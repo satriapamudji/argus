@@ -1,4 +1,4 @@
-# Athena — US Close Market Update Bot (spec.md)
+# Argus — US Close Market Update Bot (spec.md)
 
 > Telegram bot that ingests news + prices, scores and curates items, generates a WhatsApp/Telegram-style “Market Update” after US close, and publishes on a schedule (SGT + NY DST-safe). Designed to support multiple streams later.
 
@@ -6,13 +6,13 @@
 
 ## 1) Overview
 
-**Athena** produces three run types for the initial stream (`us_close_basic`):
+**Argus** produces three run types for the initial stream (`us_close_basic`):
 
 - **Mon–Fri 06:00 SGT**: Daily “US Close” update
 - **Sat 10:00 SGT**: Weekend Wrap (weekly recap + next week catalysts)
 - **Sun 18:10 America/New_York**: Conditional “Monday Preview” (only if major risk week)
 
-Athena uses:
+Argus uses:
 - A DB (Postgres) to store news metadata/content, scoring, and run artifacts (facts bundles + published messages)
 - A scoring service (heuristics + lightweight LLM triage) to rank/filter news
 - A generator LLM to format the final post **strictly from a JSON facts bundle**
@@ -121,11 +121,11 @@ Persist the breakdown (`calendar_score`, `market_score`, `headline_score`) on th
 ### Cron examples (timezone-aware)
 ```cron
 CRON_TZ=Asia/Singapore
-0 6 * * 1-5 /app/bin/athena run --stream us_close_basic --mode us_close
-0 10 * * 6 /app/bin/athena run --stream us_close_basic --mode weekend_wrap
+0 6 * * 1-5 /app/bin/argus run --stream us_close_basic --mode us_close
+0 10 * * 6 /app/bin/argus run --stream us_close_basic --mode weekend_wrap
 
 CRON_TZ=America/New_York
-10 18 * * 0 /app/bin/athena run --stream us_close_basic --mode monday_preview --conditional true
+10 18 * * 0 /app/bin/argus run --stream us_close_basic --mode monday_preview --conditional true
 ```
 
 ### US Holidays & Half-days
@@ -214,7 +214,7 @@ The generator must follow this order (and include `*Key Dates (UTC)*` + `*Source
 
 ## 7) News Content Strategy (metadata vs full text)
 
-Athena should support **two modes** per source:
+Argus should support **two modes** per source:
 
 ### A) Licensed/full-text sources
 If your news feed/provider contract permits storing full text:
@@ -331,7 +331,7 @@ TELEGRAM_CHAT_ID=xxxx              # default chat for this stream
 TELEGRAM_PARSE_MODE=MarkdownV2     # recommended default
 
 # Database
-DATABASE_URL=postgresql://user:pass@host:5432/athena
+DATABASE_URL=postgresql://user:pass@host:5432/argus
 
 # Optional
 LOG_LEVEL=INFO

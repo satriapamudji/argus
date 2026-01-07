@@ -1,0 +1,370 @@
+[
+  {
+    "name": "CNBC Top News",
+    "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 792.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Trump says Venezuela to give up to 50 million barr",
+        "status": "OK",
+        "text_length": 1195,
+        "response_time_ms": 912.0
+      },
+      {
+        "index": 2,
+        "title": "Berkshire Hathaway lifts new CEO Greg Abel’s salar",
+        "status": "OK",
+        "text_length": 1249,
+        "response_time_ms": 841.0
+      },
+      {
+        "index": 3,
+        "title": "Seven U.S. troops injured in Venezuela raid that c",
+        "status": "OK",
+        "text_length": 2009,
+        "response_time_ms": 551.0
+      },
+      {
+        "index": 4,
+        "title": "Trump administration freezes $10B in child, family",
+        "status": "OK",
+        "text_length": 2966,
+        "response_time_ms": 1097.0
+      },
+      {
+        "index": 5,
+        "title": "Prediction markets show rising odds Trump seizes P",
+        "status": "OK",
+        "text_length": 1548,
+        "response_time_ms": 561.0
+      }
+    ]
+  },
+  {
+    "name": "CNBC World",
+    "url": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 581.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Trump says Venezuela to give up to 50 million barr",
+        "status": "OK",
+        "text_length": 1195,
+        "response_time_ms": 576.0
+      },
+      {
+        "index": 2,
+        "title": "India’s state-owned refiners keep buying Russian o",
+        "status": "OK",
+        "text_length": 2809,
+        "response_time_ms": 577.0
+      },
+      {
+        "index": 3,
+        "title": "CNBC's UK Exchange newsletter: Is Britain back? Fi",
+        "status": "OK",
+        "text_length": 6696,
+        "response_time_ms": 593.0
+      },
+      {
+        "index": 4,
+        "title": "Trump weighs using U.S. military to acquire Greenl",
+        "status": "OK",
+        "text_length": 2980,
+        "response_time_ms": 576.0
+      },
+      {
+        "index": 5,
+        "title": "European markets head for mixed open as Greenland ",
+        "status": "OK",
+        "text_length": 1434,
+        "response_time_ms": 584.0
+      }
+    ]
+  },
+  {
+    "name": "CNBC Finance",
+    "url": "https://www.cnbc.com/id/10000664/device/rss/rss.html",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 1026.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Venezuela could be sitting on a big Bitcoin stash,",
+        "status": "OK",
+        "text_length": 5095,
+        "response_time_ms": 567.0
+      },
+      {
+        "index": 2,
+        "title": "Venezuela bonds are the hottest trade on Wall Stre",
+        "status": "OK",
+        "text_length": 2102,
+        "response_time_ms": 542.0
+      },
+      {
+        "index": 3,
+        "title": "Michael Burry's big play off the U.S.-Venezuela si",
+        "status": "OK",
+        "text_length": 2505,
+        "response_time_ms": 974.0
+      },
+      {
+        "index": 4,
+        "title": "JPMorgan forms special advisory group to share som",
+        "status": "OK",
+        "text_length": 2546,
+        "response_time_ms": 1428.0
+      },
+      {
+        "index": 5,
+        "title": "Minneapolis Fed's Kashkari indicates interest rate",
+        "status": "OK",
+        "text_length": 3065,
+        "response_time_ms": 1618.0
+      }
+    ]
+  },
+  {
+    "name": "Nasdaq Markets",
+    "url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 430.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Berkshire Hathaway Raises CEO Greg Abel's Pay To $",
+        "status": "OK",
+        "text_length": 576,
+        "response_time_ms": 356.0
+      },
+      {
+        "index": 2,
+        "title": "Air Transat Pilots Ratify New Five-Year Agreement ",
+        "status": "OK",
+        "text_length": 715,
+        "response_time_ms": 593.0
+      },
+      {
+        "index": 3,
+        "title": "Elon Musk's XAI Raises $20 Bln Funding, With Backi",
+        "status": "OK",
+        "text_length": 2424,
+        "response_time_ms": 346.0
+      },
+      {
+        "index": 4,
+        "title": "AerCap Prices $1.75 Bln Senior Notes Offering At 4",
+        "status": "OK",
+        "text_length": 1029,
+        "response_time_ms": 391.0
+      },
+      {
+        "index": 5,
+        "title": "Is SoundHound AI Stock a Buy Now?",
+        "status": "OK",
+        "text_length": 4791,
+        "response_time_ms": 463.0
+      }
+    ]
+  },
+  {
+    "name": "Nasdaq Earnings",
+    "url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 799.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Pre-Market Earnings Report for January 7, 2026 :  ",
+        "status": "OK",
+        "text_length": 2679,
+        "response_time_ms": 465.0
+      },
+      {
+        "index": 2,
+        "title": "After-Hours Earnings Report for January 6, 2026 : ",
+        "status": "OK",
+        "text_length": 1511,
+        "response_time_ms": 491.0
+      },
+      {
+        "index": 3,
+        "title": "Pre-Market Earnings Report for January 6, 2026 :  ",
+        "status": "OK",
+        "text_length": 869,
+        "response_time_ms": 880.0
+      },
+      {
+        "index": 4,
+        "title": "What a &quot;Normal&quot; Economy Could Mean for T",
+        "status": "OK",
+        "text_length": 5879,
+        "response_time_ms": 1087.0
+      },
+      {
+        "index": 5,
+        "title": "Bullseye Bounce: Toms Capital Takes a Stake in Tar",
+        "status": "OK",
+        "text_length": 8186,
+        "response_time_ms": 1075.0
+      }
+    ]
+  },
+  {
+    "name": "Nasdaq Commodities",
+    "url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 721.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Crude Oil Plunges As Traders Assess Impact Of U.S.",
+        "status": "OK",
+        "text_length": 2908,
+        "response_time_ms": 459.0
+      },
+      {
+        "index": 2,
+        "title": "Gold Advances Amid Geopolitical Tensions, Rate Cut",
+        "status": "OK",
+        "text_length": 3748,
+        "response_time_ms": 452.0
+      },
+      {
+        "index": 3,
+        "title": "Gold Hovers Near One-week High On Dollar Weakness",
+        "status": "OK",
+        "text_length": 1900,
+        "response_time_ms": 482.0
+      },
+      {
+        "index": 4,
+        "title": "Oil Extends Gains In Choppy Trade",
+        "status": "OK",
+        "text_length": 1635,
+        "response_time_ms": 1176.0
+      },
+      {
+        "index": 5,
+        "title": "Ramaco Resources (METC) Shares Cross Above 200 DMA",
+        "status": "OK",
+        "text_length": 763,
+        "response_time_ms": 1035.0
+      }
+    ]
+  },
+  {
+    "name": "Motley Fool",
+    "url": "https://www.fool.com/feeds/index.aspx",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 719.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Is SoundHound AI Stock a Buy Now?",
+        "status": "OK",
+        "text_length": 4365,
+        "response_time_ms": 388.0
+      },
+      {
+        "index": 2,
+        "title": "3 Top Quantum Computing Stocks to Buy in 2026",
+        "status": "OK",
+        "text_length": 5343,
+        "response_time_ms": 874.0
+      },
+      {
+        "index": 3,
+        "title": "Bloom Energy vs. Plug Power: Which One Will Domina",
+        "status": "OK",
+        "text_length": 2727,
+        "response_time_ms": 985.0
+      },
+      {
+        "index": 4,
+        "title": "90% of Investors Plan to Own AI Stocks in 2026: He",
+        "status": "OK",
+        "text_length": 4978,
+        "response_time_ms": 696.0
+      },
+      {
+        "index": 5,
+        "title": "Warren Buffett's Partner, Charlie Munger, Put Almo",
+        "status": "OK",
+        "text_length": 4946,
+        "response_time_ms": 654.0
+      }
+    ]
+  },
+  {
+    "name": "Benzinga",
+    "url": "https://www.benzinga.com/feed",
+    "articles_tested": 5,
+    "successful": 5,
+    "failed": 0,
+    "avg_response_time_ms": 2058.0,
+    "errors": [],
+    "details": [
+      {
+        "index": 1,
+        "title": "Best AI Stock Trading Bots and Software in January",
+        "status": "OK",
+        "text_length": 9887,
+        "response_time_ms": 1254.0
+      },
+      {
+        "index": 2,
+        "title": "Best Stock Portfolio Trackers in January 2026",
+        "status": "OK",
+        "text_length": 25237,
+        "response_time_ms": 1245.0
+      },
+      {
+        "index": 3,
+        "title": "Best Investing Apps for College Students in Januar",
+        "status": "OK",
+        "text_length": 12126,
+        "response_time_ms": 2686.0
+      },
+      {
+        "index": 4,
+        "title": "Best Binary Options Brokers in January 2026",
+        "status": "OK",
+        "text_length": 12526,
+        "response_time_ms": 2820.0
+      },
+      {
+        "index": 5,
+        "title": "Best ETF Brokers in January 2026",
+        "status": "OK",
+        "text_length": 13931,
+        "response_time_ms": 2287.0
+      }
+    ]
+  }
+]

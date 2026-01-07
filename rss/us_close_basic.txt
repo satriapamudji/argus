@@ -1,5 +1,11 @@
 # Whitelisted RSS feeds for the `us_close_basic` stream.
 # One URL per line. Blank lines and lines starting with "#" are ignored.
-#
-# Example:
-# https://feeds.reuters.com/reuters/businessNews
+
+# CNBC - Major financial news
+https://www.cnbc.com/id/100003114/device/rss/rss.html
+https://www.cnbc.com/id/100727362/device/rss/rss.html
+
+# Nasdaq - Markets, Earnings, Commodities
+https://www.nasdaq.com/feed/rssoutbound?category=Markets
+https://www.nasdaq.com/feed/rssoutbound?category=Earnings
+https://www.nasdaq.com/feed/rssoutbound?category=Commodities

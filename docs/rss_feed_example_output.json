@@ -1,0 +1,215 @@
+{
+  "generated_at": "2026-01-07T15:34:56.392215",
+  "feeds": {
+    "CNBC Top News": {
+      "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "source_name": "US Top News and Analysis",
+      "total_entries": 30,
+      "sample_entries": [
+        {
+          "title": "Why Trump wants Greenland — and what makes it so important for national security",
+          "source_url": "https://www.cnbc.com/2026/01/07/why-trump-wants-greenland-and-what-makes-it-so-important-for-security.html",
+          "author": null,
+          "published_at": "2026-01-07T07:26:11+00:00",
+          "snippet": "Greenland, a vast and sparsely populated self-governing Danish territory, has been thrust into the geopolitical spotlight once again."
+        },
+        {
+          "title": "Trump says Venezuela to give up to 50 million barrels of oil to U.S.",
+          "source_url": "https://www.cnbc.com/2026/01/06/trump-venezuela-oil.html",
+          "author": null,
+          "published_at": "2026-01-07T02:23:14+00:00",
+          "snippet": "Trump's announcement came days after U.S. forces attacked Venezuela and captured its leader, Nicolas Maduro, to be prosecuted on drug-trafficking charges."
+        },
+        {
+          "title": "Berkshire Hathaway lifts new CEO Greg Abel’s salary to $25 million",
+          "source_url": "https://www.cnbc.com/2026/01/06/berkshire-hathaway-greg-abel-berkshire-hathaway-ceo-warren-buffet-pay-raise-25-million.html",
+          "author": null,
+          "published_at": "2026-01-07T00:48:32+00:00",
+          "snippet": "Abel took the helm of Berkshire Hathaway on Jan. 1, succeeding legendary investor Warren Buffett."
+        },
+        {
+          "title": "Seven U.S. troops injured in Venezuela raid that captured Maduro, Pentagon says",
+          "source_url": "https://www.cnbc.com/2026/01/07/us-venezuela-military-operation-maduro-injuries-casualties.html",
+          "author": null,
+          "published_at": "2026-01-07T06:51:25+00:00",
+          "snippet": "Seven U.S. service members were injured during a U.S. military operation in Venezuela that captured President Nicolás Maduro and his wife, a Pentagon official said on Wednesday."
+        },
+        {
+          "title": "Trump administration freezes $10B in child, family aid to 5 states over fraud concerns",
+          "source_url": "https://www.cnbc.com/2026/01/07/trump-freezes-child-aid-hhs-fraud.html",
+          "author": null,
+          "published_at": "2026-01-07T03:08:38+00:00",
+          "snippet": "The move comes a day after Minnesota Gov. Tim Walz said he would not seek reelection amid political fallout over a massive fraud probe in his state."
+        }
+      ]
+    },
+    "CNBC World": {
+      "url": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+      "source_name": "International: Top News And Analysis",
+      "total_entries": 30,
+      "sample_entries": [
+        {
+          "title": "Why Trump wants Greenland — and what makes it so important for national security",
+          "source_url": "https://www.cnbc.com/2026/01/07/why-trump-wants-greenland-and-what-makes-it-so-important-for-security.html",
+          "author": null,
+          "published_at": "2026-01-07T07:26:11+00:00",
+          "snippet": "Greenland, a vast and sparsely populated self-governing Danish territory, has been thrust into the geopolitical spotlight once again."
+        },
+        {
+          "title": "Trump says Venezuela to give up to 50 million barrels of oil to U.S.",
+          "source_url": "https://www.cnbc.com/2026/01/06/trump-venezuela-oil.html",
+          "author": null,
+          "published_at": "2026-01-07T02:23:14+00:00",
+          "snippet": "Trump's announcement came days after U.S. forces attacked Venezuela and captured its leader, Nicolas Maduro, to be prosecuted on drug-trafficking charges."
+        },
+        {
+          "title": "CNBC's UK Exchange newsletter: Is Britain back? Five things to watch for the U.K. in 2026",
+          "source_url": "https://www.cnbc.com/2026/01/07/cnbcs-uk-exchange-newsletter-is-britain-back-five-things-to-watch-for-the-uk-in-2026.html",
+          "author": null,
+          "published_at": "2026-01-07T07:24:15+00:00",
+          "snippet": "From chancellor challenges to jobless-rate jitters, here are the key things to watch for the U.K. economy as the new year gets underway."
+        },
+        {
+          "title": "India’s state-owned refiners keep buying Russian oil even as New Delhi seeks U.S. tariff relief",
+          "source_url": "https://www.cnbc.com/2026/01/07/india-state-refiners-russian-oil-us-tariffs-ioc-bpcl-psu-mukesh-ambani-reliance-trump.html",
+          "author": null,
+          "published_at": "2026-01-07T02:34:53+00:00",
+          "snippet": "India’s efforts to secure U.S. tariff relief are being complicated by continued Russian crude purchases by state-owned refiners, offsetting a pullback by private buyers."
+        },
+        {
+          "title": "CNBC's The China Connection newsletter: What's next after a 10-year 'experiment' with U.S.-China competition",
+          "source_url": "https://www.cnbc.com/2026/01/07/cnbcs-the-china-connection-newsletter-turning-point-for-us-china-ties-in-2026.html",
+          "author": null,
+          "published_at": "2026-01-07T07:00:01+00:00",
+          "snippet": "For someone who's witnessed the ups and downs of U.S.-China tensions since the 1990s, AmCham China's new chair is strikingly optimistic about 2026."
+        }
+      ]
+    },
+    "Nasdaq Markets": {
+      "url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "source_name": "Markets",
+      "total_entries": 15,
+      "sample_entries": [
+        {
+          "title": "Apple's CEO Recently Invested in Nike. Should You Do the Same?",
+          "source_url": "https://www.nasdaq.com/articles/apples-ceo-recently-invested-nike-should-you-do-same",
+          "author": "The Motley Fool",
+          "published_at": "2026-01-07T07:05:00+00:00",
+          "snippet": "Key PointsTim Cook bought $3 million of Nike stock recently, adding to his existing position."
+        },
+        {
+          "title": "2 Elite Growth Stocks That Could Help Set You Up for Life",
+          "source_url": "https://www.nasdaq.com/articles/2-elite-growth-stocks-could-help-set-you-life",
+          "author": "The Motley Fool",
+          "published_at": "2026-01-07T06:50:00+00:00",
+          "snippet": "Key PointsNvidia remains the chip of choice for data centers."
+        },
+        {
+          "title": "Praxis Precision Prices $575 Mln Public Offering At $260/shr",
+          "source_url": "https://www.nasdaq.com/articles/praxis-precision-prices-575-mln-public-offering-260-shr",
+          "author": "RTTNews",
+          "published_at": "2026-01-07T06:37:04+00:00",
+          "snippet": "(RTTNews) - Praxis Precision Medicines, Inc. (PRAX), a clinical-stage biopharmaceutical company, on Tuesday said it has priced an underwritten public offering of 2.21 million shares of stock at $260 per share."
+        },
+        {
+          "title": "Berkshire Hathaway Raises CEO Greg Abel's Pay To $25 Mln",
+          "source_url": "https://www.nasdaq.com/articles/berkshire-hathaway-raises-ceo-greg-abels-pay-25-mln",
+          "author": "RTTNews",
+          "published_at": "2026-01-07T06:22:28+00:00",
+          "snippet": "(RTTNews) - Berkshire Hathaway disclosed in a regulatory filing that it has raised the annual cash salary of its chief executive officer, Greg Abel, to $25 million."
+        },
+        {
+          "title": "Air Transat Pilots Ratify New Five-Year Agreement Through 2030",
+          "source_url": "https://www.nasdaq.com/articles/air-transat-pilots-ratify-new-five-year-agreement-through-2030",
+          "author": "RTTNews",
+          "published_at": "2026-01-07T06:20:49+00:00",
+          "snippet": "(RTTNews) - Air Transat, a unit of Transat A.T. Inc. (TRZ_B.TO), said on Wednesday that its pilots have voted in favour of the tentative agreement reached with their union, ratifying a new five-year collective agreement that runs until April 2030."
+        }
+      ]
+    },
+    "Nasdaq Earnings": {
+      "url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+      "source_name": "Earnings",
+      "total_entries": 15,
+      "sample_entries": [
+        {
+          "title": "Pre-Market Earnings Report for January 7, 2026 :  ACI, MSM, UNF, APOG",
+          "source_url": "https://www.nasdaq.com/articles/pre-market-earnings-report-january-7-2026-aci-msm-unf-apog",
+          "author": "NASDAQ.com",
+          "published_at": "2026-01-06T21:00:01+00:00",
+          "snippet": "The following companies are expected to report earnings prior to market open on 01/07/2026. Visit our Earnings Calendar for a full list of expected earnings releases.Albertsons Companies, Inc. (ACI)is reporting for the quarter ending November 30, 2025. The consumer company's con"
+        },
+        {
+          "title": "After-Hours Earnings Report for January 6, 2026 :  AIR, PENG",
+          "source_url": "https://www.nasdaq.com/articles/after-hours-earnings-report-january-6-2026-air-peng",
+          "author": "NASDAQ.com",
+          "published_at": "2026-01-06T19:00:01+00:00",
+          "snippet": "The following companies are expected to report earnings after hours on 01/06/2026. Visit our Earnings Calendar for a full list of expected earnings releases.AAR Corp. (AIR)is reporting for the quarter ending November 30, 2025. The aerospace and defense company's consensus earnin"
+        },
+        {
+          "title": "Pre-Market Earnings Report for January 6, 2026 :  ANGO",
+          "source_url": "https://www.nasdaq.com/articles/pre-market-earnings-report-january-6-2026-ango",
+          "author": "NASDAQ.com",
+          "published_at": "2026-01-05T21:00:01+00:00",
+          "snippet": "The following companies are expected to report earnings prior to market open on 01/06/2026. Visit our Earnings Calendar for a full list of expected earnings releases.AngioDynamics, Inc. (ANGO)is reporting for the quarter ending November 30, 2025. The medical instruments company'"
+        },
+        {
+          "title": "What a &quot;Normal&quot; Economy Could Mean for These 3 Travel Stocks",
+          "source_url": "https://www.nasdaq.com/articles/what-normal-economy-could-mean-these-3-travel-stocks",
+          "author": "MarketBeat",
+          "published_at": "2026-01-02T19:42:00+00:00",
+          "snippet": "What would a “normal” economy look like in 2026? For starters, many investors would like to see the recent sector rotation continue. That would allow growth to expand beyond the tech sector, and specifically, beyond stocks that are part of the artificial intelligence (AI) trade."
+        },
+        {
+          "title": "Bullseye Bounce: Toms Capital Takes a Stake in Target",
+          "source_url": "https://www.nasdaq.com/articles/bullseye-bounce-toms-capital-takes-stake-target",
+          "author": "MarketBeat",
+          "published_at": "2026-01-01T17:44:00+00:00",
+          "snippet": "Wall Street is always on the hunt for a specific type of story: the turnaround play. These are companies with household names and strong foundations that have temporarily fallen out of favor with the stock market. For investors, these scenarios offer a chance to buy a dollar’s w"
+        }
+      ]
+    },
+    "Nasdaq Commodities": {
+      "url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+      "source_name": "Commodities",
+      "total_entries": 15,
+      "sample_entries": [
+        {
+          "title": "Crude Oil Plunges As Traders Assess Impact Of U.S. Offensive In Venezuela",
+          "source_url": "https://www.nasdaq.com/articles/crude-oil-plunges-traders-assess-impact-us-offensive-venezuela",
+          "author": "RTTNews",
+          "published_at": "2026-01-06T19:37:17+00:00",
+          "snippet": "(RTTNews) - Crude oil plummeted on Tuesday, giving away yesterday's gains, as investors resorted to profit-taking while analyzing the consequences of Saturday's swift U.S. military operation in Venezuela on global oil supply along with other geopolitical tensions."
+        },
+        {
+          "title": "Gold Advances Amid Geopolitical Tensions, Rate Cut Expectations",
+          "source_url": "https://www.nasdaq.com/articles/gold-advances-amid-geopolitical-tensions-rate-cut-expectations",
+          "author": "RTTNews",
+          "published_at": "2026-01-06T18:50:58+00:00",
+          "snippet": "(RTTNews) - Gold prices moved higher on Tuesday, extending yesterday's gains amid continuing geopolitical conflicts and sustained U.S. Federal Reserve rate cut expectations that drove demand for the yellow metal."
+        },
+        {
+          "title": "Gold Hovers Near One-week High On Dollar Weakness",
+          "source_url": "https://www.nasdaq.com/articles/gold-hovers-near-one-week-high-dollar-weakness",
+          "author": "RTTNews",
+          "published_at": "2026-01-06T09:46:07+00:00",
+          "snippet": "(RTTNews) - Gold added to strong overnight gains to hover above $4,460 an ounce on Tuesday amid geopolitical tensions and expectations of Federal Reserve interest-rate cuts."
+        },
+        {
+          "title": "Oil Extends Gains In Choppy Trade",
+          "source_url": "https://www.nasdaq.com/articles/oil-extends-gains-choppy-trade",
+          "author": "RTTNews",
+          "published_at": "2026-01-06T09:27:10+00:00",
+          "snippet": "(RTTNews) - Oil extended gains in choppy trading on Tuesday after settling up $1 a barrel in the previous session on concerns about the possible impact on crude flows from Venezuela, home to the world's largest oil reserves."
+        },
+        {
+          "title": "Ramaco Resources (METC) Shares Cross Above 200 DMA",
+          "source_url": "https://www.nasdaq.com/articles/ramaco-resources-metc-shares-cross-above-200-dma",
+          "author": "BNK Invest",
+          "published_at": "2026-01-05T20:22:37+00:00",
+          "snippet": "In trading on Monday, shares of Ramaco Resources Inc (Symbol: METC) crossed above their 200 day moving average of $19.31, changing hands as high as $20.45 per share. Ramaco Resources Inc shares are currently trading up about 6.3% on the day. The chart below shows the one year"
+        }
+      ]
+    }
+  }
+}

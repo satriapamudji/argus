@@ -1,0 +1,64 @@
+stream:
+  name: us_close_basic
+  enabled: true
+
+telegram:
+  # Prefer env vars; allow optional override per stream
+  bot_token_env: TELEGRAM_BOT_TOKEN
+  chat_id_env: TELEGRAM_CHAT_ID
+  parse_mode_env: TELEGRAM_PARSE_MODE
+
+schedule:
+  daily_us_close_sgt: "06:00"
+  weekend_wrap_sgt: "10:00"
+  monday_preview_ny: "SUN 18:10"
+
+monday_preview:
+  conditional: true
+  risk_threshold: 60
+  force_publish: false
+  force_skip: false
+
+retention:
+  news_items_days: 60
+  fingerprints_days: 3650
+  runs_days: 3650
+
+dedupe:
+  url_hash: true
+  text_hash: true
+  simhash:
+    enabled: true
+    hamming_threshold: 4
+    window_days: 14
+  title_trigram:
+    enabled: true
+    similarity_threshold: 0.85
+
+enrichment:
+  enabled: true
+  max_enrich_per_run: 25
+  allow_full_text_storage: false
+  snippet_chars: 1200
+
+rss:
+  # Whitelisted RSS feeds are defined in files under ./rss so adding feeds is a file edit, not a code change.
+  # Each line: URL (optionally "#" comments). Blank lines ignored.
+  allowlist_files:
+    - "rss/us_close_basic.txt"
+  poll_interval_minutes: 10
+
+constraints:
+  max_words_daily: 420
+  max_words_weekend: 520
+  max_words_preview: 320
+  max_takeaway_bullets: 5
+  max_watch_bullets: 3
+
+spotlight:
+  enabled: false
+  title: ""
+  body: ""
+  disclaimer: ""
+
+log_level: INFO

@@ -19,7 +19,7 @@ Implement end-to-end runs (`us_close`, `weekend_wrap`, `monday_preview`) with DS
 - `tasks/01_plan/spec.md` ((4) Scheduling & Timezones, (4) risk_score definition, (4) US Holidays & Half-days, (8) Architecture: Run Orchestrator)
 
 ## Scope
-- `bin/athena run --stream us_close_basic --mode <mode>` performs:
+- `bin/argus run --stream us_close_basic --mode <mode>` performs:
   1) window selection
   2) shortlist + enrichment (optional)
   3) scoring + selection

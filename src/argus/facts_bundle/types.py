@@ -1,0 +1,381 @@
+"""Type definitions for facts bundle.
+
+The facts bundle is the sole source of truth for the generator LLM.
+All dataclasses are frozen to ensure immutability and determinism.
+"""
+
+from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Any, Optional
+
+
+# =============================================================================
+# Market Data Types
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class IndexData:
+    """Market index data for the facts bundle."""
+
+    name: str
+    symbol: str
+    level: Decimal
+    change_1d_pct: Decimal
+    change_1d_pts: Decimal
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "symbol": self.symbol,
+            "level": str(self.level),
+            "change_1d_pct": str(self.change_1d_pct),
+            "change_1d_pts": str(self.change_1d_pts),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "IndexData":
+        return cls(
+            name=data["name"],
+            symbol=data["symbol"],
+            level=Decimal(data["level"]),
+            change_1d_pct=Decimal(data["change_1d_pct"]),
+            change_1d_pts=Decimal(data["change_1d_pts"]),
+        )
+
+
+@dataclass(frozen=True)
+class CrossAssetsData:
+    """Cross-asset metrics for the facts bundle.
+
+    All fields are optional - missing data does not break the bundle.
+    """
+
+    vix_level: Optional[Decimal] = None
+    vix_change_pct: Optional[Decimal] = None
+    us10y_yield: Optional[Decimal] = None
+    us10y_change_bps: Optional[Decimal] = None
+    dxy_level: Optional[Decimal] = None
+    dxy_change_pct: Optional[Decimal] = None
+    wti_level: Optional[Decimal] = None
+    wti_change_pct: Optional[Decimal] = None
+    gold_level: Optional[Decimal] = None
+    gold_change_pct: Optional[Decimal] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.vix_level is not None:
+            result["vix_level"] = str(self.vix_level)
+        if self.vix_change_pct is not None:
+            result["vix_change_pct"] = str(self.vix_change_pct)
+        if self.us10y_yield is not None:
+            result["us10y_yield"] = str(self.us10y_yield)
+        if self.us10y_change_bps is not None:
+            result["us10y_change_bps"] = str(self.us10y_change_bps)
+        if self.dxy_level is not None:
+            result["dxy_level"] = str(self.dxy_level)
+        if self.dxy_change_pct is not None:
+            result["dxy_change_pct"] = str(self.dxy_change_pct)
+        if self.wti_level is not None:
+            result["wti_level"] = str(self.wti_level)
+        if self.wti_change_pct is not None:
+            result["wti_change_pct"] = str(self.wti_change_pct)
+        if self.gold_level is not None:
+            result["gold_level"] = str(self.gold_level)
+        if self.gold_change_pct is not None:
+            result["gold_change_pct"] = str(self.gold_change_pct)
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CrossAssetsData":
+        return cls(
+            vix_level=Decimal(data["vix_level"]) if data.get("vix_level") else None,
+            vix_change_pct=Decimal(data["vix_change_pct"]) if data.get("vix_change_pct") else None,
+            us10y_yield=Decimal(data["us10y_yield"]) if data.get("us10y_yield") else None,
+            us10y_change_bps=Decimal(data["us10y_change_bps"])
+            if data.get("us10y_change_bps")
+            else None,
+            dxy_level=Decimal(data["dxy_level"]) if data.get("dxy_level") else None,
+            dxy_change_pct=Decimal(data["dxy_change_pct"]) if data.get("dxy_change_pct") else None,
+            wti_level=Decimal(data["wti_level"]) if data.get("wti_level") else None,
+            wti_change_pct=Decimal(data["wti_change_pct"]) if data.get("wti_change_pct") else None,
+            gold_level=Decimal(data["gold_level"]) if data.get("gold_level") else None,
+            gold_change_pct=Decimal(data["gold_change_pct"])
+            if data.get("gold_change_pct")
+            else None,
+        )
+
+
+@dataclass(frozen=True)
+class MarketSnapshotBundle:
+    """Complete market snapshot for the facts bundle."""
+
+    trading_date: date
+    sp500: IndexData
+    dow: IndexData
+    nasdaq: IndexData
+    cross_assets: Optional[CrossAssetsData] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "trading_date": self.trading_date.isoformat(),
+            "sp500": self.sp500.to_dict(),
+            "dow": self.dow.to_dict(),
+            "nasdaq": self.nasdaq.to_dict(),
+        }
+        if self.cross_assets is not None:
+            result["cross_assets"] = self.cross_assets.to_dict()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MarketSnapshotBundle":
+        cross_assets = None
+        if data.get("cross_assets"):
+            cross_assets = CrossAssetsData.from_dict(data["cross_assets"])
+        return cls(
+            trading_date=date.fromisoformat(data["trading_date"]),
+            sp500=IndexData.from_dict(data["sp500"]),
+            dow=IndexData.from_dict(data["dow"]),
+            nasdaq=IndexData.from_dict(data["nasdaq"]),
+            cross_assets=cross_assets,
+        )
+
+
+# =============================================================================
+# News Item Types
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class NewsItemBundle:
+    """A single news item for the facts bundle."""
+
+    id: int
+    title: str
+    source_name: str
+    source_url: str
+    published_at: Optional[datetime]
+    snippet: Optional[str]
+    content_excerpt: Optional[str]
+    topic: Optional[str]
+    impact_score: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "source_name": self.source_name,
+            "source_url": self.source_url,
+            "published_at": self.published_at.isoformat() if self.published_at else None,
+            "snippet": self.snippet,
+            "content_excerpt": self.content_excerpt,
+            "topic": self.topic,
+            "impact_score": self.impact_score,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "NewsItemBundle":
+        published_at = None
+        if data.get("published_at"):
+            published_at = datetime.fromisoformat(data["published_at"])
+        return cls(
+            id=data["id"],
+            title=data["title"],
+            source_name=data["source_name"],
+            source_url=data["source_url"],
+            published_at=published_at,
+            snippet=data.get("snippet"),
+            content_excerpt=data.get("content_excerpt"),
+            topic=data.get("topic"),
+            impact_score=data["impact_score"],
+        )
+
+
+# =============================================================================
+# Calendar Event Types
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class CalendarEventBundle:
+    """A single calendar event for the facts bundle."""
+
+    name: str
+    timestamp_utc: datetime
+    event_type: str  # 'economic', 'earnings', 'fed', 'other'
+    formatted_display: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "timestamp_utc": self.timestamp_utc.isoformat(),
+            "event_type": self.event_type,
+            "formatted_display": self.formatted_display,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CalendarEventBundle":
+        return cls(
+            name=data["name"],
+            timestamp_utc=datetime.fromisoformat(data["timestamp_utc"]),
+            event_type=data["event_type"],
+            formatted_display=data["formatted_display"],
+        )
+
+
+# =============================================================================
+# Spotlight Types
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class SpotlightBundle:
+    """Spotlight content for the facts bundle."""
+
+    title: str
+    body: str
+    disclaimer: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "title": self.title,
+            "body": self.body,
+            "disclaimer": self.disclaimer,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SpotlightBundle":
+        return cls(
+            title=data["title"],
+            body=data["body"],
+            disclaimer=data["disclaimer"],
+        )
+
+
+# =============================================================================
+# Main Facts Bundle
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class FactsBundle:
+    """The complete facts bundle - sole source of truth for the LLM.
+
+    This is the immutable contract between the bundle builder and the generator.
+    """
+
+    version: str
+    stream_name: str
+    run_mode: str  # 'us_close', 'weekend_wrap', 'monday_preview'
+    generated_at: datetime
+    trading_date: date
+    market_snapshot: MarketSnapshotBundle
+    news_items: tuple[NewsItemBundle, ...]
+    calendar_events: tuple[CalendarEventBundle, ...]
+    spotlight: Optional[SpotlightBundle] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "version": self.version,
+            "stream_name": self.stream_name,
+            "run_mode": self.run_mode,
+            "generated_at": self.generated_at.isoformat(),
+            "trading_date": self.trading_date.isoformat(),
+            "market_snapshot": self.market_snapshot.to_dict(),
+            "news_items": [item.to_dict() for item in self.news_items],
+            "calendar_events": [event.to_dict() for event in self.calendar_events],
+        }
+        if self.spotlight is not None:
+            result["spotlight"] = self.spotlight.to_dict()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "FactsBundle":
+        spotlight = None
+        if data.get("spotlight"):
+            spotlight = SpotlightBundle.from_dict(data["spotlight"])
+        return cls(
+            version=data["version"],
+            stream_name=data["stream_name"],
+            run_mode=data["run_mode"],
+            generated_at=datetime.fromisoformat(data["generated_at"]),
+            trading_date=date.fromisoformat(data["trading_date"]),
+            market_snapshot=MarketSnapshotBundle.from_dict(data["market_snapshot"]),
+            news_items=tuple(NewsItemBundle.from_dict(item) for item in data["news_items"]),
+            calendar_events=tuple(
+                CalendarEventBundle.from_dict(event) for event in data["calendar_events"]
+            ),
+            spotlight=spotlight,
+        )
+
+
+# =============================================================================
+# Internal Selection Types
+# =============================================================================
+
+
+@dataclass
+class BundleCandidate:
+    """Internal type for news item selection with diversity tracking.
+
+    Not frozen because we track selection state during processing.
+    """
+
+    news_item_id: int
+    title: str
+    source_name: str
+    source_url: str
+    published_at: Optional[datetime]
+    ingested_at: datetime
+    snippet: Optional[str]
+    content_excerpt: Optional[str]
+    topic: Optional[str]
+    impact_score: int
+    has_content: bool = False
+
+    @property
+    def effective_score(self) -> int:
+        """Score used for ranking, with bonus for enriched content."""
+        bonus = 5 if self.has_content else 0
+        return self.impact_score + bonus
+
+    def to_news_item_bundle(self) -> NewsItemBundle:
+        """Convert to immutable NewsItemBundle for final output."""
+        return NewsItemBundle(
+            id=self.news_item_id,
+            title=self.title,
+            source_name=self.source_name,
+            source_url=self.source_url,
+            published_at=self.published_at,
+            snippet=self.snippet,
+            content_excerpt=self.content_excerpt,
+            topic=self.topic,
+            impact_score=self.impact_score,
+        )
+
+
+@dataclass
+class BundleStats:
+    """Statistics from a bundle building run."""
+
+    total_candidates: int = 0
+    selected_items: int = 0
+    skipped_by_topic: int = 0
+    skipped_by_source: int = 0
+    enriched_items: int = 0
+    calendar_events: int = 0
+    has_spotlight: bool = False
+    duration_seconds: float = 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_candidates": self.total_candidates,
+            "selected_items": self.selected_items,
+            "skipped_by_topic": self.skipped_by_topic,
+            "skipped_by_source": self.skipped_by_source,
+            "enriched_items": self.enriched_items,
+            "calendar_events": self.calendar_events,
+            "has_spotlight": self.has_spotlight,
+            "duration_seconds": self.duration_seconds,
+        }
