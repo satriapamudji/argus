@@ -1,14 +1,13 @@
 [Unit]
 Description=Argus Market Update Daemon
-Documentation=https://github.com/your-org/argus
+Documentation=https://github.com/satriapamudji/argus
 After=network.target postgresql.service
 
 [Service]
 Type=simple
 User=argus
 Group=argus
-WorkingDirectory=/opt/argus
-
+WorkingDirectory=/opt/argus/app
 # Environment
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=/opt/argus/.env
@@ -23,12 +22,6 @@ RestartSec=10
 # Graceful shutdown (30 second timeout for jobs to complete)
 TimeoutStopSec=30
 KillSignal=SIGTERM
-
-# Security hardening
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/opt/argus/logs
 
 # Logging
 StandardOutput=journal
