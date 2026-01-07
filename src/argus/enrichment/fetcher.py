@@ -13,8 +13,8 @@ from argus.enrichment.types import FetchResult
 
 logger = logging.getLogger(__name__)
 
-# Default user agent that identifies as a news aggregator
-DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; ArgusBot/1.0; +https://github.com/argus-news-bot)"
+# Browser-like user agent to avoid bot detection
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 # Default timeouts
 DEFAULT_TIMEOUT_SECONDS = 15.0
@@ -70,7 +70,7 @@ class AsyncContentFetcher:
             timeout=httpx.Timeout(self.timeout_seconds, connect=DEFAULT_CONNECT_TIMEOUT),
             headers={"User-Agent": self.user_agent},
             follow_redirects=True,
-            http2=True,
+            http2=False,  # Some sites (e.g., Nasdaq) block HTTP/2
         )
         return self
 

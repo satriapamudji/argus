@@ -5,7 +5,7 @@ for the "Key Dates (UTC)" section in generated messages.
 """
 
 from argus.adapters.economic_calendar.adapter import EconomicCalendarAdapter
-from argus.adapters.economic_calendar.fetcher import EconomicCalendarFetcher
+from argus.adapters.economic_calendar.fetcher import refresh_economic_calendar
 from argus.adapters.economic_calendar.types import (
     EconomicEventRow,
     RawEconomicEvent,
@@ -14,7 +14,7 @@ from argus.adapters.economic_calendar.types import (
 
 __all__ = [
     "EconomicCalendarAdapter",
-    "EconomicCalendarFetcher",
+    "refresh_economic_calendar",
     "EconomicEventRow",
     "RawEconomicEvent",
     "RefreshResult",

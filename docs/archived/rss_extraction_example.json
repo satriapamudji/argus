@@ -1,10 +1,10 @@
 {
   "description": "Example of source-specific content extraction from sample HTML files",
-  "note": "These examples use saved HTML files from docs/cnbc.html and docs/nasdaq.html",
+  "note": "These examples use saved HTML files from docs/archived/cnbc.html and docs/archived/nasdaq.html",
   "extraction_examples": [
     {
       "source": "CNBC",
-      "sample_file": "docs/cnbc.html",
+      "sample_file": "docs/archived/cnbc.html",
       "extractor_used": "CNBCExtractor",
       "extracted_author": "Dan Mangan",
       "extracted_published_at": "2026-01-06T23:54:30+00:00",
@@ -13,7 +13,7 @@
     },
     {
       "source": "Nasdaq",
-      "sample_file": "docs/nasdaq.html",
+      "sample_file": "docs/archived/nasdaq.html",
       "extractor_used": "NasdaqExtractor",
       "extracted_author": "RTTNews.com",
       "extracted_published_at": "2026-01-06T13:50:00-05:00",

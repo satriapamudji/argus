@@ -8,7 +8,7 @@ Handles article extraction from cnbc.com pages, including:
 
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse
 

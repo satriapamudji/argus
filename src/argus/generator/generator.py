@@ -1,0 +1,316 @@
+"""Message generator using LLM via OpenRouter."""
+
+import json
+import logging
+import os
+import time
+from datetime import datetime, timezone
+from typing import Optional
+import httpx
+from argus.config import ConstraintsConfig
+from argus.facts_bundle.types import FactsBundle
+from argus.generator.prompts import (
+    build_news_contexts,
+    build_user_prompt,
+    get_system_prompt,
+)
+from argus.generator.renderer import (
+    count_words,
+    extract_referenced_ids,
+    format_header_windows,
+    format_index_snapshot,
+    format_key_dates_raw,
+    format_sources,
+    render_message,
+)
+from argus.generator.types import (
+    GenerationMode,
+    GeneratorConfig,
+    GeneratorResult,
+    LLMGeneratedContent,
+    NewsContext,
+)
+from argus.validator.validator import MessageValidator
+from argus.validator.types import ValidationResult
+
+logger = logging.getLogger(__name__)
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+class GenerationError(Exception):
+    pass
+
+
+class MessageGenerator:
+    def __init__(self, config, constraints=None, http_client=None):
+        self.config = config
+        self.constraints = constraints or ConstraintsConfig()
+        self._client = http_client
+        self._owns_client = False
+        self.validator = MessageValidator(self.constraints)
+
+    def _get_api_key(self):
+        api_key = os.getenv("OPENROUTER_API_KEY", "")
+        if not api_key:
+            raise GenerationError("OPENROUTER_API_KEY environment variable not set")
+        return api_key
+
+    def _get_client(self):
+        if self._client is None:
+            self._client = httpx.Client(timeout=float(self.config.timeout_seconds))
+            self._owns_client = True
+        return self._client
+
+    def close(self):
+        if self._owns_client and self._client is not None:
+            self._client.close()
+            self._client = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def _get_max_words(self, mode):
+        limits = {
+            GenerationMode.US_CLOSE: self.constraints.max_words_daily,
+            GenerationMode.WEEKEND_WRAP: self.constraints.max_words_weekend,
+            GenerationMode.MONDAY_PREVIEW: self.constraints.max_words_preview,
+        }
+        return limits[mode]
+
+    def _call_openrouter(self, system_prompt, user_prompt):
+        client = self._get_client()
+        headers = {
+            "Authorization": f"Bearer {self._get_api_key()}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/argus-news",
+            "X-Title": "Argus Market Update Generator",
+        }
+        payload = {
+            "model": self.config.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": self.config.temperature,
+            "max_tokens": 2000,
+        }
+        try:
+            response = client.post(OPENROUTER_API_URL, headers=headers, json=payload)
+            response.raise_for_status()
+            return str(response.json()["choices"][0]["message"]["content"])
+        except Exception as e:
+            raise GenerationError(str(e))
+
+    def _parse_llm_response(self, response, news_contexts):
+        try:
+            cleaned = response
+            if "```json" in cleaned:
+                cleaned = cleaned.split("```json")[1].split("```")[0]
+            elif "```" in cleaned:
+                cleaned = cleaned.split("```")[1].split("```")[0]
+            data = json.loads(cleaned.strip())
+            narrative = str(data.get("narrative", ""))
+            takeaways = list(data.get("takeaways", []))
+            watch_next = list(data.get("watch_next", []))
+            # Extract refs from all text sections (narrative + takeaways + watch_next)
+            all_text = narrative + " " + " ".join(takeaways) + " " + " ".join(watch_next)
+            referenced_ids = extract_referenced_ids(all_text, news_contexts)
+            return LLMGeneratedContent(
+                narrative=narrative,
+                takeaways=takeaways[: self.constraints.max_takeaway_bullets],
+                watch_next=watch_next[: self.constraints.max_watch_bullets],
+                referenced_item_ids=referenced_ids,
+                raw_response=response,
+            )
+        except Exception as e:
+            raise GenerationError(str(e))
+
+    def _build_fallback_message(
+        self, bundle: FactsBundle, news_contexts: list[NewsContext], mode: GenerationMode
+    ) -> GeneratorResult:
+        """Build a minimal safe fallback message from bundle data only (no LLM).
+
+        This is used when LLM generation fails validation after retry.
+        The fallback contains only verified data from the facts bundle.
+        """
+        sections = []
+
+        # 1. Header (title + date)
+        sections.append(format_header_windows(bundle.trading_date))
+
+        # 2. Index snapshot
+        sections.append("")
+        sections.append(format_index_snapshot(bundle.market_snapshot))
+
+        # 3. Minimal narrative (no LLM-generated content)
+        sections.append("")
+        sections.append("Market data as of close. See sources for details.")
+
+        # 4. Separator (em dashes with blank lines)
+        sections.append("")
+        sections.append("—————")
+        sections.append("")
+
+        # 5. Takeaways - minimal safe version
+        sections.append("__Investor Key Takeaways__")
+        sections.append("• Market closed; review sources for key developments")
+        sections.append("• Monitor scheduled events in Key Dates section")
+        sections.append("• Check sources for detailed analysis")
+
+        # 6. Key Dates
+        sections.append("")
+        sections.append(format_key_dates_raw(bundle.calendar_events))
+
+        # 7. Watch Next - minimal safe version
+        sections.append("")
+        sections.append("__What to Watch Next__")
+        sections.append("• Upcoming scheduled events (see Key Dates)")
+
+        # 8. Sources - include all news items
+        sections.append("")
+        all_item_ids = [ctx.news_item_id for ctx in news_contexts]
+        sections.append(format_sources(news_contexts, all_item_ids))
+
+        raw_message = "\n".join(sections)
+
+        # Apply escaping
+        escaped_message = raw_message
+        # Escape parentheses
+        import re
+
+        def escape_parens(match):
+            content = match.group(1)
+            return f"\\({content}\\)"
+
+        escaped_message = re.sub(r"\(([^)]+)\)", escape_parens, escaped_message)
+
+        return GeneratorResult(
+            message=escaped_message,
+            message_raw=raw_message,
+            word_count=count_words(raw_message),
+            sources_count=len(news_contexts),
+            has_spotlight=False,  # Fallback never includes spotlight
+            model="fallback",
+            generation_mode=mode,
+            generated_at=datetime.now(timezone.utc),
+            retry_count=2,  # Indicates we tried twice before fallback
+            llm_duration_seconds=0.0,
+            error="Validation failed after retry; using fallback message",
+        )
+
+    def generate(
+        self, bundle: FactsBundle, mode: Optional[GenerationMode] = None
+    ) -> tuple[GeneratorResult, ValidationResult]:
+        """Generate a message from a facts bundle.
+
+        Args:
+            bundle: The facts bundle to generate from.
+            mode: Generation mode (defaults to bundle's run_mode).
+
+        Returns:
+            Tuple of (GeneratorResult, ValidationResult).
+            - GeneratorResult contains the message (LLM-generated or fallback).
+            - ValidationResult contains validation details for persistence.
+        """
+        if not self.config.enabled:
+            raise GenerationError("Generator is disabled in configuration")
+        if mode is None:
+            mode = GenerationMode.from_string(bundle.run_mode)
+
+        news_contexts = build_news_contexts(bundle)
+        system_prompt = get_system_prompt(mode)
+        user_prompt = build_user_prompt(bundle, news_contexts, mode, self._get_max_words(mode))
+
+        llm_content = None
+        retry_count = 0
+        total_duration = 0.0
+        final_result = None
+        final_validation = None
+
+        for val_attempt in range(2):
+            for api_attempt in range(self.config.max_retries + 1):
+                try:
+                    start = time.time()
+                    raw_response = self._call_openrouter(system_prompt, user_prompt)
+                    total_duration += time.time() - start
+                    llm_content = self._parse_llm_response(raw_response, news_contexts)
+                    break
+                except Exception as e:
+                    retry_count += 1
+                    if api_attempt == self.config.max_retries:
+                        # LLM call failed completely - use fallback
+                        logger.error(f"LLM generation failed after retries: {e}")
+                        fallback = self._build_fallback_message(bundle, news_contexts, mode)
+                        fallback_validation = ValidationResult(
+                            is_valid=False,
+                            errors=[f"LLM generation failed: {e}"],
+                            sections_valid=True,
+                            bullet_counts_valid=True,
+                            no_hallucinations=True,
+                            formatting_valid=True,
+                        )
+                        return fallback, fallback_validation
+
+            escaped, raw = render_message(bundle, news_contexts, llm_content, True)
+            candidate = GeneratorResult(
+                message=escaped,
+                message_raw=raw,
+                word_count=count_words(llm_content.narrative),
+                sources_count=len(llm_content.referenced_item_ids),
+                has_spotlight=bundle.spotlight is not None,
+                model=self.config.model,
+                generation_mode=mode,
+                generated_at=datetime.now(timezone.utc),
+                retry_count=retry_count,
+                llm_duration_seconds=total_duration,
+            )
+
+            val = self.validator.validate(candidate, bundle)
+            if val.is_valid:
+                final_result = candidate
+                final_validation = val
+                break
+            else:
+                if val_attempt == 0:
+                    # First validation failed - retry with corrective prompt
+                    user_prompt += f"\n\nValidation errors to fix: {', '.join(val.errors)}"
+                    user_prompt += "\nPlease regenerate the content fixing these issues. Do not add any facts not in the provided data."
+                    retry_count += 1
+                    logger.warning(f"Validation failed, retrying: {val.errors}")
+                else:
+                    # Second validation also failed - use fallback
+                    logger.error(f"Validation failed after retry: {val.errors}")
+                    final_result = self._build_fallback_message(bundle, news_contexts, mode)
+                    final_validation = val
+                    break
+
+        # Ensure we always have a result (should never reach here without assignment)
+        if final_result is None or final_validation is None:
+            # This is a defensive fallback - should not happen in normal flow
+            final_result = self._build_fallback_message(bundle, news_contexts, mode)
+            final_validation = ValidationResult(
+                is_valid=False,
+                errors=["Unexpected generation flow - using fallback"],
+            )
+
+        return final_result, final_validation
+
+
+def generate_message(
+    bundle: FactsBundle,
+    config: Optional[GeneratorConfig] = None,
+    constraints: Optional[ConstraintsConfig] = None,
+    mode: Optional[GenerationMode] = None,
+) -> tuple[GeneratorResult, ValidationResult]:
+    """Convenience function to generate a message.
+
+    Returns:
+        Tuple of (GeneratorResult, ValidationResult).
+    """
+    if config is None:
+        config = GeneratorConfig()
+    with MessageGenerator(config, constraints) as gen:
+        return gen.generate(bundle, mode)

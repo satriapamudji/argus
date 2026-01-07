@@ -14,10 +14,12 @@ from argus.enrichment.extractors.base import BaseExtractor, ExtractedArticle
 from argus.enrichment.extractors.cnbc import CNBCExtractor
 from argus.enrichment.extractors.generic import GenericExtractor
 from argus.enrichment.extractors.nasdaq import NasdaqExtractor
+from argus.enrichment.extractors.newspaper import NewspaperExtractor
 
 __all__ = [
     "BaseExtractor",
     "ExtractedArticle",
+    "NewspaperExtractor",
     "CNBCExtractor",
     "NasdaqExtractor",
     "GenericExtractor",
@@ -25,11 +27,14 @@ __all__ = [
 ]
 
 # Extractor registry - order matters!
-# First match wins, Generic is the fallback (always returns True for can_handle)
+# NewspaperExtractor is primary (uses newspaper4k + common patterns)
+# Site-specific extractors are fallbacks if newspaper4k fails
+# GenericExtractor is last resort
 _EXTRACTORS: list[BaseExtractor] = [
-    CNBCExtractor(),
-    NasdaqExtractor(),
-    GenericExtractor(),  # Must be last - handles everything
+    NewspaperExtractor(),  # Primary: newspaper4k + common metadata patterns
+    CNBCExtractor(),  # Fallback for CNBC if newspaper fails
+    NasdaqExtractor(),  # Fallback for Nasdaq if newspaper fails
+    GenericExtractor(),  # Last resort - lxml heuristics
 ]
 
 

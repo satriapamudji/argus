@@ -889,3 +889,73 @@ def get_scored_items_for_bundle(
         )
 
     return results
+
+
+# =============================================================================
+# Message repository functions
+# =============================================================================
+
+
+def get_message_by_id(conn: Connection, message_id: int) -> Optional[MessageRow]:
+    """Get a message by ID.
+
+    Args:
+        conn: Database connection.
+        message_id: ID of the message to fetch.
+
+    Returns:
+        MessageRow if found, None otherwise.
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM messages WHERE id = %s", (message_id,))
+        row = cur.fetchone()
+
+        if row:
+            return MessageRow.from_row(row)
+        return None
+
+
+def get_messages_by_run_id(conn: Connection, run_id: int) -> list[MessageRow]:
+    """Get all messages for a run.
+
+    Args:
+        conn: Database connection.
+        run_id: ID of the run.
+
+    Returns:
+        List of MessageRow objects.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM messages WHERE run_id = %s ORDER BY created_at",
+            (run_id,),
+        )
+        rows = cur.fetchall()
+
+    return [MessageRow.from_row(row) for row in rows]
+
+
+def get_pending_messages(conn: Connection, limit: int = 10) -> list[MessageRow]:
+    """Get messages with pending publish status.
+
+    Args:
+        conn: Database connection.
+        limit: Maximum number of messages to return.
+
+    Returns:
+        List of MessageRow objects with publish_status='pending'.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT * FROM messages 
+            WHERE publish_status = 'pending' 
+                AND validation_status IN ('valid', 'fallback')
+            ORDER BY created_at
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        rows = cur.fetchall()
+
+    return [MessageRow.from_row(row) for row in rows]

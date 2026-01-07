@@ -13,6 +13,9 @@ from argus.adapters.calendar import (
     TradingDayInfo,
     create_catalyst,
 )
+from argus.adapters.economic_calendar import (
+    EconomicCalendarAdapter,
+)
 
 __all__ = [
     "CrossAssetMetrics",
@@ -24,4 +27,5 @@ __all__ = [
     "MarketCalendarAdapter",
     "TradingDayInfo",
     "create_catalyst",
+    "EconomicCalendarAdapter",
 ]

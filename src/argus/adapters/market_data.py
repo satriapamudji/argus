@@ -14,6 +14,30 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
+class HistoricalMetrics:
+    """Historical market metrics for risk score calculation.
+
+    Contains multi-day data needed to calculate market_score component
+    of the risk score formula.
+
+    Attributes:
+        vix_current: Current VIX level.
+        sp500_5d_return_pct: S&P 500 5-day return percentage.
+        us10y_5d_move_bps: US 10Y yield 5-day absolute move in basis points.
+        data_start: Start date of the historical window.
+        data_end: End date of the historical window.
+        fetched_at: When this data was fetched.
+    """
+
+    vix_current: Optional[Decimal] = None
+    sp500_5d_return_pct: Optional[Decimal] = None
+    us10y_5d_move_bps: Optional[Decimal] = None
+    data_start: Optional[date] = None
+    data_end: Optional[date] = None
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass(frozen=True)
 class IndexSnapshot:
     """Snapshot of a single market index.
 
@@ -331,5 +355,105 @@ class MarketDataProvider:
             dow=dow,
             nasdaq=nasdaq,
             cross_assets=cross_assets,
+            fetched_at=now,
+        )
+
+    def fetch_historical(self, days: int = 7) -> HistoricalMetrics:
+        """Fetch historical market data for risk score calculation.
+
+        Fetches multi-day data to calculate:
+        - Current VIX level
+        - S&P 500 5-day return
+        - US 10Y yield 5-day absolute move
+
+        Args:
+            days: Number of days of history to fetch (default 7 for buffer).
+
+        Returns:
+            HistoricalMetrics with available data.
+
+        Note:
+            Missing data is tolerated - fields will be None if unavailable.
+            The risk score calculator should handle None gracefully.
+        """
+        yf = self._get_yfinance()
+        now = datetime.now(timezone.utc)
+
+        # We need at least 5 trading days, fetch extra for buffer
+        period = f"{days}d"
+
+        vix_current: Optional[Decimal] = None
+        sp500_5d_return_pct: Optional[Decimal] = None
+        us10y_5d_move_bps: Optional[Decimal] = None
+        data_start: Optional[date] = None
+        data_end: Optional[date] = None
+
+        # Fetch VIX current level
+        try:
+            vix_ticker = yf.Ticker(CROSS_ASSET_SYMBOLS["vix"])  # type: ignore[attr-defined]
+            vix_hist = vix_ticker.history(period=period)
+
+            if not vix_hist.empty:
+                vix_current = Decimal(str(round(float(vix_hist["Close"].iloc[-1]), 2)))
+                logger.debug(f"VIX current: {vix_current}")
+        except Exception as e:
+            logger.warning(f"Failed to fetch VIX history: {e}")
+
+        # Fetch S&P 500 for 5-day return
+        try:
+            sp500_ticker = yf.Ticker(INDEX_SYMBOLS["sp500"][0])  # type: ignore[attr-defined]
+            sp500_hist = sp500_ticker.history(period=period)
+
+            if not sp500_hist.empty and len(sp500_hist) >= 5:
+                # 5-day return: (current - 5 days ago) / 5 days ago * 100
+                current_close = float(sp500_hist["Close"].iloc[-1])
+                close_5d_ago = float(sp500_hist["Close"].iloc[-6])  # -6 because -1 is today
+                return_pct = ((current_close - close_5d_ago) / close_5d_ago) * 100.0
+                sp500_5d_return_pct = Decimal(str(round(return_pct, 2)))
+
+                # Track data range
+                data_start = sp500_hist.index[0].date()
+                data_end = sp500_hist.index[-1].date()
+                logger.debug(f"S&P 500 5D return: {sp500_5d_return_pct}%")
+            elif not sp500_hist.empty and len(sp500_hist) >= 2:
+                # Less than 5 days available, use what we have
+                current_close = float(sp500_hist["Close"].iloc[-1])
+                oldest_close = float(sp500_hist["Close"].iloc[0])
+                return_pct = ((current_close - oldest_close) / oldest_close) * 100.0
+                sp500_5d_return_pct = Decimal(str(round(return_pct, 2)))
+                data_start = sp500_hist.index[0].date()
+                data_end = sp500_hist.index[-1].date()
+                logger.debug(f"S&P 500 {len(sp500_hist)}D return (partial): {sp500_5d_return_pct}%")
+        except Exception as e:
+            logger.warning(f"Failed to fetch S&P 500 history: {e}")
+
+        # Fetch US 10Y yield for 5-day move
+        try:
+            us10y_ticker = yf.Ticker(CROSS_ASSET_SYMBOLS["us10y"])  # type: ignore[attr-defined]
+            us10y_hist = us10y_ticker.history(period=period)
+
+            if not us10y_hist.empty and len(us10y_hist) >= 5:
+                # 5-day absolute move in basis points
+                current_yield = float(us10y_hist["Close"].iloc[-1])
+                yield_5d_ago = float(us10y_hist["Close"].iloc[-6])
+                move_bps = abs(current_yield - yield_5d_ago) * 100.0  # Convert to bps
+                us10y_5d_move_bps = Decimal(str(round(move_bps, 1)))
+                logger.debug(f"US 10Y 5D move: {us10y_5d_move_bps} bps")
+            elif not us10y_hist.empty and len(us10y_hist) >= 2:
+                # Less than 5 days available
+                current_yield = float(us10y_hist["Close"].iloc[-1])
+                oldest_yield = float(us10y_hist["Close"].iloc[0])
+                move_bps = abs(current_yield - oldest_yield) * 100.0
+                us10y_5d_move_bps = Decimal(str(round(move_bps, 1)))
+                logger.debug(f"US 10Y {len(us10y_hist)}D move (partial): {us10y_5d_move_bps} bps")
+        except Exception as e:
+            logger.warning(f"Failed to fetch US 10Y history: {e}")
+
+        return HistoricalMetrics(
+            vix_current=vix_current,
+            sp500_5d_return_pct=sp500_5d_return_pct,
+            us10y_5d_move_bps=us10y_5d_move_bps,
+            data_start=data_start,
+            data_end=data_end,
             fetched_at=now,
         )

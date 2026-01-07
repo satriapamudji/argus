@@ -21,7 +21,7 @@ from argus.adapters.market_data import (
     IndexSnapshot,
     MarketDataProvider,
 )
-from argus.config import ArgusConfig, SpotlightConfig
+from argus.config import ArgusConfig, EconomicCalendarConfig, SpotlightConfig
 from argus.db.connection import get_connection
 from argus.facts_bundle.schema import BUNDLE_SCHEMA_VERSION, validate_bundle
 from argus.facts_bundle.selector import BundleSelector
@@ -53,6 +53,7 @@ class BundleBuilderConfig:
     enriched_bonus: int = 5
     include_cross_assets: bool = False
     spotlight: Optional[SpotlightConfig] = None
+    economic_calendar: Optional[EconomicCalendarConfig] = None
 
     @classmethod
     def from_argus_config(
@@ -71,11 +72,16 @@ class BundleBuilderConfig:
         if config.stream.spotlight.enabled:
             spotlight = config.stream.spotlight
 
+        economic_calendar = None
+        if config.stream.economic_calendar.enabled:
+            economic_calendar = config.stream.economic_calendar
+
         return cls(
             stream_name=config.stream.name,
             run_mode=run_mode,
             window_hours=config.stream.scoring.window_hours,
             spotlight=spotlight,
+            economic_calendar=economic_calendar,
         )
 
 
@@ -204,15 +210,36 @@ class FactsBundleBuilder:
             cross_assets=self._convert_cross_assets(snapshot.cross_assets),
         )
 
-    def _get_calendar_events(self) -> tuple[CalendarEventBundle, ...]:
+    def _get_calendar_events(self, conn: Connection) -> tuple[CalendarEventBundle, ...]:
         """Get calendar events for the bundle.
 
+        Uses EconomicCalendarAdapter to fetch upcoming events from the database.
+        Auto-refreshes from ForexFactory if data is stale.
+
+        Args:
+            conn: Database connection.
+
         Returns:
-            Empty tuple for now (placeholder for calendar adapter).
+            Tuple of CalendarEventBundle for upcoming events.
         """
-        # TODO: Implement calendar adapter integration
-        # For now, return empty list as per spec decision
-        return tuple()
+        if self.config.economic_calendar is None:
+            logger.debug("Economic calendar not configured")
+            return tuple()
+
+        try:
+            from argus.adapters.economic_calendar import EconomicCalendarAdapter
+
+            adapter = EconomicCalendarAdapter(
+                conn=conn,
+                config=self.config.economic_calendar,
+            )
+            events = adapter.get_upcoming_events(auto_refresh=True)
+            logger.info(f"Fetched {len(events)} economic calendar events")
+            return tuple(events)
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch economic calendar events: {e}")
+            return tuple()
 
     def _build_spotlight(self) -> Optional[SpotlightBundle]:
         """Build spotlight if configured.
@@ -284,8 +311,8 @@ class FactsBundleBuilder:
             market_snapshot = self._fetch_market_snapshot(trading_date)
             logger.info(f"Fetched market snapshot for {trading_date}")
 
-            # 3. Get calendar events (placeholder)
-            calendar_events = self._get_calendar_events()
+            # 3. Get calendar events
+            calendar_events = self._get_calendar_events(conn)
             stats.calendar_events = len(calendar_events)
 
             # 4. Build spotlight if configured

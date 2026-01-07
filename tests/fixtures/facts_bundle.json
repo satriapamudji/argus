@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "stream_name": "us_close_basic",
+  "run_mode": "us_close",
+  "generated_at": "2026-01-06T22:00:00+00:00",
+  "trading_date": "2026-01-06",
+  "market_snapshot": {
+    "trading_date": "2026-01-06",
+    "sp500": {
+      "name": "S&P 500",
+      "symbol": "^GSPC",
+      "level": "6902.05",
+      "change_1d_pct": "0.64",
+      "change_1d_pts": "43.58"
+    },
+    "dow": {
+      "name": "Dow Jones",
+      "symbol": "^DJI",
+      "level": "48977.18",
+      "change_1d_pct": "1.23",
+      "change_1d_pts": "594.79"
+    },
+    "nasdaq": {
+      "name": "Nasdaq",
+      "symbol": "^IXIC",
+      "level": "23395.82",
+      "change_1d_pct": "0.69",
+      "change_1d_pts": "160.10"
+    },
+    "cross_assets": {
+      "vix_level": "18.50",
+      "vix_change_pct": "-2.10",
+      "gold_level": "2045.30",
+      "gold_change_pct": "1.20"
+    }
+  },
+  "news_items": [
+    {
+      "id": 1,
+      "title": "U.S. officials discuss potential Venezuela energy investment framework",
+      "source_name": "Reuters",
+      "source_url": "https://example.com/article-1",
+      "published_at": "2026-01-06T14:30:00+00:00",
+      "snippet": "U.S. officials are exploring potential investment and security arrangements tied to Venezuela's oil sector, according to sources familiar with the matter.",
+      "content_excerpt": "The Biden administration is reportedly in discussions about a framework that would allow American companies to invest in Venezuela's struggling oil industry. The move comes amid efforts to stabilize global energy markets and reduce reliance on Russian oil imports.",
+      "topic": "geopolitics",
+      "impact_score": 85
+    },
+    {
+      "id": 2,
+      "title": "Gold jumps as investors seek hedges amid geopolitical uncertainty",
+      "source_name": "Bloomberg",
+      "source_url": "https://example.com/article-2",
+      "published_at": "2026-01-06T16:00:00+00:00",
+      "snippet": "Gold prices surged as investors sought safe-haven assets amid rising geopolitical tensions and mixed economic signals.",
+      "content_excerpt": "Spot gold climbed 1.2% to $2,045.30 an ounce as traders positioned for potential volatility. The move suggests investors are adopting a 'risk-on with protection' stance rather than pure risk appetite.",
+      "topic": "commodities",
+      "impact_score": 75
+    },
+    {
+      "id": 3,
+      "title": "Chip gains offset software weakness as market leadership rotates",
+      "source_name": "CNBC",
+      "source_url": "https://example.com/article-3",
+      "published_at": "2026-01-06T20:00:00+00:00",
+      "snippet": "Semiconductor stocks led tech higher while software names lagged, pointing to a more selective market environment.",
+      "content_excerpt": "The Philadelphia Semiconductor Index rose 1.8% as AI-related chipmakers extended their rally. Meanwhile, high-multiple software stocks faced pressure as investors rotated toward companies with stronger near-term cash flow visibility.",
+      "topic": "earnings",
+      "impact_score": 70
+    }
+  ],
+  "calendar_events": [
+    {
+      "name": "US CPI (Dec)",
+      "timestamp_utc": "2026-01-08T13:30:00+00:00",
+      "event_type": "economic",
+      "formatted_display": "08 Jan, 13:30 UTC: US CPI (Dec)"
+    },
+    {
+      "name": "Housing Starts",
+      "timestamp_utc": "2026-01-10T21:00:00+00:00",
+      "event_type": "economic",
+      "formatted_display": "10 Jan, 21:00 UTC: Housing Starts"
+    }
+  ],
+  "spotlight": null
+}

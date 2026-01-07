@@ -190,6 +190,32 @@ class SpotlightConfig:
 
 
 @dataclass
+class GeneratorConfig:
+    """Generator LLM configuration.
+
+    Controls the message generation using OpenRouter API.
+
+    Attributes:
+        enabled: Whether generation is enabled.
+        model: OpenRouter model identifier (e.g., "openai/gpt-4.1").
+        temperature: LLM temperature (0-1). Lower = more deterministic.
+        max_retries: Number of retries on LLM failure.
+        timeout_seconds: HTTP timeout for LLM API calls.
+    """
+
+    enabled: bool = True
+    model: str = "openai/gpt-4.1"
+    temperature: float = 0.4
+    max_retries: int = 1
+    timeout_seconds: int = 60
+
+    @property
+    def openrouter_api_key(self) -> str:
+        """Get OpenRouter API key from environment."""
+        return os.getenv("OPENROUTER_API_KEY", "")
+
+
+@dataclass
 class EconomicCalendarConfig:
     """Economic calendar configuration.
 
@@ -214,6 +240,102 @@ class EconomicCalendarConfig:
 
 
 @dataclass
+class HolidayBehaviorConfig:
+    """Holiday and half-day behavior configuration.
+
+    Controls how the orchestrator handles market holidays and early close days.
+
+    Attributes:
+        holiday_behavior: What to do on full market holidays.
+            - "skip": Skip the run entirely (default).
+            - "publish_closed_note": Publish a "markets closed" note.
+        half_day_behavior: What to do on early close / half days.
+            - "label_half_day": Include a label in the message (default).
+            - "skip": Skip the run entirely.
+    """
+
+    holiday_behavior: str = "skip"
+    half_day_behavior: str = "label_half_day"
+
+    def __post_init__(self) -> None:
+        """Validate behavior values."""
+        valid_holiday = {"skip", "publish_closed_note"}
+        valid_half_day = {"label_half_day", "skip"}
+
+        if self.holiday_behavior not in valid_holiday:
+            raise ValueError(
+                f"Invalid holiday_behavior: {self.holiday_behavior}. "
+                f"Must be one of: {valid_holiday}"
+            )
+        if self.half_day_behavior not in valid_half_day:
+            raise ValueError(
+                f"Invalid half_day_behavior: {self.half_day_behavior}. "
+                f"Must be one of: {valid_half_day}"
+            )
+
+
+@dataclass
+class DaemonConfig:
+    """Daemon scheduler configuration.
+
+    Controls the long-running daemon mode with internal scheduling.
+
+    Attributes:
+        enabled: Whether daemon mode is available.
+        health_port: Port for health endpoint (0 to disable).
+        health_bind: Address to bind health endpoint to.
+        retention_hour: Hour (UTC) to run retention cleanup.
+        jobs_enabled: Dict of job_id -> enabled status.
+        missed_policy: Dict of job_id -> policy ('run_immediately' or 'skip').
+    """
+
+    enabled: bool = True
+    health_port: int = 8080
+    health_bind: str = "127.0.0.1"
+    retention_hour: int = 3
+    jobs_enabled: dict[str, bool] = field(
+        default_factory=lambda: {
+            "ingest": True,
+            "us_close": True,
+            "weekend_wrap": True,
+            "monday_preview": True,
+            "retention": True,
+        }
+    )
+    missed_policy: dict[str, str] = field(
+        default_factory=lambda: {
+            "ingest": "run_immediately",
+            "retention": "run_immediately",
+            "us_close": "skip",
+            "weekend_wrap": "skip",
+            "monday_preview": "skip",
+        }
+    )
+
+    def is_job_enabled(self, job_id: str) -> bool:
+        """Check if a job is enabled.
+
+        Args:
+            job_id: Job identifier.
+
+        Returns:
+            True if job is enabled, False otherwise.
+        """
+        return self.jobs_enabled.get(job_id, True)
+
+    def get_missed_policy(self, job_id: str) -> str:
+        """Get the missed job policy.
+
+        Args:
+            job_id: Job identifier.
+
+        Returns:
+            Policy string ('run_immediately' or 'skip').
+        """
+        return self.missed_policy.get(job_id, "skip")
+
+
+@dataclass
 class StreamConfig:
     """Stream configuration."""
 
@@ -229,7 +351,9 @@ class StreamConfig:
     rss: RSSConfig = field(default_factory=RSSConfig)
     constraints: ConstraintsConfig = field(default_factory=ConstraintsConfig)
     spotlight: SpotlightConfig = field(default_factory=SpotlightConfig)
+    generator: GeneratorConfig = field(default_factory=GeneratorConfig)
     economic_calendar: EconomicCalendarConfig = field(default_factory=EconomicCalendarConfig)
+    holiday_behavior: HolidayBehaviorConfig = field(default_factory=HolidayBehaviorConfig)
 
 
 @dataclass
@@ -237,6 +361,7 @@ class ArgusConfig:
     """Main Argus configuration."""
 
     stream: StreamConfig = field(default_factory=StreamConfig)
+    daemon: DaemonConfig = field(default_factory=DaemonConfig)
     log_level: str = "INFO"
 
     @classmethod
@@ -264,18 +389,31 @@ class ArgusConfig:
             raw_config = {}
 
         # Build stream config from YAML
+        # Support both root-level defaults and stream-level overrides
+        # Priority: stream-level > root-level > code defaults
         stream_raw = raw_config.get("stream", {})
-        telegram_raw = stream_raw.get("telegram", {})
-        schedule_raw = stream_raw.get("schedule", {})
-        monday_preview_raw = stream_raw.get("monday_preview", {})
-        retention_raw = stream_raw.get("retention", {})
-        dedupe_raw = stream_raw.get("dedupe", {})
-        enrichment_raw = stream_raw.get("enrichment", {})
-        scoring_raw = stream_raw.get("scoring", {})
-        rss_raw = stream_raw.get("rss", {})
-        constraints_raw = stream_raw.get("constraints", {})
-        spotlight_raw = stream_raw.get("spotlight", {})
-        economic_calendar_raw = stream_raw.get("economic_calendar", {})
+
+        def merge_config(key: str) -> dict:
+            """Get config with root-level defaults and stream-level overrides."""
+            root = raw_config.get(key, {})
+            stream = stream_raw.get(key, {})
+            # Merge: stream overrides root
+            merged = {**root, **stream}
+            return merged
+
+        telegram_raw = merge_config("telegram")
+        schedule_raw = merge_config("schedule")
+        monday_preview_raw = merge_config("monday_preview")
+        retention_raw = merge_config("retention")
+        dedupe_raw = merge_config("dedupe")
+        enrichment_raw = merge_config("enrichment")
+        scoring_raw = merge_config("scoring")
+        rss_raw = merge_config("rss")
+        constraints_raw = merge_config("constraints")
+        spotlight_raw = merge_config("spotlight")
+        generator_raw = merge_config("generator")
+        economic_calendar_raw = merge_config("economic_calendar")
+        holiday_behavior_raw = merge_config("holiday_behavior")
 
         # Parse nested configs
         telegram = TelegramConfig(
@@ -368,6 +506,14 @@ class ArgusConfig:
             disclaimer=spotlight_raw.get("disclaimer", ""),
         )
 
+        generator = GeneratorConfig(
+            enabled=generator_raw.get("enabled", True),
+            model=generator_raw.get("model", "openai/gpt-4.1"),
+            temperature=generator_raw.get("temperature", 0.4),
+            max_retries=generator_raw.get("max_retries", 1),
+            timeout_seconds=generator_raw.get("timeout_seconds", 60),
+        )
+
         economic_calendar = EconomicCalendarConfig(
             enabled=economic_calendar_raw.get("enabled", True),
             feed_url=economic_calendar_raw.get(
@@ -377,6 +523,11 @@ class ArgusConfig:
             impact_filter=economic_calendar_raw.get("impact_filter", ["High"]),
             lookahead_days=economic_calendar_raw.get("lookahead_days", 7),
             stale_hours=economic_calendar_raw.get("stale_hours", 12),
+        )
+
+        holiday_behavior = HolidayBehaviorConfig(
+            holiday_behavior=holiday_behavior_raw.get("holiday_behavior", "skip"),
+            half_day_behavior=holiday_behavior_raw.get("half_day_behavior", "label_half_day"),
         )
 
         stream = StreamConfig(
@@ -392,12 +543,40 @@ class ArgusConfig:
             rss=rss,
             constraints=constraints,
             spotlight=spotlight,
+            generator=generator,
             economic_calendar=economic_calendar,
+            holiday_behavior=holiday_behavior,
+        )
+
+        # Parse daemon config
+        daemon_raw = raw_config.get("daemon", {})
+        jobs_enabled_raw = daemon_raw.get("jobs_enabled", {})
+        missed_policy_raw = daemon_raw.get("missed_policy", {})
+
+        daemon = DaemonConfig(
+            enabled=daemon_raw.get("enabled", True),
+            health_port=daemon_raw.get("health_port", 8080),
+            health_bind=daemon_raw.get("health_bind", "127.0.0.1"),
+            retention_hour=daemon_raw.get("retention_hour", 3),
+            jobs_enabled={
+                "ingest": jobs_enabled_raw.get("ingest", True),
+                "us_close": jobs_enabled_raw.get("us_close", True),
+                "weekend_wrap": jobs_enabled_raw.get("weekend_wrap", True),
+                "monday_preview": jobs_enabled_raw.get("monday_preview", True),
+                "retention": jobs_enabled_raw.get("retention", True),
+            },
+            missed_policy={
+                "ingest": missed_policy_raw.get("ingest", "run_immediately"),
+                "retention": missed_policy_raw.get("retention", "run_immediately"),
+                "us_close": missed_policy_raw.get("us_close", "skip"),
+                "weekend_wrap": missed_policy_raw.get("weekend_wrap", "skip"),
+                "monday_preview": missed_policy_raw.get("monday_preview", "skip"),
+            },
         )
 
         log_level = raw_config.get("log_level", "INFO")
 
-        return cls(stream=stream, log_level=log_level)
+        return cls(stream=stream, daemon=daemon, log_level=log_level)
 
     def get_rss_feeds(self) -> list[str]:
         """Get list of RSS feed URLs from allowlist files.

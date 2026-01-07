@@ -10,6 +10,7 @@ from argus.enrichment.extractors import (
     CNBCExtractor,
     NasdaqExtractor,
     GenericExtractor,
+    NewspaperExtractor,
     ExtractedArticle,
 )
 
@@ -21,32 +22,108 @@ NASDAQ_HTML_PATH = FIXTURES_DIR / "nasdaq.html"
 
 
 class TestGetExtractor:
-    """Tests for the get_extractor registry function."""
+    """Tests for the get_extractor registry function.
 
-    def test_cnbc_url_returns_cnbc_extractor(self) -> None:
-        """CNBC URLs should return CNBCExtractor."""
+    Note: NewspaperExtractor is now the primary extractor for all URLs.
+    Site-specific extractors (CNBC, Nasdaq) are kept as fallbacks but
+    NewspaperExtractor handles everything first.
+    """
+
+    def test_all_urls_return_newspaper_extractor(self) -> None:
+        """All URLs should return NewspaperExtractor as primary."""
         extractor = get_extractor("https://www.cnbc.com/2026/01/06/some-article.html")
-        assert isinstance(extractor, CNBCExtractor)
+        assert isinstance(extractor, NewspaperExtractor)
 
-    def test_cnbc_url_with_subdomain(self) -> None:
-        """CNBC subdomains should also return CNBCExtractor."""
-        extractor = get_extractor("https://news.cnbc.com/article/12345")
-        assert isinstance(extractor, CNBCExtractor)
-
-    def test_nasdaq_url_returns_nasdaq_extractor(self) -> None:
-        """Nasdaq URLs should return NasdaqExtractor."""
         extractor = get_extractor("https://www.nasdaq.com/articles/gold-advances")
-        assert isinstance(extractor, NasdaqExtractor)
+        assert isinstance(extractor, NewspaperExtractor)
 
-    def test_unknown_url_returns_generic_extractor(self) -> None:
-        """Unknown URLs should fall back to GenericExtractor."""
         extractor = get_extractor("https://www.reuters.com/article/12345")
-        assert isinstance(extractor, GenericExtractor)
+        assert isinstance(extractor, NewspaperExtractor)
 
-    def test_malformed_url_returns_generic_extractor(self) -> None:
-        """Malformed URLs should fall back to GenericExtractor."""
+    def test_newspaper_extractor_handles_any_url(self) -> None:
+        """NewspaperExtractor should handle any URL including malformed ones."""
         extractor = get_extractor("not-a-valid-url")
-        assert isinstance(extractor, GenericExtractor)
+        assert isinstance(extractor, NewspaperExtractor)
+
+    def test_newspaper_extractor_can_handle_returns_true(self) -> None:
+        """NewspaperExtractor.can_handle() should return True for any URL."""
+        extractor = NewspaperExtractor()
+        assert extractor.can_handle("https://www.cnbc.com/article")
+        assert extractor.can_handle("https://www.reuters.com/article")
+        assert extractor.can_handle("not-a-url")
+
+
+class TestNewspaperExtractor:
+    """Tests for NewspaperExtractor (primary universal extractor)."""
+
+    @pytest.fixture
+    def extractor(self) -> NewspaperExtractor:
+        return NewspaperExtractor()
+
+    def test_can_handle_any_url(self, extractor: NewspaperExtractor) -> None:
+        """NewspaperExtractor should handle any URL."""
+        assert extractor.can_handle("https://www.example.com/article")
+        assert extractor.can_handle("https://www.cnbc.com/article")
+        assert extractor.can_handle("not-a-url")
+
+    def test_extract_empty_html_returns_none(self, extractor: NewspaperExtractor) -> None:
+        """Extract should return None for empty HTML."""
+        assert extractor.extract("", "https://example.com/test") is None
+        assert extractor.extract("   ", "https://example.com/test") is None
+
+    def test_extract_basic_article(self, extractor: NewspaperExtractor) -> None:
+        """Extract should handle basic HTML articles."""
+        html = """
+        <html>
+        <body>
+            <article>
+                <p>This is the article content with enough text to pass the minimum threshold.</p>
+                <p>More content here to ensure we have substantial text for extraction.</p>
+                <p>Additional paragraphs help ensure the content is long enough.</p>
+            </article>
+        </body>
+        </html>
+        """
+        result = extractor.extract(html, "https://example.com/test")
+        assert result is not None
+        assert len(result.content) > 50
+
+    def test_extract_with_author_class(self, extractor: NewspaperExtractor) -> None:
+        """Extract should find author from common class patterns."""
+        html = """
+        <html>
+        <body>
+            <span class="author-name">John Doe</span>
+            <article>
+                <p>This is the article content with enough text to pass the minimum threshold.</p>
+                <p>More content here to ensure we have substantial text for extraction.</p>
+            </article>
+        </body>
+        </html>
+        """
+        result = extractor.extract(html, "https://example.com/test")
+        assert result is not None
+        assert result.author == "John Doe"
+
+    def test_extract_with_time_datetime(self, extractor: NewspaperExtractor) -> None:
+        """Extract should find date from time[@datetime] element."""
+        html = """
+        <html>
+        <body>
+            <time datetime="2026-01-06T14:30:00+00:00">January 6, 2026</time>
+            <article>
+                <p>This is the article content with enough text to pass the minimum threshold.</p>
+                <p>More content here to ensure we have substantial text for extraction.</p>
+            </article>
+        </body>
+        </html>
+        """
+        result = extractor.extract(html, "https://example.com/test")
+        assert result is not None
+        assert result.published_at is not None
+        assert result.published_at.year == 2026
+        assert result.published_at.month == 1
+        assert result.published_at.day == 6
 
 
 class TestCNBCExtractor:

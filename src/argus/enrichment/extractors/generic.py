@@ -6,9 +6,7 @@ It uses the existing lxml-based extraction logic from the parent module.
 
 import logging
 from typing import Optional
-from urllib.parse import urlparse
 
-from lxml import html
 
 from argus.enrichment.extractor import extract_article_text
 from argus.enrichment.extractors.base import BaseExtractor, ExtractedArticle

@@ -62,3 +62,27 @@ spotlight:
   disclaimer: ""
 
 log_level: INFO
+
+# Daemon mode configuration (for VPS deployment with argus daemon start)
+daemon:
+  health_port: 8080
+  health_bind: "127.0.0.1"  # Localhost only - access via SSH tunnel
+  retention_hour: 3  # Daily retention cleanup at 03:00 UTC
+
+  # Enable/disable individual jobs
+  jobs_enabled:
+    ingest: true
+    us_close: true
+    weekend_wrap: true
+    monday_preview: true
+    retention: true
+
+  # Missed job policy: 'run_immediately' or 'skip'
+  # - run_immediately: Run the job if it was missed during downtime
+  # - skip: Wait for the next scheduled run
+  missed_policy:
+    ingest: run_immediately  # Always catch up on ingestion
+    retention: run_immediately  # Always catch up on cleanup
+    us_close: skip  # Don't send stale market updates
+    weekend_wrap: skip  # Don't send stale weekend wraps
+    monday_preview: skip  # Don't send stale monday previews
