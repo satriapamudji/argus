@@ -33,30 +33,37 @@ The orchestrator becomes a thin coordinator that calls providers resolved from c
 ## Configuration Changes (Per Stream)
 Extend `StreamConfig` in `src/argus/config.py` to include provider selectors.
 
-Example `config.yaml` (shape; exact names TBD):
+### Provider selector shape (nested)
+Selections live under a single `stream.providers` object.
+
+Example `config.yaml`:
 ```yaml
 stream:
   name: us_close_basic
   enabled: true
 
-  ingestion:
-    provider: rss
+  providers:
+    ingestion: rss
+    scoring: heuristic_v1
+    enrichment: fetch_extract
+    publisher: telegram
 
-  scoring:
-    provider: heuristic
-
-  enrichment:
-    provider: fetch_extract
-
-  publisher:
-    provider: telegram
+  # Provider-specific configs remain in their existing blocks.
+  # RSS ingestion uses EXACTLY ONE allowlist file per stream.
+  rss:
+    allowlist_files:
+      - "rss/us_close_basic.txt"
+    poll_interval_minutes: 10
 ```
 
-Defaults:
-- ingestion.provider = `rss`
-- scoring.provider = `heuristic`
-- enrichment.provider = `fetch_extract`
-- publisher.provider = `telegram`
+Defaults (preserve current behavior):
+- providers.ingestion = `rss`
+- providers.scoring = `heuristic_v1`
+- providers.enrichment = `fetch_extract`
+- providers.publisher = `telegram`
+
+Validation rule (ingestion):
+- If `providers.ingestion == "rss"`, require `stream.rss.allowlist_files` to contain **exactly 1** file path.
 
 ## New Code: Pipeline Provider Interfaces
 Create `src/argus/pipeline/` with:
@@ -79,7 +86,7 @@ Notes:
 - `get_enrichment_provider(stream_config) -> EnrichmentProvider`
 - `get_publisher_provider(stream_config) -> PublisherProvider`
 
-Registry chooses provider by `stream.<stage>.provider`.
+Registry chooses provider by `stream.providers.<stage>`.
 
 ## Provider Implementations (Adapters Around Existing Code)
 Create `src/argus/pipeline/providers/`:
@@ -136,26 +143,26 @@ Keep current CLI flags (`--skip-scoring`, `--skip-enrichment`, `--skip-publish`,
 - Avoid coupling provider interfaces to any legacy numeric `[n]` citation assumptions.
 
 ### Phase 1: Ingestion modularity
-1. Add config: `stream.ingestion.provider`
+1. Add config: `stream.providers.ingestion`
 2. Add interface + registry resolution for ingestion
 3. Implement `RSSIngestionProvider`
 4. Update orchestrator ingestion step to use provider
 5. Tests: registry + orchestrator calls ingestion provider when enabled
 
 ### Phase 2: Scoring modularity
-1. Add config: `stream.scoring.provider`
+1. Add config: `stream.providers.scoring`
 2. Interface + provider adapter `HeuristicScoringProvider`
 3. Update orchestrator scoring step
 4. Tests: scoring provider selection and invocation
 
 ### Phase 3: Enrichment modularity
-1. Add config: `stream.enrichment.provider`
+1. Add config: `stream.providers.enrichment`
 2. Adapter `FetchExtractEnrichmentProvider`
 3. Update orchestrator enrichment step
 4. Tests: enrichment provider selection and invocation
 
 ### Phase 4: Publisher modularity
-1. Add config: `stream.publisher.provider`
+1. Add config: `stream.providers.publisher`
 2. Adapter `TelegramPublisherProvider`
 3. Add `NullPublisherProvider`
 4. Update orchestrator publish step to use provider
@@ -187,5 +194,18 @@ Run existing suite:
 
 ## Open Questions (need decision before implementation)
 1) Provider naming convention:
-   - short (`rss`, `heuristic`, `fetch_extract`, `telegram`, `null`) vs namespaced (`ingestion.rss`, etc.)
-   - Recommendation: short, with per-stage namespace in config path already providing context.
+   - Use short keys under `stream.providers.*`.
+   - Initial provider keys (v1):
+     - `providers.ingestion`: `rss`
+     - `providers.scoring`: `heuristic_v1`
+     - `providers.enrichment`: `fetch_extract`
+     - `providers.publisher`: `telegram` | `null`
+
+2) Scoring provider evolution:
+   - `heuristic_v1` is the baseline.
+   - Future provider swaps should follow the same pattern (e.g., `heuristic_v2`) without changing orchestrator code.
+
+3) Ingestion allowlist constraint:
+   - For `providers.ingestion == "rss"`, enforce exactly one `stream.rss.allowlist_files` entry per stream.
+
+(If any of the above should differ, decide before implementing provider registry + orchestrator wiring.)

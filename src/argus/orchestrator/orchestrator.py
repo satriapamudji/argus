@@ -200,7 +200,7 @@ class RunOrchestrator:
             # Step 3: Optional ingestion
             if self.options.include_ingest:
                 self._timer.start("ingest")
-                self._run_ingestion()
+                self._run_ingestion(conn)
                 self._timer.stop()
 
             # Step 4: Optional scoring
@@ -290,17 +290,27 @@ class RunOrchestrator:
             if not self.options.skip_publish:
                 self._timer.start("publish")
                 try:
-                    telegram_msg_id = self._publish_message(message_content)
-                    result.telegram_message_id = telegram_msg_id
+                    from argus.pipeline.registry import get_publisher_provider
 
-                    update_message(
+                    provider = get_publisher_provider(self.config.stream)
+                    publish_result = provider.publish(
+                        config=self.config,
                         conn=conn,
                         message_id=message_row.id,
-                        publish_status="published",
-                        telegram_message_id=telegram_msg_id,
-                        published_at=datetime.now(timezone.utc),
+                        dry_run=self.options.dry_run,
+                        silent=False,
                     )
-                    logger.info(f"Published to Telegram: message_id={telegram_msg_id}")
+
+                    result.telegram_message_id = publish_result.telegram_message_id
+
+                    if self.config.stream.providers.publisher == "telegram":
+                        logger.info(
+                            f"Published to Telegram: message_id={publish_result.telegram_message_id}"
+                        )
+                    else:
+                        logger.info(
+                            f"Publishing skipped by provider: provider={self.config.stream.providers.publisher}"
+                        )
                 except Exception as e:
                     logger.error(f"Failed to publish: {e}")
                     update_message(
@@ -440,38 +450,43 @@ class RunOrchestrator:
             return HalfDayBehavior.SKIP
         return None
 
-    def _run_ingestion(self) -> None:
+    def _run_ingestion(self, conn: Connection) -> None:
         """Run ingestion step."""
-        from argus.ingestion import run_ingestion
+        from argus.pipeline.registry import get_ingestion_provider
 
         logger.info("Running ingestion...")
-        run_ingestion(self.config)
-        logger.info("Ingestion complete")
+        provider = get_ingestion_provider(self.config.stream)
+        stats = provider.run(config=self.config, conn=conn)
+        logger.info(
+            f"Ingestion complete: {stats.feeds_processed} feeds, {stats.entries_new} new, "
+            f"{stats.entries_duplicate} duplicates"
+        )
 
     def _run_scoring(self, conn: Connection) -> None:
         """Run scoring step."""
-        from argus.scoring.worker import ScoringWorker
+        from argus.pipeline.registry import get_scoring_provider
 
         logger.info("Running scoring...")
-        worker = ScoringWorker(
+        provider = get_scoring_provider(self.config.stream)
+        stats = provider.run(
             config=self.config,
             conn=conn,
             window_hours=self.config.stream.scoring.window_hours,
+            dry_run=self.options.dry_run,
         )
-        stats = worker.run()
         logger.info(f"Scoring complete: {stats.scored} items scored")
 
     def _run_enrichment(self, conn: Connection) -> None:
         """Run enrichment step."""
-        from argus.enrichment.worker import EnrichmentWorker
+        from argus.pipeline.registry import get_enrichment_provider
 
         logger.info("Running enrichment...")
-        worker = EnrichmentWorker(
+        provider = get_enrichment_provider(self.config.stream)
+        stats = provider.run(
             config=self.config,
             conn=conn,
             window_hours=self.config.stream.scoring.window_hours,
         )
-        stats = worker.run()
         logger.info(f"Enrichment complete: {stats.items_enriched} items enriched")
 
     def _build_facts_bundle(

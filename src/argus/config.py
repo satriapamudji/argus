@@ -338,11 +338,26 @@ class DaemonConfig:
 
 
 @dataclass
+class StreamProvidersConfig:
+    """Provider selection per pipeline stage.
+
+    These are selector keys used by the pipeline registry. Provider-specific
+    configuration stays in the existing config blocks (rss/scoring/enrichment/telegram).
+    """
+
+    ingestion: str = "rss"
+    scoring: str = "heuristic_v1"
+    enrichment: str = "fetch_extract"
+    publisher: str = "telegram"
+
+
+@dataclass
 class StreamConfig:
     """Stream configuration."""
 
     name: str = ""
     enabled: bool = True
+    providers: StreamProvidersConfig = field(default_factory=StreamProvidersConfig)
     telegram: TelegramConfig = field(default_factory=TelegramConfig)
     schedule: ScheduleConfig = field(default_factory=ScheduleConfig)
     monday_preview: MondayPreviewConfig = field(default_factory=MondayPreviewConfig)
@@ -394,6 +409,7 @@ class ArgusConfig:
         # Support both root-level defaults and stream-level overrides
         # Priority: stream-level > root-level > code defaults
         stream_raw = raw_config.get("stream", {})
+        providers_raw = stream_raw.get("providers", {})
 
         def merge_config(key: str) -> dict:
             """Get config with root-level defaults and stream-level overrides."""
@@ -416,6 +432,13 @@ class ArgusConfig:
         generator_raw = merge_config("generator")
         economic_calendar_raw = merge_config("economic_calendar")
         holiday_behavior_raw = merge_config("holiday_behavior")
+
+        providers = StreamProvidersConfig(
+            ingestion=providers_raw.get("ingestion", "rss"),
+            scoring=providers_raw.get("scoring", "heuristic_v1"),
+            enrichment=providers_raw.get("enrichment", "fetch_extract"),
+            publisher=providers_raw.get("publisher", "telegram"),
+        )
 
         # Parse nested configs
         telegram = TelegramConfig(
@@ -535,6 +558,7 @@ class ArgusConfig:
         stream = StreamConfig(
             name=stream_raw.get("name", "us_close_basic"),
             enabled=stream_raw.get("enabled", True),
+            providers=providers,
             telegram=telegram,
             schedule=schedule,
             monday_preview=monday_preview,
@@ -549,6 +573,9 @@ class ArgusConfig:
             economic_calendar=economic_calendar,
             holiday_behavior=holiday_behavior,
         )
+
+        # NOTE: provider-specific runtime validations should live in the provider itself
+        # (or the worker it wraps), not during config load.
 
         # Parse daemon config
         daemon_raw = raw_config.get("daemon", {})
