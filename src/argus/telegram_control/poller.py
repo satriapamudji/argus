@@ -110,6 +110,62 @@ def _format_countdown(now_utc: datetime, next_run: datetime) -> tuple[int, int]:
     return hours, minutes
 
 
+def _poll_iteration(
+    config: ArgusConfig,
+    cp: TelegramControlPlaneConfig,
+    api: TelegramBotApi,
+) -> bool:
+    """Run one iteration of the Telegram polling loop.
+
+    Returns True to continue polling, False to sleep before retry.
+    This is a blocking function meant to be run in an executor.
+    """
+    offset = None
+    try:
+        conn = get_connection()
+        try:
+            offset_raw = get_bot_state(conn, key=BOT_STATE_OFFSET_KEY)
+            offset = int(offset_raw) if offset_raw is not None else None
+        finally:
+            conn.close()
+    except Exception:
+        logger.exception("Failed reading telegram offset from DB")
+
+    updates = []
+    try:
+        updates = api.get_updates(offset=offset, timeout=30)
+    except (httpx.ReadTimeout, httpx.ConnectTimeout):
+        # Expected occasionally during long polling / transient network issues.
+        logger.warning("Telegram getUpdates timed out; continuing")
+        return True
+    except Exception:
+        logger.exception("Telegram getUpdates failed")
+        return False  # Signal to sleep before retry
+
+    max_update_id: Optional[int] = None
+    for upd in updates:
+        uid = upd.get("update_id")
+        if isinstance(uid, int):
+            max_update_id = uid if max_update_id is None else max(max_update_id, uid)
+
+        try:
+            _handle_update(config, cp, api, upd)
+        except Exception:
+            logger.exception("Error handling telegram update")
+
+    if max_update_id is not None:
+        try:
+            conn = get_connection()
+            try:
+                set_bot_state(conn, key=BOT_STATE_OFFSET_KEY, value=str(max_update_id + 1))
+            finally:
+                conn.close()
+        except Exception:
+            logger.exception("Failed persisting telegram offset")
+
+    return True
+
+
 async def run_telegram_control_plane(config: ArgusConfig) -> None:
     """Run Telegram polling loop until cancelled."""
 
@@ -127,53 +183,16 @@ async def run_telegram_control_plane(config: ArgusConfig) -> None:
         return
 
     api = TelegramBotApi(bot_token=bot_token)
+    loop = asyncio.get_event_loop()
 
     try:
         while True:
-            offset = None
-            try:
-                conn = get_connection()
-                try:
-                    offset_raw = get_bot_state(conn, key=BOT_STATE_OFFSET_KEY)
-                    offset = int(offset_raw) if offset_raw is not None else None
-                finally:
-                    conn.close()
-            except Exception:
-                logger.exception("Failed reading telegram offset from DB")
-
-            updates = []
-            try:
-                updates = api.get_updates(offset=offset, timeout=30)
-            except (httpx.ReadTimeout, httpx.ConnectTimeout):
-                # Expected occasionally during long polling / transient network issues.
-                logger.warning("Telegram getUpdates timed out; continuing")
-                continue
-            except Exception:
-                logger.exception("Telegram getUpdates failed")
+            # Run blocking poll iteration in executor to avoid blocking event loop
+            continue_immediately = await loop.run_in_executor(
+                None, _poll_iteration, config, cp, api
+            )
+            if not continue_immediately:
                 await asyncio.sleep(2)
-                continue
-
-            max_update_id: Optional[int] = None
-            for upd in updates:
-                uid = upd.get("update_id")
-                if isinstance(uid, int):
-                    max_update_id = uid if max_update_id is None else max(max_update_id, uid)
-
-                try:
-                    _handle_update(config, cp, api, upd)
-                except Exception:
-                    logger.exception("Error handling telegram update")
-
-            if max_update_id is not None:
-                try:
-                    conn = get_connection()
-                    try:
-                        set_bot_state(conn, key=BOT_STATE_OFFSET_KEY, value=str(max_update_id + 1))
-                    finally:
-                        conn.close()
-                except Exception:
-                    logger.exception("Failed persisting telegram offset")
-
     except asyncio.CancelledError:
         logger.info("Telegram control plane cancelled")
         raise

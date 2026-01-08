@@ -67,6 +67,7 @@ class HealthServer:
     async def start(self) -> None:
         """Start the health server."""
         self._app = web.Application()
+        self._app.router.add_get("/ping", self._handle_ping)
         self._app.router.add_get("/health", self._handle_health)
         self._app.router.add_get("/health/jobs/{job_id}/history", self._handle_job_history)
         self._app.router.add_post("/trigger/{job_id}", self._handle_trigger)
@@ -85,13 +86,19 @@ class HealthServer:
             await self._runner.cleanup()
             logger.info("Health server stopped")
 
+    async def _handle_ping(self, request: web.Request) -> web.Response:  # noqa: ARG002
+        """Handle GET /ping request. Simple liveness check."""
+        return web.Response(text="pong", content_type="text/plain")
+
     async def _handle_health(self, request: web.Request) -> web.Response:  # noqa: ARG002
         """Handle GET /health request.
 
         Returns overall daemon status and job information.
         """
         try:
-            status = self.daemon.get_status()
+            # Run blocking get_status() in executor to avoid blocking event loop
+            loop = asyncio.get_event_loop()
+            status = await loop.run_in_executor(None, self.daemon.get_status)
             response_data = self._serialize_status(status)
 
             return web.Response(
@@ -115,7 +122,9 @@ class HealthServer:
         limit = int(request.query.get("limit", "10"))
 
         try:
-            history = self.daemon.get_job_history(job_id, limit=limit)
+            # Run blocking get_job_history() in executor to avoid blocking event loop
+            loop = asyncio.get_event_loop()
+            history = await loop.run_in_executor(None, self.daemon.get_job_history, job_id, limit)
 
             response_data = {
                 "job_id": job_id,
