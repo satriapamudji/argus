@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from argus.config import ArgusConfig
@@ -31,6 +32,8 @@ from argus.telegram_control.commands import parse_command
 logger = logging.getLogger(__name__)
 
 BOT_STATE_OFFSET_KEY = "telegram_update_offset"
+# Stores a pending deny action started via inline button: {"rid": <int>}
+BOT_STATE_PENDING_DENY_KEY = "telegram_pending_deny"
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,44 @@ def _escape_md_v2(text: str) -> str:
         else:
             out.append(ch)
     return "".join(out)
+
+
+def _format_handle(from_username: str | None) -> str:
+    """Format a user handle for greetings.
+
+    Telegram `username` is without '@'. If missing, we fall back to a generic greeting.
+    We intentionally do not use `first_name` to keep greetings consistent across users.
+    """
+
+    if from_username:
+        return f"@{from_username}"
+    return "there"
+
+
+def _admin_access_request_keyboard(request_id: int) -> dict[str, Any]:
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "Approve", "callback_data": f"access:approve:{request_id}"},
+                {"text": "Deny", "callback_data": f"access:deny:{request_id}"},
+            ]
+        ]
+    }
+
+
+def _format_countdown(now_utc: datetime, next_run: datetime) -> tuple[int, int]:
+    """Return (hours, minutes) until next_run.
+
+    If next_run is in the past, clamps to (0, 0).
+    """
+
+    delta_seconds = int((next_run - now_utc).total_seconds())
+    if delta_seconds <= 0:
+        return 0, 0
+
+    hours = delta_seconds // 3600
+    minutes = (delta_seconds % 3600) // 60
+    return hours, minutes
 
 
 async def run_telegram_control_plane(config: ArgusConfig) -> None:
@@ -137,6 +178,12 @@ async def run_telegram_control_plane(config: ArgusConfig) -> None:
 def _handle_update(
     config: ArgusConfig, cp: TelegramControlPlaneConfig, api: TelegramBotApi, upd: dict[str, Any]
 ) -> None:
+    # Inline button callbacks
+    callback = upd.get("callback_query")
+    if isinstance(callback, dict):
+        _handle_callback_query(config, cp, api, callback)
+        return
+
     message = upd.get("message") or upd.get("edited_message")
     if not isinstance(message, dict):
         return
@@ -160,13 +207,18 @@ def _handle_update(
     )
 
     text = message.get("text") if isinstance(message.get("text"), str) else None
-    cmd = parse_command(text)
-    if cmd is None:
-        return
 
     conn = get_connection()
     try:
         upsert_chat(conn, chat_id=chat_id, chat_type=chat_type, chat_title=chat_title)
+
+        # Deny flow: if admin previously pressed Deny, treat next message as reason.
+        if chat_id == cp.admin_chat_id and from_user_id == cp.owner_user_id and text:
+            _maybe_handle_pending_deny_reason(conn, cp=cp, api=api, text=text)
+
+        cmd = parse_command(text)
+        if cmd is None:
+            return
 
         # Admin group commands
         if chat_id == cp.admin_chat_id:
@@ -197,6 +249,115 @@ def _handle_update(
         conn.close()
 
 
+def _handle_callback_query(
+    config: ArgusConfig,
+    cp: TelegramControlPlaneConfig,
+    api: TelegramBotApi,
+    callback: dict[str, Any],
+) -> None:
+    data = callback.get("data") if isinstance(callback.get("data"), str) else None
+    from_user_raw = callback.get("from")
+    from_user = from_user_raw if isinstance(from_user_raw, dict) else {}
+    from_user_id = from_user.get("id") if isinstance(from_user.get("id"), int) else None
+
+    message = callback.get("message") if isinstance(callback.get("message"), dict) else None
+    chat = message.get("chat") if isinstance(message, dict) else None
+    chat_id = chat.get("id") if isinstance(chat, dict) else None
+
+    if chat_id != cp.admin_chat_id:
+        return
+    if from_user_id != cp.owner_user_id:
+        return
+    if not data:
+        return
+
+    parts = data.split(":")
+    if len(parts) != 3 or parts[0] != "access":
+        return
+
+    action = parts[1]
+    try:
+        rid = int(parts[2])
+    except ValueError:
+        return
+
+    # Button clicks are only visible in the admin chat. We persist/act via DB.
+    conn = get_connection()
+    try:
+        if action == "approve":
+            target_chat_id = approve_access_request(
+                conn, request_id=rid, approved_by_user_id=cp.owner_user_id
+            )
+            if target_chat_id is None:
+                api.send_message(
+                    chat_id=cp.admin_chat_id,
+                    text=_escape_md_v2(f"Request A-{rid} not found/pending."),
+                )
+                return
+            api.send_message(chat_id=cp.admin_chat_id, text=_escape_md_v2(f"Approved A-{rid}."))
+            api.send_message(
+                chat_id=target_chat_id,
+                text=_escape_md_v2(
+                    "Your access request has been approved. What's next?\n\n"
+                    "1. Run /streams to see the streams that we currently have\n"
+                    "2. Subscribe to a stream by doing /subscribe <stream>"
+                ),
+            )
+            return
+
+        if action == "deny":
+            # Start deny-with-reason flow: store pending rid, then prompt admin.
+            set_bot_state(conn, key=BOT_STATE_PENDING_DENY_KEY, value=str(rid))
+            api.send_message(
+                chat_id=cp.admin_chat_id,
+                text=_escape_md_v2(
+                    f"Send the deny reason for A-{rid} as your next message."
+                    "\nOr use /deny <id> [reason]"
+                ),
+            )
+            return
+    finally:
+        conn.close()
+
+
+def _maybe_handle_pending_deny_reason(
+    conn, *, cp: TelegramControlPlaneConfig, api: TelegramBotApi, text: str
+) -> None:
+    pending = get_bot_state(conn, key=BOT_STATE_PENDING_DENY_KEY)
+    if not pending:
+        return
+
+    try:
+        rid = int(pending)
+    except ValueError:
+        set_bot_state(conn, key=BOT_STATE_PENDING_DENY_KEY, value="")
+        return
+
+    reason = text.strip()
+    if not reason:
+        api.send_message(chat_id=cp.admin_chat_id, text=_escape_md_v2("Reason cannot be empty."))
+        return
+
+    # Clear pending state first to avoid double-deny if downstream errors.
+    set_bot_state(conn, key=BOT_STATE_PENDING_DENY_KEY, value="")
+
+    target_chat_id = deny_access_request(
+        conn, request_id=rid, denied_by_user_id=cp.owner_user_id, reason=reason
+    )
+    if target_chat_id is None:
+        api.send_message(
+            chat_id=cp.admin_chat_id,
+            text=_escape_md_v2(f"Request A-{rid} not found/pending."),
+        )
+        return
+
+    api.send_message(chat_id=cp.admin_chat_id, text=_escape_md_v2(f"Denied A-{rid}."))
+    api.send_message(
+        chat_id=target_chat_id,
+        text=_escape_md_v2("Denied. Reason: " + reason),
+    )
+
+
 def _handle_user_command(
     conn,
     *,
@@ -210,10 +371,13 @@ def _handle_user_command(
     cmd_args: str,
 ) -> None:
     if cmd_name == "start":
+        handle = _format_handle(from_username)
         api.send_message(
             chat_id=chat_id,
             text=_escape_md_v2(
-                "Welcome to Argus. To request access, send /access. After approval, use /streams then /subscribe <stream>."
+                "Hey " + handle + ", nice to meet you.\n\n"
+                "I'm Argus, and I help you see the markets.\n\n"
+                "To request access, send /access and we will onboard you shortly."
             ),
         )
         return
@@ -225,19 +389,26 @@ def _handle_user_command(
             requested_by_user_id=from_user_id,
             requested_by_username=from_username,
         )
-        api.send_message(
-            chat_id=chat_id,
-            text=_escape_md_v2(
-                f"Access request received (A-{req.id}). Pending approval."
-                if created
-                else f"Access request already pending (A-{req.id})."
-            ),
-        )
+
+        if created:
+            user_msg = "Your access request has been received. Hope to see you inside!"
+        else:
+            user_msg = f"Your access request is already pending (A-{req.id})."
+
+        api.send_message(chat_id=chat_id, text=_escape_md_v2(user_msg))
+
+        requester_handle = _format_handle(from_username)
         api.send_message(
             chat_id=cp.admin_chat_id,
             text=_escape_md_v2(
-                f"New access request A-{req.id} from chat_id={chat_id}. Approve with /approve {req.id} or deny with /deny {req.id} [reason]."
+                "New access request: A-"
+                + str(req.id)
+                + "\n"
+                + f"chat_id={chat_id}\n"
+                + f"user={requester_handle}\n\n"
+                + "Tap Approve or Deny below."
             ),
+            reply_markup=_admin_access_request_keyboard(req.id),
         )
         return
 
@@ -248,9 +419,8 @@ def _handle_user_command(
             )
             return
         streams = config.list_streams()
-        api.send_message(
-            chat_id=chat_id, text=_escape_md_v2("Available streams: " + ", ".join(streams))
-        )
+        lines = ["Available streams:"] + [f"{i + 1}. {name}" for i, name in enumerate(streams)]
+        api.send_message(chat_id=chat_id, text=_escape_md_v2("\n".join(lines)))
         return
 
     if cmd_name == "subscribe":
@@ -269,7 +439,36 @@ def _handle_user_command(
         set_subscription_enabled(
             conn, chat_id=chat_id, stream_name=stream, enabled=True, actor_user_id=from_user_id
         )
-        api.send_message(chat_id=chat_id, text=_escape_md_v2(f"Subscribed to {stream}."))
+        msg = f"You are subscribed to {stream}."
+
+        # Best-effort countdown to next scheduled job run.
+        # If daemon scheduler is not running in this process, we fall back to no countdown.
+        now = datetime.now(timezone.utc)
+        next_run = None
+        try:
+            # Import inside handler to avoid import cost and circular issues.
+            from apscheduler.triggers.cron import CronTrigger
+
+            stream_cfg = config.get_stream(stream)
+
+            # Determine which job governs the stream's next update.
+            # For now, streams map to us_close cadence.
+            hour, minute = (int(x) for x in stream_cfg.schedule.daily_us_close_sgt.split(":", 1))
+            trigger = CronTrigger(
+                hour=hour,
+                minute=minute,
+                day_of_week="mon-fri",
+                timezone="Asia/Singapore",
+            )
+            next_run = trigger.get_next_fire_time(previous_fire_time=None, now=now)
+        except Exception:
+            next_run = None
+
+        if next_run is not None:
+            h, m = _format_countdown(now, next_run)
+            msg += f" The next update will be in {h}h {m} mins"
+
+        api.send_message(chat_id=chat_id, text=_escape_md_v2(msg))
         return
 
     if cmd_name == "unsubscribe":
@@ -347,7 +546,11 @@ def _handle_admin_command(
         api.send_message(chat_id=cp.admin_chat_id, text=_escape_md_v2(f"Approved A-{rid}."))
         api.send_message(
             chat_id=chat_id,
-            text=_escape_md_v2("Approved. Run /streams then /subscribe <stream>."),
+            text=_escape_md_v2(
+                "Your access request has been approved. What's next?\n\n"
+                "1. Run /streams to see the streams that we currently have\n"
+                "2. Subscribe to a stream by doing /subscribe <stream>"
+            ),
         )
         return
 

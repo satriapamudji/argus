@@ -164,6 +164,20 @@ sudo systemctl status argus
 
 ### Step 3: Verify Deployment
 
+#### Telegram control plane (optional)
+
+If you set `TELEGRAM_OWNER_USER_ID` and `TELEGRAM_ADMIN_CHAT_ID`, the daemon also runs a Telegram long-polling loop for onboarding and subscriptions.
+
+Quick check:
+
+1. DM the bot: `/start` then `/access`
+2. In your admin group (from the owner user): `/approve <id>`
+3. Back in DM: `/streams` then `/subscribe us_close_basic`
+
+If the control plane is disabled, journald will include one of:
+- `Telegram control plane disabled: TELEGRAM_BOT_TOKEN not set`
+- `Telegram control plane disabled: missing TELEGRAM_OWNER_USER_ID or TELEGRAM_ADMIN_CHAT_ID`
+
 ```bash
 # Check service is running
 sudo systemctl status argus
@@ -894,6 +908,30 @@ argus ingest --dry-run
 # Check if items exist in DB
 psql -d argus -c "SELECT COUNT(*) FROM news_items WHERE ingested_at > NOW() - INTERVAL '24 hours';"
 ```
+
+#### "Telegram control plane tables do not exist" (missing migrations)
+
+Symptoms in logs:
+- `relation "telegram_stream_subscriptions" does not exist`
+- or other `telegram_*` tables missing
+
+Fix:
+
+```bash
+argus db migrate
+```
+
+This applies the Telegram control plane migration (e.g. `002_telegram_control_plane`).
+
+#### "Admin group is receiving broadcasts"
+
+This usually means one of:
+
+- You set `TELEGRAM_CHAT_ID` to your admin group chat id and there are no DB subscriptions yet (legacy fallback behavior).
+- Your admin group is subscribed to the stream in the database.
+
+Preferred setup:
+- Use the admin group only for approvals, and subscribe the actual destination chat(s) with `/subscribe <stream>`.
 
 #### "Validation failed"
 

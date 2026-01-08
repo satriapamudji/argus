@@ -42,14 +42,17 @@ class TelegramBotApi:
         text: str,
         parse_mode: str = "MarkdownV2",
         disable_web_page_preview: bool = True,
+        reply_markup: Optional[dict[str, Any]] = None,
     ) -> None:
         url = f"https://api.telegram.org/bot{self._bot_token}/sendMessage"
-        payload = {
+        payload: dict[str, Any] = {
             "chat_id": chat_id,
             "text": text,
             "parse_mode": parse_mode,
             "disable_web_page_preview": disable_web_page_preview,
         }
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
         resp = self._client.post(url, json=payload)
         resp.raise_for_status()
         data = resp.json()
