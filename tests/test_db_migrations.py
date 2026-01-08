@@ -19,6 +19,7 @@ class TestMigrationsAvailable:
         migrations = get_available_migrations()
         versions = [v for v, _ in migrations]
         assert "001_initial_schema" in versions
+        assert "002_telegram_control_plane" in versions
 
     def test_migrations_sorted_by_version(self) -> None:
         """Test that migrations are sorted."""

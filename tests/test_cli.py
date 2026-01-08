@@ -89,6 +89,74 @@ class TestCLI:
         assert result.returncode != 0
         assert "Missing option" in result.stderr or "--mode" in result.stderr
 
+    def test_run_requires_stream_when_multi_stream_config(self, tmp_path: Path):
+        """Test that run errors if streams: exists and --stream is omitted."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            """
+streams:
+  alpha:
+    enabled: true
+  beta:
+    enabled: true
+""".lstrip(),
+            encoding="utf-8",
+        )
+
+        env = {**os.environ, "PYTHONPATH": get_pythonpath()}
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "argus",
+                "--config",
+                str(config_path),
+                "run",
+                "--mode",
+                "us_close",
+                "--dry-run",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        assert result.returncode == 2
+        assert "--stream is required" in (result.stdout + result.stderr)
+
+    def test_ingest_requires_stream_when_multi_stream_config(self, tmp_path: Path):
+        """Test that ingest errors if streams: exists and --stream is omitted."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            """
+streams:
+  alpha:
+    enabled: true
+  beta:
+    enabled: true
+""".lstrip(),
+            encoding="utf-8",
+        )
+
+        env = {**os.environ, "PYTHONPATH": get_pythonpath()}
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "argus",
+                "--config",
+                str(config_path),
+                "ingest",
+                "--dry-run",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        assert result.returncode == 2
+        assert "--stream is required" in (result.stdout + result.stderr)
+
 
 class TestBinScript:
     """Tests for bin/argus script."""

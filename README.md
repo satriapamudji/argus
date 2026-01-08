@@ -27,9 +27,16 @@ Create a `.env` file in the project root (see `.env.example`):
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) | `123456789:ABCdef...` |
-| `TELEGRAM_CHAT_ID` | Target chat/channel ID | `-1001234567890` |
+| `TELEGRAM_CHAT_ID` | Target chat/channel ID (legacy single-destination publishing) | `-1001234567890` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/argus` |
 | `OPENROUTER_API_KEY` | API key for LLM generation via [OpenRouter](https://openrouter.ai) | `sk-or-v1-...` |
+
+### Telegram Control Plane (Task 19)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `TELEGRAM_OWNER_USER_ID` | Owner Telegram user ID (only this user can approve access) | `123456789` |
+| `TELEGRAM_ADMIN_CHAT_ID` | Admin group chat ID where approvals happen | `-1001234567890` |
 
 ### Optional Variables
 

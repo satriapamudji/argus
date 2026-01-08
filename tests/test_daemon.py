@@ -8,7 +8,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
+# Pyright: pytest marks are dynamically created.
+# This alias avoids reportUndefinedVariable for `@pytest.mark.db`.
+db = pytest.mark.db
+
 from argus.config import ArgusConfig, DaemonConfig
+from argus.daemon.scheduler import ArgusDaemon
 from argus.daemon.types import DaemonStatus, JobRunRecord, JobStatus
 
 
@@ -190,12 +195,52 @@ class TestDaemonPersistence:
     Marked with pytest.mark.db to allow selective running.
     """
 
-    @pytest.mark.db
+    @db
     def test_create_and_complete_job_run(self):
         """Test creating and completing a job run record."""
         # This test requires actual database setup
         # Skip if no database available
         pytest.skip("Requires database connection - run with --run-db flag")
+
+
+class TestDaemonSchedulingMultiStream:
+    def test_setup_jobs_creates_per_stream_ids(self, tmp_path: Path):
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            """
+streams:
+  alpha:
+    enabled: true
+    rss:
+      poll_interval_minutes: 5
+  beta:
+    enabled: true
+    rss:
+      poll_interval_minutes: 7
+daemon:
+  health_port: 0
+""".lstrip(),
+            encoding="utf-8",
+        )
+        config = ArgusConfig.load(config_path=config_path)
+        daemon = ArgusDaemon(config)
+
+        scheduler = MagicMock()
+        daemon._scheduler = scheduler
+
+        daemon._setup_jobs()
+
+        job_ids = [kwargs.get("id") for _, kwargs in scheduler.add_job.call_args_list]
+        assert "ingest:alpha" in job_ids
+        assert "ingest:beta" in job_ids
+        assert "us_close:alpha" in job_ids
+        assert "us_close:beta" in job_ids
+        assert "weekend_wrap:alpha" in job_ids
+        assert "weekend_wrap:beta" in job_ids
+        assert "monday_preview:alpha" in job_ids
+        assert "monday_preview:beta" in job_ids
+        assert "retention:alpha" in job_ids
+        assert "retention:beta" in job_ids
 
 
 class TestHealthServerSerialization:
@@ -239,7 +284,7 @@ class TestHealthServerSerialization:
             version="0.1.0",
             started_at=now,
             jobs={
-                "ingest": JobStatus(job_id="ingest", run_count=100),
+                "ingest:alpha": JobStatus(job_id="ingest:alpha", run_count=100),
             },
         )
 
@@ -261,8 +306,8 @@ class TestHealthServerSerialization:
         assert serialized["status"] == "healthy"
         assert serialized["uptime_seconds"] == 7200
         assert serialized["version"] == "0.1.0"
-        assert "ingest" in serialized["jobs"]
-        assert serialized["jobs"]["ingest"]["run_count"] == 100
+        assert "ingest:alpha" in serialized["jobs"]
+        assert serialized["jobs"]["ingest:alpha"]["run_count"] == 100
 
 
 class TestSchedulerJobIds:
