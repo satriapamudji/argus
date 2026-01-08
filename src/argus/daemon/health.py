@@ -173,34 +173,36 @@ class HealthServer:
         """Handle POST /trigger/{job_id} request.
 
         Manually triggers a scheduled job.
+
+        Supports both base job IDs (single-stream) and composite "job:stream" keys.
         """
-        job_id = request.match_info.get("job_id", "")
+        job_key = request.match_info.get("job_id", "")
 
-        # Validate job_id
-        from argus.daemon.scheduler import ALL_JOBS
+        from argus.daemon.scheduler import ALL_JOBS, JOB_SEPARATOR
 
-        if job_id not in ALL_JOBS:
+        base_job_id = job_key.split(JOB_SEPARATOR, 1)[0]
+        if base_job_id not in ALL_JOBS:
             return web.Response(
-                text=json.dumps({"status": "error", "message": f"Unknown job: {job_id}"}),
+                text=json.dumps({"status": "error", "message": f"Unknown job: {job_key}"}),
                 status=400,
                 content_type="application/json",
             )
 
         try:
             # Check if job is enabled
-            if not self.daemon.daemon_config.is_job_enabled(job_id):
+            if not self.daemon.daemon_config.is_job_enabled(base_job_id):
                 return web.Response(
-                    text=json.dumps({"status": "disabled", "job_id": job_id}),
+                    text=json.dumps({"status": "disabled", "job_id": job_key}),
                     content_type="application/json",
                 )
 
             # Trigger the job
-            result = await self.daemon.trigger_job(job_id)
+            result = await self.daemon.trigger_job(job_key)
 
             if result is None:
                 # Job was already running or disabled
                 return web.Response(
-                    text=json.dumps({"status": "already_running", "job_id": job_id}),
+                    text=json.dumps({"status": "already_running", "job_id": job_key}),
                     content_type="application/json",
                 )
 
@@ -208,14 +210,14 @@ class HealthServer:
                 text=json.dumps(
                     {
                         "status": "triggered",
-                        "job_id": job_id,
+                        "job_id": job_key,
                         "run_id": result.id,
                     }
                 ),
                 content_type="application/json",
             )
         except Exception as e:
-            logger.exception(f"Error triggering job {job_id}")
+            logger.exception(f"Error triggering job {job_key}")
             return web.Response(
                 text=json.dumps({"status": "error", "message": str(e)}),
                 status=500,

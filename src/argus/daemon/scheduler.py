@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -39,6 +40,8 @@ JOB_WEEKEND_WRAP = "weekend_wrap"
 JOB_MONDAY_PREVIEW = "monday_preview"
 JOB_RETENTION = "retention"
 JOB_HEALTH_PING = "health_ping"
+
+JOB_SEPARATOR = ":"
 
 ALL_JOBS = [JOB_INGEST, JOB_US_CLOSE, JOB_WEEKEND_WRAP, JOB_MONDAY_PREVIEW, JOB_RETENTION]
 
@@ -75,6 +78,7 @@ class ArgusDaemon:
         self._started_at: Optional[datetime] = None
         self._running_jobs: dict[str, int] = {}  # job_id -> record_id
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._telegram_task: Optional[asyncio.Task[None]] = None
 
     async def start(self) -> None:
         """Start the daemon and run until shutdown signal."""
@@ -112,6 +116,14 @@ class ArgusDaemon:
             )
             await self._health_server.start()
 
+        # Start Telegram control plane (best-effort; disabled if env missing)
+        try:
+            from argus.telegram_control.poller import run_telegram_control_plane
+
+            self._telegram_task = asyncio.create_task(run_telegram_control_plane(self.config))
+        except Exception as e:
+            logger.warning(f"Telegram control plane not started: {e}")
+
         # Log one immediate heartbeat (then periodic below if enabled)
         self._log_health_ping()
 
@@ -136,6 +148,14 @@ class ArgusDaemon:
             self._scheduler.shutdown(wait=True)
             logger.info("Scheduler stopped")
 
+        # Stop Telegram control plane
+        if self._telegram_task is not None:
+            self._telegram_task.cancel()
+            try:
+                await self._telegram_task
+            except asyncio.CancelledError:
+                pass
+
         # Stop health server
         if self._health_server:
             await self._health_server.stop()
@@ -158,86 +178,91 @@ class ArgusDaemon:
         """Setup all scheduled jobs."""
         assert self._scheduler is not None
 
-        # Get schedule config
-        schedule = self.config.stream.schedule
-        rss_config = self.config.stream.rss
+        for stream_name in self._iter_enabled_streams():
+            stream_cfg = self.config.get_stream(stream_name)
+            schedule = stream_cfg.schedule
+            rss_config = stream_cfg.rss
 
-        # Ingest job - runs every N minutes
-        if self.daemon_config.is_job_enabled(JOB_INGEST):
-            self._scheduler.add_job(
-                self._run_ingest,
-                IntervalTrigger(minutes=rss_config.poll_interval_minutes),
-                id=JOB_INGEST,
-                name="RSS Ingestion",
-                replace_existing=True,
-            )
-            logger.info(f"Scheduled {JOB_INGEST}: every {rss_config.poll_interval_minutes} minutes")
+            # Ingest job - runs every N minutes
+            if self.daemon_config.is_job_enabled(JOB_INGEST):
+                jid = self._job_key(JOB_INGEST, stream_name)
+                self._scheduler.add_job(
+                    lambda _stream=stream_name: self._run_ingest_for_stream(_stream),
+                    IntervalTrigger(minutes=rss_config.poll_interval_minutes),
+                    id=jid,
+                    name=f"RSS Ingestion ({stream_name})",
+                    replace_existing=True,
+                )
+                logger.info(f"Scheduled {jid}: every {rss_config.poll_interval_minutes} minutes")
 
-        # US Close job - Mon-Fri at configured time (SGT)
-        if self.daemon_config.is_job_enabled(JOB_US_CLOSE):
-            hour, minute = self._parse_time(schedule.daily_us_close_sgt)
-            self._scheduler.add_job(
-                self._run_us_close,
-                CronTrigger(
-                    hour=hour,
-                    minute=minute,
-                    day_of_week="mon-fri",
-                    timezone="Asia/Singapore",
-                ),
-                id=JOB_US_CLOSE,
-                name="US Close Update",
-                replace_existing=True,
-            )
-            logger.info(f"Scheduled {JOB_US_CLOSE}: Mon-Fri {schedule.daily_us_close_sgt} SGT")
+            # US Close job - Mon-Fri at configured time (SGT)
+            if self.daemon_config.is_job_enabled(JOB_US_CLOSE):
+                hour, minute = self._parse_time(schedule.daily_us_close_sgt)
+                jid = self._job_key(JOB_US_CLOSE, stream_name)
+                self._scheduler.add_job(
+                    lambda _stream=stream_name: self._run_us_close_for_stream(_stream),
+                    CronTrigger(
+                        hour=hour,
+                        minute=minute,
+                        day_of_week="mon-fri",
+                        timezone="Asia/Singapore",
+                    ),
+                    id=jid,
+                    name=f"US Close Update ({stream_name})",
+                    replace_existing=True,
+                )
+                logger.info(f"Scheduled {jid}: Mon-Fri {schedule.daily_us_close_sgt} SGT")
 
-        # Weekend Wrap job - Saturday at configured time (SGT)
-        if self.daemon_config.is_job_enabled(JOB_WEEKEND_WRAP):
-            hour, minute = self._parse_time(schedule.weekend_wrap_sgt)
-            self._scheduler.add_job(
-                self._run_weekend_wrap,
-                CronTrigger(
-                    hour=hour,
-                    minute=minute,
-                    day_of_week="sat",
-                    timezone="Asia/Singapore",
-                ),
-                id=JOB_WEEKEND_WRAP,
-                name="Weekend Wrap",
-                replace_existing=True,
-            )
-            logger.info(f"Scheduled {JOB_WEEKEND_WRAP}: Sat {schedule.weekend_wrap_sgt} SGT")
+            # Weekend Wrap job - Saturday at configured time (SGT)
+            if self.daemon_config.is_job_enabled(JOB_WEEKEND_WRAP):
+                hour, minute = self._parse_time(schedule.weekend_wrap_sgt)
+                jid = self._job_key(JOB_WEEKEND_WRAP, stream_name)
+                self._scheduler.add_job(
+                    lambda _stream=stream_name: self._run_weekend_wrap_for_stream(_stream),
+                    CronTrigger(
+                        hour=hour,
+                        minute=minute,
+                        day_of_week="sat",
+                        timezone="Asia/Singapore",
+                    ),
+                    id=jid,
+                    name=f"Weekend Wrap ({stream_name})",
+                    replace_existing=True,
+                )
+                logger.info(f"Scheduled {jid}: Sat {schedule.weekend_wrap_sgt} SGT")
 
-        # Monday Preview job - Sunday at configured time (NY)
-        if self.daemon_config.is_job_enabled(JOB_MONDAY_PREVIEW):
-            # Parse "SUN 18:10" format
-            parts = schedule.monday_preview_ny.split()
-            time_str = parts[-1] if len(parts) > 1 else parts[0]
-            hour, minute = self._parse_time(time_str)
-            self._scheduler.add_job(
-                self._run_monday_preview,
-                CronTrigger(
-                    hour=hour,
-                    minute=minute,
-                    day_of_week="sun",
-                    timezone="America/New_York",
-                ),
-                id=JOB_MONDAY_PREVIEW,
-                name="Monday Preview",
-                replace_existing=True,
-            )
-            logger.info(f"Scheduled {JOB_MONDAY_PREVIEW}: Sun {time_str} NY")
+            # Monday Preview job - Sunday at configured time (NY)
+            if self.daemon_config.is_job_enabled(JOB_MONDAY_PREVIEW):
+                parts = schedule.monday_preview_ny.split()
+                time_str = parts[-1] if len(parts) > 1 else parts[0]
+                hour, minute = self._parse_time(time_str)
+                jid = self._job_key(JOB_MONDAY_PREVIEW, stream_name)
+                self._scheduler.add_job(
+                    lambda _stream=stream_name: self._run_monday_preview_for_stream(_stream),
+                    CronTrigger(
+                        hour=hour,
+                        minute=minute,
+                        day_of_week="sun",
+                        timezone="America/New_York",
+                    ),
+                    id=jid,
+                    name=f"Monday Preview ({stream_name})",
+                    replace_existing=True,
+                )
+                logger.info(f"Scheduled {jid}: Sun {time_str} NY")
 
-        # Retention job - daily at configured hour (UTC)
-        if self.daemon_config.is_job_enabled(JOB_RETENTION):
-            retention_hour = self.daemon_config.retention_hour
-            self._scheduler.add_job(
-                self._run_retention,
-                CronTrigger(hour=retention_hour, minute=0, timezone="UTC"),
-                id=JOB_RETENTION,
-                name="Retention Cleanup",
-                replace_existing=True,
-            )
-            logger.info(f"Scheduled {JOB_RETENTION}: daily at {retention_hour:02d}:00 UTC")
+            # Retention job - daily at configured hour (UTC)
+            if self.daemon_config.is_job_enabled(JOB_RETENTION):
+                retention_hour = self.daemon_config.retention_hour
+                jid = self._job_key(JOB_RETENTION, stream_name)
+                self._scheduler.add_job(
+                    lambda _stream=stream_name: self._run_retention_for_stream(_stream),
+                    CronTrigger(hour=retention_hour, minute=0, timezone="UTC"),
+                    id=jid,
+                    name=f"Retention Cleanup ({stream_name})",
+                    replace_existing=True,
+                )
+                logger.info(f"Scheduled {jid}: daily at {retention_hour:02d}:00 UTC")
 
         # Journald heartbeat - every N minutes (0 disables)
         health_ping_minutes = getattr(self.daemon_config, "health_ping_minutes", 10)
@@ -331,63 +356,89 @@ class ArgusDaemon:
             # Heartbeat should never crash the daemon.
             logger.exception("event=health_ping status=error")
 
+    def _job_key(self, job_id: str, stream_name: str) -> str:
+        return f"{job_id}{JOB_SEPARATOR}{stream_name}"
+
+    def _split_job_key(self, job_key: str) -> tuple[str, Optional[str]]:
+        if JOB_SEPARATOR not in job_key:
+            return job_key, None
+        job_id, stream_name = job_key.split(JOB_SEPARATOR, 1)
+        return job_id, stream_name or None
+
+    def _iter_enabled_streams(self) -> list[str]:
+        names = self.config.list_streams(enabled_only=True)
+        return names or [self.config.stream.name]
+
     async def _check_missed_jobs(self) -> None:
         """Check for jobs that need catch-up after restart."""
         try:
             conn = get_connection()
             now = datetime.now(timezone.utc)
 
-            for job_id in CATCHUP_JOBS:
-                if not self.daemon_config.is_job_enabled(job_id):
-                    continue
+            for stream_name in self._iter_enabled_streams():
+                stream_cfg = self.config.get_stream(stream_name)
 
-                policy = self.daemon_config.get_missed_policy(job_id)
-                if policy != "run_immediately":
-                    continue
+                for job_id in CATCHUP_JOBS:
+                    if not self.daemon_config.is_job_enabled(job_id):
+                        continue
 
-                last_run = get_last_job_run(conn, job_id)
-                if last_run is None:
-                    # Never run before, trigger immediately
-                    logger.info(f"Job {job_id} has never run, triggering catch-up")
-                    await self._trigger_job(job_id, trigger_type="catchup")
-                else:
+                    policy = self.daemon_config.get_missed_policy(job_id)
+                    if policy != "run_immediately":
+                        continue
+
+                    job_key = self._job_key(job_id, stream_name)
+                    last_run = get_last_job_run(conn, job_key)
+                    if last_run is None:
+                        # Never run before, trigger immediately
+                        logger.info(f"Job {job_key} has never run, triggering catch-up")
+                        await self._trigger_job(job_key, trigger_type="catchup")
+                        continue
+
                     # Check if overdue based on expected interval
                     if job_id == JOB_INGEST:
-                        interval_minutes = self.config.stream.rss.poll_interval_minutes
+                        interval_minutes = stream_cfg.rss.poll_interval_minutes
                         expected_interval = interval_minutes * 60  # seconds
                         elapsed = (now - last_run.started_at).total_seconds()
                         if elapsed > expected_interval * 2:  # 2x overdue
                             logger.info(
-                                f"Job {job_id} is overdue (last run: {last_run.started_at}), "
+                                f"Job {job_key} is overdue (last run: {last_run.started_at}), "
                                 "triggering catch-up"
                             )
-                            await self._trigger_job(job_id, trigger_type="catchup")
+                            await self._trigger_job(job_key, trigger_type="catchup")
 
             conn.close()
         except Exception as e:
             logger.warning(f"Error checking missed jobs: {e}")
 
     async def _trigger_job(
-        self, job_id: str, trigger_type: str = "manual"
+        self, job_id_or_key: str, trigger_type: str = "manual"
     ) -> Optional[JobRunRecord]:
         """Trigger a job immediately.
 
         Args:
-            job_id: Job to trigger.
+            job_id_or_key: Job to trigger (base id like "ingest" or composite key like "ingest:alpha").
             trigger_type: Type of trigger ('manual', 'catchup', 'scheduled').
 
         Returns:
             JobRunRecord if job was executed, None if job is disabled or already running.
         """
-        if not self.daemon_config.is_job_enabled(job_id):
-            logger.warning(f"Job {job_id} is disabled, skipping trigger")
+        base_job_id, stream_name = self._split_job_key(job_id_or_key)
+
+        if not self.daemon_config.is_job_enabled(base_job_id):
+            logger.warning(f"Job {base_job_id} is disabled, skipping trigger")
             return None
 
-        if job_id in self._running_jobs:
-            logger.warning(f"Job {job_id} is already running, skipping trigger")
+        if stream_name is None:
+            # Back-compat: single-stream trigger.
+            job_key = base_job_id
+        else:
+            job_key = self._job_key(base_job_id, stream_name)
+
+        if job_key in self._running_jobs:
+            logger.warning(f"Job {job_key} is already running, skipping trigger")
             return None
 
-        # Map job_id to handler
+        # Map base job id to handler
         handlers = {
             JOB_INGEST: self._run_ingest,
             JOB_US_CLOSE: self._run_us_close,
@@ -396,19 +447,20 @@ class ArgusDaemon:
             JOB_RETENTION: self._run_retention,
         }
 
-        handler = handlers.get(job_id)
+        handler = handlers.get(base_job_id)
         if handler is None:
-            logger.error(f"Unknown job: {job_id}")
+            logger.error(f"Unknown job: {base_job_id}")
             return None
 
         # Run the job
-        return await handler(trigger_type=trigger_type)
+        return await handler(trigger_type=trigger_type, stream_name=stream_name)
 
     async def _run_job(
         self,
         job_id: str,
         job_func: Any,
         trigger_type: str = "scheduled",
+        stream_name: Optional[str] = None,
     ) -> Optional[JobRunRecord]:
         """Run a job with tracking.
 
@@ -434,7 +486,11 @@ class ArgusDaemon:
             logger.info(f"Starting job: {job_id} (trigger: {trigger_type})")
 
             # Execute the job
-            result = await asyncio.get_event_loop().run_in_executor(None, job_func, self.config)
+            cfg = self.config
+            if stream_name is not None:
+                cfg = replace(cfg, stream=cfg.get_stream(stream_name))
+
+            result = await asyncio.get_event_loop().run_in_executor(None, job_func, cfg)
 
             # Extract run_id if available
             if hasattr(result, "run_id"):
@@ -458,13 +514,50 @@ class ArgusDaemon:
             if conn:
                 conn.close()
 
-    async def _run_ingest(self, trigger_type: str = "scheduled") -> Optional[JobRunRecord]:
+    async def _run_ingest_for_stream(self, stream_name: str) -> Optional[JobRunRecord]:
+        """Run RSS ingestion job for a specific stream."""
+        from argus.ingestion import run_ingestion
+
+        job_id = self._job_key(JOB_INGEST, stream_name)
+        return await self._run_job(
+            job_id, run_ingestion, trigger_type="scheduled", stream_name=stream_name
+        )
+
+    async def _run_ingest(
+        self, trigger_type: str = "scheduled", stream_name: Optional[str] = None
+    ) -> Optional[JobRunRecord]:
         """Run RSS ingestion job."""
         from argus.ingestion import run_ingestion
 
-        return await self._run_job(JOB_INGEST, run_ingestion, trigger_type)
+        if stream_name is None:
+            return await self._run_job(JOB_INGEST, run_ingestion, trigger_type)
 
-    async def _run_us_close(self, trigger_type: str = "scheduled") -> Optional[JobRunRecord]:
+        job_id = self._job_key(JOB_INGEST, stream_name)
+        return await self._run_job(job_id, run_ingestion, trigger_type, stream_name=stream_name)
+
+    async def _run_us_close_for_stream(self, stream_name: str) -> Optional[JobRunRecord]:
+        """Run US Close update job for a specific stream."""
+
+        def run_us_close_sync(config: ArgusConfig) -> Any:
+            from argus.orchestrator import OrchestratorOptions, RunOrchestrator, RunMode
+
+            options = OrchestratorOptions(
+                conditional=config.stream.monday_preview.conditional,
+                force_publish=config.stream.monday_preview.force_publish,
+                force_skip=config.stream.monday_preview.force_skip,
+                risk_threshold=config.stream.monday_preview.risk_threshold,
+            )
+            orchestrator = RunOrchestrator(config, RunMode.US_CLOSE, options)
+            return orchestrator.run()
+
+        job_id = self._job_key(JOB_US_CLOSE, stream_name)
+        return await self._run_job(
+            job_id, run_us_close_sync, trigger_type="scheduled", stream_name=stream_name
+        )
+
+    async def _run_us_close(
+        self, trigger_type: str = "scheduled", stream_name: Optional[str] = None
+    ) -> Optional[JobRunRecord]:
         """Run US Close update job."""
 
         def run_us_close_sync(config: ArgusConfig) -> Any:
@@ -479,9 +572,30 @@ class ArgusDaemon:
             orchestrator = RunOrchestrator(config, RunMode.US_CLOSE, options)
             return orchestrator.run()
 
-        return await self._run_job(JOB_US_CLOSE, run_us_close_sync, trigger_type)
+        if stream_name is None:
+            return await self._run_job(JOB_US_CLOSE, run_us_close_sync, trigger_type)
 
-    async def _run_weekend_wrap(self, trigger_type: str = "scheduled") -> Optional[JobRunRecord]:
+        job_id = self._job_key(JOB_US_CLOSE, stream_name)
+        return await self._run_job(job_id, run_us_close_sync, trigger_type, stream_name=stream_name)
+
+    async def _run_weekend_wrap_for_stream(self, stream_name: str) -> Optional[JobRunRecord]:
+        """Run Weekend Wrap job for a specific stream."""
+
+        def run_weekend_wrap_sync(config: ArgusConfig) -> Any:
+            from argus.orchestrator import OrchestratorOptions, RunOrchestrator, RunMode
+
+            options = OrchestratorOptions()
+            orchestrator = RunOrchestrator(config, RunMode.WEEKEND_WRAP, options)
+            return orchestrator.run()
+
+        job_id = self._job_key(JOB_WEEKEND_WRAP, stream_name)
+        return await self._run_job(
+            job_id, run_weekend_wrap_sync, trigger_type="scheduled", stream_name=stream_name
+        )
+
+    async def _run_weekend_wrap(
+        self, trigger_type: str = "scheduled", stream_name: Optional[str] = None
+    ) -> Optional[JobRunRecord]:
         """Run Weekend Wrap job."""
 
         def run_weekend_wrap_sync(config: ArgusConfig) -> Any:
@@ -491,9 +605,37 @@ class ArgusDaemon:
             orchestrator = RunOrchestrator(config, RunMode.WEEKEND_WRAP, options)
             return orchestrator.run()
 
-        return await self._run_job(JOB_WEEKEND_WRAP, run_weekend_wrap_sync, trigger_type)
+        if stream_name is None:
+            return await self._run_job(JOB_WEEKEND_WRAP, run_weekend_wrap_sync, trigger_type)
 
-    async def _run_monday_preview(self, trigger_type: str = "scheduled") -> Optional[JobRunRecord]:
+        job_id = self._job_key(JOB_WEEKEND_WRAP, stream_name)
+        return await self._run_job(
+            job_id, run_weekend_wrap_sync, trigger_type, stream_name=stream_name
+        )
+
+    async def _run_monday_preview_for_stream(self, stream_name: str) -> Optional[JobRunRecord]:
+        """Run Monday Preview job for a specific stream."""
+
+        def run_monday_preview_sync(config: ArgusConfig) -> Any:
+            from argus.orchestrator import OrchestratorOptions, RunOrchestrator, RunMode
+
+            options = OrchestratorOptions(
+                conditional=config.stream.monday_preview.conditional,
+                force_publish=config.stream.monday_preview.force_publish,
+                force_skip=config.stream.monday_preview.force_skip,
+                risk_threshold=config.stream.monday_preview.risk_threshold,
+            )
+            orchestrator = RunOrchestrator(config, RunMode.MONDAY_PREVIEW, options)
+            return orchestrator.run()
+
+        job_id = self._job_key(JOB_MONDAY_PREVIEW, stream_name)
+        return await self._run_job(
+            job_id, run_monday_preview_sync, trigger_type="scheduled", stream_name=stream_name
+        )
+
+    async def _run_monday_preview(
+        self, trigger_type: str = "scheduled", stream_name: Optional[str] = None
+    ) -> Optional[JobRunRecord]:
         """Run Monday Preview job."""
 
         def run_monday_preview_sync(config: ArgusConfig) -> Any:
@@ -508,9 +650,35 @@ class ArgusDaemon:
             orchestrator = RunOrchestrator(config, RunMode.MONDAY_PREVIEW, options)
             return orchestrator.run()
 
-        return await self._run_job(JOB_MONDAY_PREVIEW, run_monday_preview_sync, trigger_type)
+        if stream_name is None:
+            return await self._run_job(JOB_MONDAY_PREVIEW, run_monday_preview_sync, trigger_type)
 
-    async def _run_retention(self, trigger_type: str = "scheduled") -> Optional[JobRunRecord]:
+        job_id = self._job_key(JOB_MONDAY_PREVIEW, stream_name)
+        return await self._run_job(
+            job_id, run_monday_preview_sync, trigger_type, stream_name=stream_name
+        )
+
+    async def _run_retention_for_stream(self, stream_name: str) -> Optional[JobRunRecord]:
+        """Run retention cleanup job for a specific stream."""
+
+        def run_retention_sync(config: ArgusConfig) -> Any:
+            from argus.db.partitions import run_retention_cleanup
+
+            conn = get_connection()
+            try:
+                run_retention_cleanup(conn, config.stream.retention.news_items_days)
+            finally:
+                conn.close()
+            return None
+
+        job_id = self._job_key(JOB_RETENTION, stream_name)
+        return await self._run_job(
+            job_id, run_retention_sync, trigger_type="scheduled", stream_name=stream_name
+        )
+
+    async def _run_retention(
+        self, trigger_type: str = "scheduled", stream_name: Optional[str] = None
+    ) -> Optional[JobRunRecord]:
         """Run retention cleanup job."""
 
         def run_retention_sync(config: ArgusConfig) -> Any:
@@ -523,7 +691,13 @@ class ArgusDaemon:
                 conn.close()
             return None
 
-        return await self._run_job(JOB_RETENTION, run_retention_sync, trigger_type)
+        if stream_name is None:
+            return await self._run_job(JOB_RETENTION, run_retention_sync, trigger_type)
+
+        job_id = self._job_key(JOB_RETENTION, stream_name)
+        return await self._run_job(
+            job_id, run_retention_sync, trigger_type, stream_name=stream_name
+        )
 
     def get_status(self) -> DaemonStatus:
         """Get current daemon status.
@@ -540,26 +714,47 @@ class ArgusDaemon:
         try:
             conn = get_connection()
 
-            for job_id in ALL_JOBS:
-                last_run = get_last_job_run(conn, job_id)
-                run_count = get_job_run_count(conn, job_id)
+            # Multi-stream jobs
+            for stream_name in self._iter_enabled_streams():
+                for base_job_id in ALL_JOBS:
+                    job_key = self._job_key(base_job_id, stream_name)
 
-                # Get next run time from scheduler
+                    last_run = get_last_job_run(conn, job_key)
+                    run_count = get_job_run_count(conn, job_key)
+
+                    # Get next run time from scheduler
+                    next_run = None
+                    if self._scheduler:
+                        job = self._scheduler.get_job(job_key)
+                        if job and job.next_run_time:
+                            next_run = job.next_run_time
+
+                    jobs[job_key] = JobStatus(
+                        job_id=job_key,
+                        enabled=self.daemon_config.is_job_enabled(base_job_id),
+                        last_run=last_run.started_at if last_run else None,
+                        last_status=last_run.status if last_run else None,
+                        next_run=next_run,
+                        run_count=run_count,
+                        is_running=job_key in self._running_jobs,
+                    )
+
+            # Global jobs
+            if self._scheduler:
+                job = self._scheduler.get_job(JOB_HEALTH_PING)
+                next_run = job.next_run_time if job and job.next_run_time else None
+            else:
                 next_run = None
-                if self._scheduler:
-                    job = self._scheduler.get_job(job_id)
-                    if job and job.next_run_time:
-                        next_run = job.next_run_time
 
-                jobs[job_id] = JobStatus(
-                    job_id=job_id,
-                    enabled=self.daemon_config.is_job_enabled(job_id),
-                    last_run=last_run.started_at if last_run else None,
-                    last_status=last_run.status if last_run else None,
-                    next_run=next_run,
-                    run_count=run_count,
-                    is_running=job_id in self._running_jobs,
-                )
+            jobs[JOB_HEALTH_PING] = JobStatus(
+                job_id=JOB_HEALTH_PING,
+                enabled=True,
+                last_run=None,
+                last_status=None,
+                next_run=next_run,
+                run_count=0,
+                is_running=JOB_HEALTH_PING in self._running_jobs,
+            )
 
             conn.close()
         except Exception as e:

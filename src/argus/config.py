@@ -8,6 +8,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+
+class UnknownStreamError(ValueError):
+    """Raised when a requested stream name does not exist in config."""
+
+
 import yaml
 from dotenv import load_dotenv
 
@@ -377,7 +382,14 @@ class StreamConfig:
 class ArgusConfig:
     """Main Argus configuration."""
 
+    # Backward compatibility: most of the codebase still expects .stream
+    # to exist (single-stream mode). In multi-stream configs, .stream is
+    # set to the *selected* stream (CLI) or iterated by the daemon.
     stream: StreamConfig = field(default_factory=StreamConfig)
+
+    # Multi-stream support (optional). Keyed by stream name.
+    streams: dict[str, StreamConfig] = field(default_factory=dict)
+
     daemon: DaemonConfig = field(default_factory=DaemonConfig)
     log_level: str = "INFO"
 
@@ -405,174 +417,195 @@ class ArgusConfig:
         else:
             raw_config = {}
 
-        # Build stream config from YAML
-        # Support both root-level defaults and stream-level overrides
-        # Priority: stream-level > root-level > code defaults
-        stream_raw = raw_config.get("stream", {})
-        providers_raw = stream_raw.get("providers", {})
+        def build_stream_config(stream_raw: dict, root_raw: dict) -> StreamConfig:
+            """Build a StreamConfig from YAML.
 
-        def merge_config(key: str) -> dict:
-            """Get config with root-level defaults and stream-level overrides."""
-            root = raw_config.get(key, {})
-            stream = stream_raw.get(key, {})
-            # Merge: stream overrides root
-            merged = {**root, **stream}
-            return merged
+            Supports both root-level defaults and stream-level overrides.
+            Priority: stream-level > root-level > code defaults.
+            """
 
-        telegram_raw = merge_config("telegram")
-        schedule_raw = merge_config("schedule")
-        monday_preview_raw = merge_config("monday_preview")
-        retention_raw = merge_config("retention")
-        dedupe_raw = merge_config("dedupe")
-        enrichment_raw = merge_config("enrichment")
-        scoring_raw = merge_config("scoring")
-        rss_raw = merge_config("rss")
-        constraints_raw = merge_config("constraints")
-        spotlight_raw = merge_config("spotlight")
-        generator_raw = merge_config("generator")
-        economic_calendar_raw = merge_config("economic_calendar")
-        holiday_behavior_raw = merge_config("holiday_behavior")
+            providers_raw = stream_raw.get("providers", {})
 
-        providers = StreamProvidersConfig(
-            ingestion=providers_raw.get("ingestion", "rss"),
-            scoring=providers_raw.get("scoring", "heuristic_v1"),
-            enrichment=providers_raw.get("enrichment", "fetch_extract"),
-            publisher=providers_raw.get("publisher", "telegram"),
-        )
+            def merge_config(key: str) -> dict:
+                root = root_raw.get(key, {})
+                stream = stream_raw.get(key, {})
+                return {**root, **stream}
 
-        # Parse nested configs
-        telegram = TelegramConfig(
-            bot_token_env=telegram_raw.get("bot_token_env", "TELEGRAM_BOT_TOKEN"),
-            chat_id_env=telegram_raw.get("chat_id_env", "TELEGRAM_CHAT_ID"),
-            parse_mode_env=telegram_raw.get("parse_mode_env", "TELEGRAM_PARSE_MODE"),
-        )
+            telegram_raw = merge_config("telegram")
+            schedule_raw = merge_config("schedule")
+            monday_preview_raw = merge_config("monday_preview")
+            retention_raw = merge_config("retention")
+            dedupe_raw = merge_config("dedupe")
+            enrichment_raw = merge_config("enrichment")
+            scoring_raw = merge_config("scoring")
+            rss_raw = merge_config("rss")
+            constraints_raw = merge_config("constraints")
+            spotlight_raw = merge_config("spotlight")
+            generator_raw = merge_config("generator")
+            economic_calendar_raw = merge_config("economic_calendar")
+            holiday_behavior_raw = merge_config("holiday_behavior")
 
-        schedule = ScheduleConfig(
-            daily_us_close_sgt=schedule_raw.get("daily_us_close_sgt", "06:00"),
-            weekend_wrap_sgt=schedule_raw.get("weekend_wrap_sgt", "10:00"),
-            monday_preview_ny=schedule_raw.get("monday_preview_ny", "SUN 18:10"),
-        )
+            providers = StreamProvidersConfig(
+                ingestion=providers_raw.get("ingestion", "rss"),
+                scoring=providers_raw.get("scoring", "heuristic_v1"),
+                enrichment=providers_raw.get("enrichment", "fetch_extract"),
+                publisher=providers_raw.get("publisher", "telegram"),
+            )
 
-        monday_preview = MondayPreviewConfig(
-            conditional=monday_preview_raw.get("conditional", True),
-            risk_threshold=monday_preview_raw.get("risk_threshold", 60),
-            force_publish=monday_preview_raw.get("force_publish", False),
-            force_skip=monday_preview_raw.get("force_skip", False),
-        )
+            telegram = TelegramConfig(
+                bot_token_env=telegram_raw.get("bot_token_env", "TELEGRAM_BOT_TOKEN"),
+                chat_id_env=telegram_raw.get("chat_id_env", "TELEGRAM_CHAT_ID"),
+                parse_mode_env=telegram_raw.get("parse_mode_env", "TELEGRAM_PARSE_MODE"),
+            )
 
-        retention = RetentionConfig(
-            news_items_days=retention_raw.get("news_items_days", 60),
-            fingerprints_days=retention_raw.get("fingerprints_days", 3650),
-            runs_days=retention_raw.get("runs_days", 3650),
-        )
+            schedule = ScheduleConfig(
+                daily_us_close_sgt=schedule_raw.get("daily_us_close_sgt", "06:00"),
+                weekend_wrap_sgt=schedule_raw.get("weekend_wrap_sgt", "10:00"),
+                monday_preview_ny=schedule_raw.get("monday_preview_ny", "SUN 18:10"),
+            )
 
-        simhash_raw = dedupe_raw.get("simhash", {})
-        simhash = SimHashConfig(
-            enabled=simhash_raw.get("enabled", True),
-            hamming_threshold=simhash_raw.get("hamming_threshold", 4),
-            window_days=simhash_raw.get("window_days", 14),
-        )
+            monday_preview = MondayPreviewConfig(
+                conditional=monday_preview_raw.get("conditional", True),
+                risk_threshold=monday_preview_raw.get("risk_threshold", 60),
+                force_publish=monday_preview_raw.get("force_publish", False),
+                force_skip=monday_preview_raw.get("force_skip", False),
+            )
 
-        trigram_raw = dedupe_raw.get("title_trigram", {})
-        title_trigram = TitleTrigramConfig(
-            enabled=trigram_raw.get("enabled", True),
-            similarity_threshold=trigram_raw.get("similarity_threshold", 0.85),
-        )
+            retention = RetentionConfig(
+                news_items_days=retention_raw.get("news_items_days", 60),
+                fingerprints_days=retention_raw.get("fingerprints_days", 3650),
+                runs_days=retention_raw.get("runs_days", 3650),
+            )
 
-        dedupe = DedupeConfig(
-            url_hash=dedupe_raw.get("url_hash", True),
-            text_hash=dedupe_raw.get("text_hash", True),
-            simhash=simhash,
-            title_trigram=title_trigram,
-        )
+            simhash_raw = dedupe_raw.get("simhash", {})
+            simhash = SimHashConfig(
+                enabled=simhash_raw.get("enabled", True),
+                hamming_threshold=simhash_raw.get("hamming_threshold", 4),
+                window_days=simhash_raw.get("window_days", 14),
+            )
 
-        enrichment = EnrichmentConfig(
-            enabled=enrichment_raw.get("enabled", True),
-            max_enrich_per_run=enrichment_raw.get("max_enrich_per_run", 25),
-            allow_full_text_storage=enrichment_raw.get("allow_full_text_storage", False),
-            snippet_chars=enrichment_raw.get("snippet_chars", 1200),
-        )
+            trigram_raw = dedupe_raw.get("title_trigram", {})
+            title_trigram = TitleTrigramConfig(
+                enabled=trigram_raw.get("enabled", True),
+                similarity_threshold=trigram_raw.get("similarity_threshold", 0.85),
+            )
 
-        source_tiers_raw = scoring_raw.get("source_tiers", {})
-        source_tiers = SourceTiersConfig(
-            tier_1=source_tiers_raw.get("tier_1", ["Reuters", "Bloomberg", "WSJ"]),
-            tier_2=source_tiers_raw.get("tier_2", ["CNBC", "Financial Times"]),
-            tier_3=source_tiers_raw.get("tier_3", ["Yahoo Finance", "MarketWatch"]),
-        )
+            dedupe = DedupeConfig(
+                url_hash=dedupe_raw.get("url_hash", True),
+                text_hash=dedupe_raw.get("text_hash", True),
+                simhash=simhash,
+                title_trigram=title_trigram,
+            )
 
-        scoring = ScoringConfig(
-            enabled=scoring_raw.get("enabled", True),
-            window_hours=scoring_raw.get("window_hours", 24),
-            max_items_per_run=scoring_raw.get("max_items_per_run", 100),
-            scorer_version=scoring_raw.get("scorer_version", "heuristic_v1"),
-            source_tiers=source_tiers,
-            llm_triage_enabled=scoring_raw.get("llm_triage_enabled", False),
-            llm_model=scoring_raw.get("llm_model", "mistralai/mistral-7b-instruct"),
-            llm_max_items=scoring_raw.get("llm_max_items", 25),
-        )
+            enrichment = EnrichmentConfig(
+                enabled=enrichment_raw.get("enabled", True),
+                max_enrich_per_run=enrichment_raw.get("max_enrich_per_run", 25),
+                allow_full_text_storage=enrichment_raw.get("allow_full_text_storage", False),
+                snippet_chars=enrichment_raw.get("snippet_chars", 1200),
+            )
 
-        rss = RSSConfig(
-            allowlist_files=rss_raw.get("allowlist_files", []),
-            poll_interval_minutes=rss_raw.get("poll_interval_minutes", 10),
-        )
+            source_tiers_raw = scoring_raw.get("source_tiers", {})
+            source_tiers = SourceTiersConfig(
+                tier_1=source_tiers_raw.get("tier_1", ["Reuters", "Bloomberg", "WSJ"]),
+                tier_2=source_tiers_raw.get("tier_2", ["CNBC", "Financial Times"]),
+                tier_3=source_tiers_raw.get("tier_3", ["Yahoo Finance", "MarketWatch"]),
+            )
 
-        constraints = ConstraintsConfig(
-            max_words_daily=constraints_raw.get("max_words_daily", 420),
-            max_words_weekend=constraints_raw.get("max_words_weekend", 520),
-            max_words_preview=constraints_raw.get("max_words_preview", 320),
-            max_takeaway_bullets=constraints_raw.get("max_takeaway_bullets", 5),
-            max_watch_bullets=constraints_raw.get("max_watch_bullets", 3),
-        )
+            scoring = ScoringConfig(
+                enabled=scoring_raw.get("enabled", True),
+                window_hours=scoring_raw.get("window_hours", 24),
+                max_items_per_run=scoring_raw.get("max_items_per_run", 100),
+                scorer_version=scoring_raw.get("scorer_version", "heuristic_v1"),
+                source_tiers=source_tiers,
+                llm_triage_enabled=scoring_raw.get("llm_triage_enabled", False),
+                llm_model=scoring_raw.get("llm_model", "mistralai/mistral-7b-instruct"),
+                llm_max_items=scoring_raw.get("llm_max_items", 25),
+            )
 
-        spotlight = SpotlightConfig(
-            enabled=spotlight_raw.get("enabled", False),
-            title=spotlight_raw.get("title", ""),
-            body=spotlight_raw.get("body", ""),
-            disclaimer=spotlight_raw.get("disclaimer", ""),
-        )
+            rss = RSSConfig(
+                allowlist_files=rss_raw.get("allowlist_files", []),
+                poll_interval_minutes=rss_raw.get("poll_interval_minutes", 10),
+            )
 
-        generator = GeneratorConfig(
-            enabled=generator_raw.get("enabled", True),
-            model=generator_raw.get("model", "openai/gpt-4.1"),
-            temperature=generator_raw.get("temperature", 0.4),
-            max_retries=generator_raw.get("max_retries", 1),
-            timeout_seconds=generator_raw.get("timeout_seconds", 60),
-        )
+            constraints = ConstraintsConfig(
+                max_words_daily=constraints_raw.get("max_words_daily", 420),
+                max_words_weekend=constraints_raw.get("max_words_weekend", 520),
+                max_words_preview=constraints_raw.get("max_words_preview", 320),
+                max_takeaway_bullets=constraints_raw.get("max_takeaway_bullets", 5),
+                max_watch_bullets=constraints_raw.get("max_watch_bullets", 3),
+            )
 
-        economic_calendar = EconomicCalendarConfig(
-            enabled=economic_calendar_raw.get("enabled", True),
-            feed_url=economic_calendar_raw.get(
-                "feed_url", "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-            ),
-            countries=economic_calendar_raw.get("countries", ["USD"]),
-            impact_filter=economic_calendar_raw.get("impact_filter", ["High"]),
-            lookahead_days=economic_calendar_raw.get("lookahead_days", 7),
-            stale_hours=economic_calendar_raw.get("stale_hours", 12),
-        )
+            spotlight = SpotlightConfig(
+                enabled=spotlight_raw.get("enabled", False),
+                title=spotlight_raw.get("title", ""),
+                body=spotlight_raw.get("body", ""),
+                disclaimer=spotlight_raw.get("disclaimer", ""),
+            )
 
-        holiday_behavior = HolidayBehaviorConfig(
-            holiday_behavior=holiday_behavior_raw.get("holiday_behavior", "skip"),
-            half_day_behavior=holiday_behavior_raw.get("half_day_behavior", "label_half_day"),
-        )
+            generator = GeneratorConfig(
+                enabled=generator_raw.get("enabled", True),
+                model=generator_raw.get("model", "openai/gpt-4.1"),
+                temperature=generator_raw.get("temperature", 0.4),
+                max_retries=generator_raw.get("max_retries", 1),
+                timeout_seconds=generator_raw.get("timeout_seconds", 60),
+            )
 
-        stream = StreamConfig(
-            name=stream_raw.get("name", "us_close_basic"),
-            enabled=stream_raw.get("enabled", True),
-            providers=providers,
-            telegram=telegram,
-            schedule=schedule,
-            monday_preview=monday_preview,
-            retention=retention,
-            dedupe=dedupe,
-            enrichment=enrichment,
-            scoring=scoring,
-            rss=rss,
-            constraints=constraints,
-            spotlight=spotlight,
-            generator=generator,
-            economic_calendar=economic_calendar,
-            holiday_behavior=holiday_behavior,
-        )
+            economic_calendar = EconomicCalendarConfig(
+                enabled=economic_calendar_raw.get("enabled", True),
+                feed_url=economic_calendar_raw.get(
+                    "feed_url", "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+                ),
+                countries=economic_calendar_raw.get("countries", ["USD"]),
+                impact_filter=economic_calendar_raw.get("impact_filter", ["High"]),
+                lookahead_days=economic_calendar_raw.get("lookahead_days", 7),
+                stale_hours=economic_calendar_raw.get("stale_hours", 12),
+            )
+
+            holiday_behavior = HolidayBehaviorConfig(
+                holiday_behavior=holiday_behavior_raw.get("holiday_behavior", "skip"),
+                half_day_behavior=holiday_behavior_raw.get("half_day_behavior", "label_half_day"),
+            )
+
+            return StreamConfig(
+                name=stream_raw.get("name", "us_close_basic"),
+                enabled=stream_raw.get("enabled", True),
+                providers=providers,
+                telegram=telegram,
+                schedule=schedule,
+                monday_preview=monday_preview,
+                retention=retention,
+                dedupe=dedupe,
+                enrichment=enrichment,
+                scoring=scoring,
+                rss=rss,
+                constraints=constraints,
+                spotlight=spotlight,
+                generator=generator,
+                economic_calendar=economic_calendar,
+                holiday_behavior=holiday_behavior,
+            )
+
+        # Build stream config(s) from YAML.
+        streams_raw = raw_config.get("streams")
+        streams: dict[str, StreamConfig] = {}
+
+        if isinstance(streams_raw, dict) and streams_raw:
+            for stream_name, stream_overrides in streams_raw.items():
+                if not isinstance(stream_overrides, dict):
+                    stream_overrides = {}
+                # Ensure stream name is set deterministically.
+                merged_stream = {**stream_overrides, "name": stream_name}
+                stream_cfg = build_stream_config(merged_stream, raw_config)
+                streams[stream_name] = stream_cfg
+
+            # Backward-compat: pick the first stream as .stream placeholder.
+            # CLI/daemon should explicitly select the active streams.
+            first_name = next(iter(streams.keys()))
+            stream = streams[first_name]
+        else:
+            stream_raw = raw_config.get("stream", {})
+            stream = build_stream_config(stream_raw, raw_config)
+            streams = {stream.name: stream}
 
         # NOTE: provider-specific runtime validations should live in the provider itself
         # (or the worker it wraps), not during config load.
@@ -606,16 +639,55 @@ class ArgusConfig:
 
         log_level = raw_config.get("log_level", "INFO")
 
-        return cls(stream=stream, daemon=daemon, log_level=log_level)
+        return cls(stream=stream, streams=streams, daemon=daemon, log_level=log_level)
 
-    def get_rss_feeds(self) -> list[str]:
+    def list_streams(self, *, enabled_only: bool = False) -> list[str]:
+        """List configured stream names.
+
+        Args:
+            enabled_only: If True, return only enabled streams.
+
+        Returns:
+            Sorted list of stream names.
+        """
+        if enabled_only:
+            names = [name for name, s in self.streams.items() if s.enabled]
+        else:
+            names = list(self.streams.keys())
+        return sorted(names)
+
+    def get_stream(self, stream_name: str) -> StreamConfig:
+        """Get a stream config by name.
+
+        Raises:
+            UnknownStreamError: if stream_name does not exist.
+        """
+        stream = self.streams.get(stream_name)
+        if stream is None:
+            raise UnknownStreamError(
+                f"Unknown stream: {stream_name}. Available: {', '.join(self.list_streams())}"
+            )
+        return stream
+
+    def select_stream(self, stream_name: str) -> "ArgusConfig":
+        """Return a view of this config with .stream set to the chosen stream."""
+        selected = self.get_stream(stream_name)
+        self.stream = selected
+        return self
+
+    def get_rss_feeds(self, stream_name: Optional[str] = None) -> list[str]:
         """Get list of RSS feed URLs from allowlist files.
+
+        Args:
+            stream_name: Optional stream name. If omitted, uses self.stream.
 
         Returns:
             List of RSS feed URLs.
         """
-        feeds = []
-        allowlist = self.stream.rss.allowlist_files or []
+        feeds: list[str] = []
+        stream = self.get_stream(stream_name) if stream_name else self.stream
+        allowlist = stream.rss.allowlist_files or []
+
         for filename in allowlist:
             filepath = Path(filename)
             if not filepath.is_absolute():

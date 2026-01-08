@@ -7,7 +7,7 @@ from typing import Optional
 import click
 
 from . import __version__
-from .config import ArgusConfig
+from .config import ArgusConfig, UnknownStreamError
 
 
 @click.group()
@@ -28,7 +28,9 @@ def cli(ctx: click.Context, config: Optional[Path]) -> None:
 
 
 @cli.command()
-@click.option("--stream", default="us_close_basic", help="Stream name")
+@click.option(
+    "--stream", default=None, help="Stream name (required when using multi-stream config)"
+)
 @click.option(
     "--mode",
     type=click.Choice(["us_close", "weekend_wrap", "monday_preview"]),
@@ -46,6 +48,18 @@ def cli(ctx: click.Context, config: Optional[Path]) -> None:
     is_flag=True,
     default=False,
     help="Run pipeline but don't send to Telegram",
+)
+@click.option(
+    "--print-message",
+    is_flag=True,
+    default=False,
+    help="Print the final generated message to stdout at the end of the run",
+)
+@click.option(
+    "--save-message",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Write the final generated message to a file",
 )
 @click.option(
     "--skip-scoring",
@@ -86,10 +100,12 @@ def cli(ctx: click.Context, config: Optional[Path]) -> None:
 @click.pass_context
 def run(
     ctx: click.Context,
-    stream: str,
+    stream: Optional[str],
     mode: str,
     dry_run: bool,
     skip_publish: bool,
+    print_message: bool,
+    save_message: Optional[Path],
     skip_scoring: bool,
     skip_enrichment: bool,
     include_ingest: bool,
@@ -121,6 +137,24 @@ def run(
     config_path = ctx.obj.get("config_path")
     config = ArgusConfig.load(config_path)
 
+    if stream is None:
+        if len(config.streams) > 1:
+            click.echo(
+                "Error: --stream is required when config.yaml defines multiple streams. "
+                f"Available: {', '.join(config.list_streams())}",
+                err=True,
+            )
+            raise SystemExit(2)
+
+        # Single-stream backward compatibility
+        stream = config.stream.name
+
+    try:
+        config.select_stream(stream)
+    except UnknownStreamError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(2)
+
     # Build orchestrator options
     options = OrchestratorOptions(
         dry_run=dry_run,
@@ -133,6 +167,9 @@ def run(
         force_skip=force_skip or config.stream.monday_preview.force_skip,
         risk_threshold=config.stream.monday_preview.risk_threshold,
     )
+
+    if save_message is not None:
+        save_message.parent.mkdir(parents=True, exist_ok=True)
 
     if dry_run:
         click.echo("=== Argus Dry Run ===")
@@ -240,6 +277,24 @@ def run(
         click.echo(f"  Market: {result.risk_score.market_score}/30")
         click.echo(f"  Headline: {result.risk_score.headline_score}/30")
         click.echo(f"  Total: {result.risk_score.total}/100")
+
+    if print_message or save_message is not None:
+        if not result.message_content:
+            click.echo()
+            click.echo(
+                click.style("[WARN] No message content available to print/save", fg="yellow")
+            )
+        else:
+            if print_message:
+                click.echo()
+                click.echo("--- FINAL GENERATED MESSAGE ---")
+                click.echo(result.message_content)
+                click.echo("--- END MESSAGE ---")
+
+            if save_message is not None:
+                save_message.write_text(result.message_content)
+                click.echo()
+                click.echo(f"Message written to: {save_message}")
 
 
 @cli.group()
@@ -479,9 +534,12 @@ def main() -> None:
 
 
 @cli.command()
+@click.option(
+    "--stream", default=None, help="Stream name (required when using multi-stream config)"
+)
 @click.option("--dry-run", is_flag=True, help="Parse feeds but don't insert into DB")
 @click.pass_context
-def ingest(ctx: click.Context, dry_run: bool) -> None:
+def ingest(ctx: click.Context, stream: Optional[str], dry_run: bool) -> None:
     """Run RSS feed ingestion.
 
     Polls all configured RSS feeds and ingests new items into the database.
@@ -492,6 +550,24 @@ def ingest(ctx: click.Context, dry_run: bool) -> None:
 
     config_path = ctx.obj.get("config_path")
     config = ArgusConfig.load(config_path)
+
+    if stream is None:
+        if len(config.streams) > 1:
+            click.echo(
+                "Error: --stream is required when config.yaml defines multiple streams. "
+                f"Available: {', '.join(config.list_streams())}",
+                err=True,
+            )
+            raise SystemExit(2)
+
+        # Single-stream backward compatibility
+        stream = config.stream.name
+
+    try:
+        config.select_stream(stream)
+    except UnknownStreamError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(2)
 
     feed_urls = config.get_rss_feeds()
 

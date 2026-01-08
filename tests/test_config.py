@@ -8,6 +8,7 @@ import yaml
 from argus.config import (
     ArgusConfig,
     TelegramConfig,
+    UnknownStreamError,
 )
 
 
@@ -58,9 +59,7 @@ class TestArgusConfigLoad:
             "log_level": "DEBUG",
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_content, f)
             config_path = Path(f.name)
 
@@ -92,9 +91,7 @@ class TestArgusConfigLoad:
             }
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_content, f)
             config_path = Path(f.name)
 
@@ -109,15 +106,68 @@ class TestArgusConfigLoad:
             config_path.unlink()
 
 
+class TestMultiStreamConfig:
+    def test_load_streams_map(self):
+        config_content = {
+            "streams": {
+                "alpha": {"enabled": True},
+                "beta": {"enabled": False},
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_content, f)
+            config_path = Path(f.name)
+
+        try:
+            config = ArgusConfig.load(config_path=config_path)
+            assert set(config.streams.keys()) == {"alpha", "beta"}
+            assert config.get_stream("alpha").name == "alpha"
+            assert config.get_stream("beta").enabled is False
+            assert config.list_streams() == ["alpha", "beta"]
+            assert config.list_streams(enabled_only=True) == ["alpha"]
+        finally:
+            config_path.unlink()
+
+    def test_load_stream_backward_compat_populates_streams(self):
+        config_content = {"stream": {"name": "solo", "enabled": True}}
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_content, f)
+            config_path = Path(f.name)
+
+        try:
+            config = ArgusConfig.load(config_path=config_path)
+            assert config.stream.name == "solo"
+            assert config.streams["solo"].name == "solo"
+        finally:
+            config_path.unlink()
+
+    def test_get_stream_unknown_raises(self):
+        config_content = {"streams": {"alpha": {"enabled": True}}}
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_content, f)
+            config_path = Path(f.name)
+
+        try:
+            config = ArgusConfig.load(config_path=config_path)
+            try:
+                config.get_stream("missing")
+                assert False, "expected UnknownStreamError"
+            except UnknownStreamError:
+                pass
+        finally:
+            config_path.unlink()
+
+
 class TestGetRssFeeds:
     """Tests for get_rss_feeds()."""
 
     def test_get_rss_feeds_from_file(self, monkeypatch):
         """Test loading RSS feeds from allowlist file."""
         # Create a temporary RSS file
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("# Comment line\n")
             f.write("https://example.com/feed1.xml\n")
             f.write("\n")
@@ -132,9 +182,7 @@ class TestGetRssFeeds:
             }
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_content, f)
             config_path = Path(f.name)
 
@@ -158,9 +206,7 @@ class TestGetRssFeeds:
             }
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yaml", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_content, f)
             config_path = Path(f.name)
 

@@ -1,6 +1,6 @@
-# Argus - US Close Market Update Bot
+# Argus - Market Update Bot
 
-Telegram bot that ingests news + prices, scores and curates items, generates a WhatsApp/Telegram-style "Market Update" after US close, and publishes on a schedule (SGT + NY DST-safe).
+Telegram bot that ingests news + prices, scores and curates items, generates WhatsApp/Telegram-style market updates across multiple run modes (e.g. `us_close`, `weekend_wrap`, `monday_preview`) within a stream (e.g. `us_close_basic`), and publishes on a schedule (SGT + NY DST-safe).
 
 ## Quick Start
 
@@ -27,9 +27,18 @@ Create a `.env` file in the project root (see `.env.example`):
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) | `123456789:ABCdef...` |
-| `TELEGRAM_CHAT_ID` | Target chat/channel ID | `-1001234567890` |
+| `TELEGRAM_CHAT_ID` | Target chat/channel ID (legacy single-destination publishing) | `-1001234567890` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/argus` |
 | `OPENROUTER_API_KEY` | API key for LLM generation via [OpenRouter](https://openrouter.ai) | `sk-or-v1-...` |
+
+### Telegram Control Plane (Access + Subscriptions)
+
+These settings enable chat onboarding and per-stream subscriptions. The control plane runs automatically inside `argus daemon start` when these variables are set.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `TELEGRAM_OWNER_USER_ID` | Owner Telegram user ID (only this user can approve/deny access) | `123456789` |
+| `TELEGRAM_ADMIN_CHAT_ID` | Admin group chat ID where approvals happen | `-1001234567890` |
 
 ### Optional Variables
 
@@ -81,6 +90,35 @@ RSS feeds are configured in text files under the `rss/` directory:
 rss/
   us_close_basic.txt   # One URL per line, # for comments
 ```
+
+## Telegram Control Plane (Onboarding + Subscriptions)
+
+Argus supports DB-backed per-stream subscriptions for Telegram publishing.
+
+### Onboarding flow
+
+In any chat with the bot:
+
+1. `/start` — shows onboarding help
+2. `/access` — request access (creates a pending request)
+3. In the admin group (must be sent by `TELEGRAM_OWNER_USER_ID`):
+   - `/approve <id>` or `/deny <id> [reason]`
+4. After approval:
+   - `/streams` — list available stream names
+   - `/subscribe <stream>` — receive broadcasts for that stream
+   - `/unsubscribe <stream>` — stop receiving broadcasts
+   - `/status` — show authorization + current subscriptions
+
+Admin group commands (owner only):
+- `/requests` — list pending access requests
+
+### Broadcast publishing behavior
+
+When Argus publishes a message for a given stream, it sends it to **all authorized, enabled subscribers** for that stream.
+
+If there are **no subscriptions** in the database for that stream, Argus falls back to the legacy single destination `TELEGRAM_CHAT_ID`.
+
+This means being the owner/admin does **not** automatically subscribe you to broadcasts — subscribe the specific chat (DM/group/channel) you want to receive posts.
 
 ## Commands Reference
 
@@ -165,6 +203,8 @@ The smoke test:
 ## Daemon Mode
 
 For VPS deployment, Argus can run as a long-lived daemon with internal scheduling, eliminating the need for external cron configuration.
+
+**Note:** `argus daemon start` also starts the Telegram control plane (long polling) when `TELEGRAM_OWNER_USER_ID` and `TELEGRAM_ADMIN_CHAT_ID` are set.
 
 ```bash
 # Start daemon (foreground)
