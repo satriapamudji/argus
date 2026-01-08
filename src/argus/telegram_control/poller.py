@@ -29,6 +29,8 @@ from argus.db.telegram_repository import (
 from argus.telegram_control.client import TelegramBotApi
 from argus.telegram_control.commands import parse_command
 
+import httpx
+
 logger = logging.getLogger(__name__)
 
 BOT_STATE_OFFSET_KEY = "telegram_update_offset"
@@ -142,6 +144,10 @@ async def run_telegram_control_plane(config: ArgusConfig) -> None:
             updates = []
             try:
                 updates = api.get_updates(offset=offset, timeout=30)
+            except (httpx.ReadTimeout, httpx.ConnectTimeout):
+                # Expected occasionally during long polling / transient network issues.
+                logger.warning("Telegram getUpdates timed out; continuing")
+                continue
             except Exception:
                 logger.exception("Telegram getUpdates failed")
                 await asyncio.sleep(2)

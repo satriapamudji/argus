@@ -17,7 +17,19 @@ logger = logging.getLogger(__name__)
 class TelegramBotApi:
     def __init__(self, *, bot_token: str, timeout_seconds: float = 30.0) -> None:
         self._bot_token = bot_token
-        self._client = httpx.Client(timeout=timeout_seconds)
+
+        # Telegram long-polling (getUpdates) can legitimately hold the connection open for
+        # `timeout` seconds. Ensure our HTTP client read timeout is comfortably above that.
+        #
+        # We keep other phases reasonably short to avoid hanging on connect/write.
+        self._client = httpx.Client(
+            timeout=httpx.Timeout(
+                connect=10.0,
+                read=max(timeout_seconds, 65.0),
+                write=10.0,
+                pool=10.0,
+            )
+        )
 
     def close(self) -> None:
         self._client.close()
