@@ -38,6 +38,7 @@ JOB_US_CLOSE = "us_close"
 JOB_WEEKEND_WRAP = "weekend_wrap"
 JOB_MONDAY_PREVIEW = "monday_preview"
 JOB_RETENTION = "retention"
+JOB_HEALTH_PING = "health_ping"
 
 ALL_JOBS = [JOB_INGEST, JOB_US_CLOSE, JOB_WEEKEND_WRAP, JOB_MONDAY_PREVIEW, JOB_RETENTION]
 
@@ -110,6 +111,9 @@ class ArgusDaemon:
                 bind=self.daemon_config.health_bind,
             )
             await self._health_server.start()
+
+        # Log one immediate heartbeat (then periodic below if enabled)
+        self._log_health_ping()
 
         logger.info("Daemon started, waiting for shutdown signal...")
 
@@ -235,10 +239,97 @@ class ArgusDaemon:
             )
             logger.info(f"Scheduled {JOB_RETENTION}: daily at {retention_hour:02d}:00 UTC")
 
+        # Journald heartbeat - every N minutes (0 disables)
+        health_ping_minutes = getattr(self.daemon_config, "health_ping_minutes", 10)
+        if health_ping_minutes > 0:
+            self._scheduler.add_job(
+                self._log_health_ping,
+                IntervalTrigger(minutes=health_ping_minutes),
+                id=JOB_HEALTH_PING,
+                name="Health Ping",
+                replace_existing=True,
+            )
+            logger.info(f"Scheduled {JOB_HEALTH_PING}: every {health_ping_minutes} minutes")
+
     def _parse_time(self, time_str: str) -> tuple[int, int]:
         """Parse a time string like '06:00' into (hour, minute)."""
         parts = time_str.split(":")
         return int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+
+    def _kv(self, **fields: object) -> str:
+        """Format key=value pairs for journald-friendly logs."""
+        # Keep formatting predictable and single-line.
+        formatted: list[str] = []
+        for key, value in fields.items():
+            if value is None:
+                continue
+            if isinstance(value, bool):
+                formatted.append(f"{key}={1 if value else 0}")
+            else:
+                formatted.append(f"{key}={value}")
+        return " ".join(formatted)
+
+    def _log_health_ping(self) -> None:
+        """Log daemon liveness/health line for journald.
+
+        Healthy case: one short INFO line.
+        Degraded/unhealthy: one WARN/ERROR line + per-job detail lines for degraded jobs only.
+        """
+        try:
+            status = self.get_status()
+
+            jobs_total = len(status.jobs)
+            jobs_enabled = sum(1 for j in status.jobs.values() if j.enabled)
+            jobs_running = sum(1 for j in status.jobs.values() if j.is_running)
+
+            # Degraded jobs are enabled jobs with last_status == 'failed'.
+            degraded_jobs = [
+                j.job_id
+                for j in status.jobs.values()
+                if j.enabled and j.last_status == "failed" and j.last_run is not None
+            ]
+
+            is_degraded = status.status in {"degraded", "unhealthy"} or len(degraded_jobs) > 0
+
+            heartbeat_line = self._kv(
+                event="health_ping",
+                status=status.status,
+                uptime_s=status.uptime_seconds,
+                jobs_total=jobs_total,
+                jobs_enabled=jobs_enabled,
+                jobs_running=jobs_running,
+                degraded=is_degraded,
+                degraded_jobs=",".join(degraded_jobs) if degraded_jobs else None,
+            )
+
+            if is_degraded:
+                # Use WARNING unless explicitly unhealthy.
+                if status.status == "unhealthy":
+                    logger.error(heartbeat_line)
+                else:
+                    logger.warning(heartbeat_line)
+
+                for job_id in degraded_jobs:
+                    job = status.jobs.get(job_id)
+                    if job is None:
+                        continue
+                    logger.warning(
+                        self._kv(
+                            event="job_health",
+                            job_id=job.job_id,
+                            enabled=job.enabled,
+                            is_running=job.is_running,
+                            last_status=job.last_status,
+                            last_run=job.last_run.isoformat() if job.last_run else None,
+                            next_run=job.next_run.isoformat() if job.next_run else None,
+                            run_count=job.run_count,
+                        )
+                    )
+            else:
+                logger.info(heartbeat_line)
+        except Exception:
+            # Heartbeat should never crash the daemon.
+            logger.exception("event=health_ping status=error")
 
     async def _check_missed_jobs(self) -> None:
         """Check for jobs that need catch-up after restart."""
@@ -476,7 +567,6 @@ class ArgusDaemon:
 
         # Determine overall status
         status = "healthy"
-        running_jobs = get_running_jobs(get_connection()) if self._running_jobs else []
         if any(job.last_status == "failed" for job in jobs.values() if job.last_run):
             status = "degraded"
 

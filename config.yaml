@@ -68,6 +68,7 @@ daemon:
   health_port: 8080
   health_bind: "127.0.0.1"  # Localhost only - access via SSH tunnel
   retention_hour: 3  # Daily retention cleanup at 03:00 UTC
+  health_ping_minutes: 10  # Journald heartbeat interval (0 to disable)
 
   # Enable/disable individual jobs
   jobs_enabled:

@@ -285,6 +285,7 @@ class DaemonConfig:
         health_port: Port for health endpoint (0 to disable).
         health_bind: Address to bind health endpoint to.
         retention_hour: Hour (UTC) to run retention cleanup.
+        health_ping_minutes: Interval minutes for journald heartbeat log (<=0 to disable).
         jobs_enabled: Dict of job_id -> enabled status.
         missed_policy: Dict of job_id -> policy ('run_immediately' or 'skip').
     """
@@ -293,6 +294,7 @@ class DaemonConfig:
     health_port: int = 8080
     health_bind: str = "127.0.0.1"
     retention_hour: int = 3
+    health_ping_minutes: int = 10
     jobs_enabled: dict[str, bool] = field(
         default_factory=lambda: {
             "ingest": True,
@@ -558,6 +560,7 @@ class ArgusConfig:
             health_port=daemon_raw.get("health_port", 8080),
             health_bind=daemon_raw.get("health_bind", "127.0.0.1"),
             retention_hour=daemon_raw.get("retention_hour", 3),
+            health_ping_minutes=daemon_raw.get("health_ping_minutes", 10),
             jobs_enabled={
                 "ingest": jobs_enabled_raw.get("ingest", True),
                 "us_close": jobs_enabled_raw.get("us_close", True),

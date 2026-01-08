@@ -21,6 +21,7 @@ class TestDaemonConfig:
         assert config.health_port == 8080
         assert config.health_bind == "127.0.0.1"
         assert config.retention_hour == 3
+        assert config.health_ping_minutes == 10
 
     def test_is_job_enabled_default(self):
         """Test all jobs enabled by default."""
@@ -69,6 +70,7 @@ class TestDaemonConfigFromYaml:
                 "health_port": 9090,
                 "health_bind": "0.0.0.0",
                 "retention_hour": 5,
+                "health_ping_minutes": 7,
                 "jobs_enabled": {
                     "ingest": True,
                     "us_close": False,
@@ -88,6 +90,7 @@ class TestDaemonConfigFromYaml:
             assert config.daemon.health_port == 9090
             assert config.daemon.health_bind == "0.0.0.0"
             assert config.daemon.retention_hour == 5
+            assert config.daemon.health_ping_minutes == 7
             assert config.daemon.is_job_enabled("ingest") is True
             assert config.daemon.is_job_enabled("us_close") is False
             assert config.daemon.get_missed_policy("ingest") == "skip"

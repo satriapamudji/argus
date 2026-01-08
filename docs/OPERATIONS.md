@@ -121,6 +121,7 @@ daemon:
   health_port: 8080
   health_bind: "127.0.0.1"  # Localhost only - access via SSH tunnel
   retention_hour: 3  # Daily retention cleanup at 03:00 UTC
+  health_ping_minutes: 10  # Journald heartbeat interval (0 to disable)
 
   # Enable/disable individual jobs
   jobs_enabled:
@@ -169,6 +170,12 @@ sudo systemctl status argus
 
 # View logs
 sudo journalctl -u argus -f
+
+# Filter daemon heartbeat (liveness)
+sudo journalctl -u argus | grep "event=health_ping"
+
+# Show only degraded/unhealthy signals
+sudo journalctl -u argus -p warning
 
 # Check health endpoint (via SSH tunnel or locally)
 curl http://127.0.0.1:8080/health
