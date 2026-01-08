@@ -171,6 +171,7 @@ def sample_news_contexts(sample_news_items: tuple[NewsItemBundle, ...]) -> list[
             published_date = item.published_at.strftime("%d %b %Y")
         contexts.append(
             NewsContext(
+                cite_key=("A1B2C3D4" if i == 1 else "BEEFC0DE" if i == 2 else "DEADBEEF"),
                 ref_number=i,
                 news_item_id=item.id,
                 title=item.title,
@@ -190,14 +191,14 @@ def sample_llm_content() -> LLMGeneratedContent:
     """Sample LLM-generated content for tests."""
     return LLMGeneratedContent(
         narrative=(
-            "Markets rallied today as the Federal Reserve signaled openness to rate cuts [1]. "
-            "Tech stocks led the charge following strong earnings reports [2].\n\n"
+            "Markets rallied today as the Federal Reserve signaled openness to rate cuts [#A1B2C3D4]. "
+            "Tech stocks led the charge following strong earnings reports [#BEEFC0DE].\n\n"
             "The S&P 500 closed higher, buoyed by optimism around monetary policy. "
             "Cross-asset confirmation came from falling Treasury yields."
         ),
         takeaways=[
-            "Monitor Fed communications for rate cut timing",
-            "Tech sector showing resilience despite macro uncertainty",
+            "Monitor Fed communications for rate cut timing [#A1B2C3D4]",
+            "Tech sector showing resilience despite macro uncertainty [#BEEFC0DE]",
             "Treasury yields trending lower supports equity valuations",
         ],
         watch_next=[
@@ -515,18 +516,18 @@ class TestFormatIndexSnapshot:
 
 
 class TestExtractReferencedIds:
-    """Tests for extract_referenced_ids function."""
+    """Tests for extract_referenced_ids function (strict cite-key mode)."""
 
     def test_extracts_single_reference(self, sample_news_contexts: list[NewsContext]) -> None:
-        """Test extracting a single reference."""
-        narrative = "Markets rallied on Fed news [1]."
+        """Test extracting a single cite key."""
+        narrative = "Markets rallied on Fed news [#A1B2C3D4]."
         ids = extract_referenced_ids(narrative, sample_news_contexts)
 
         assert ids == [1]
 
     def test_extracts_multiple_references(self, sample_news_contexts: list[NewsContext]) -> None:
-        """Test extracting multiple references."""
-        narrative = "Fed [1] and tech earnings [2] drove gains."
+        """Test extracting multiple cite keys."""
+        narrative = "Fed [#A1B2C3D4] and tech earnings [#BEEFC0DE] drove gains."
         ids = extract_referenced_ids(narrative, sample_news_contexts)
 
         assert ids == [1, 2]
@@ -534,26 +535,25 @@ class TestExtractReferencedIds:
     def test_preserves_order_of_first_reference(
         self, sample_news_contexts: list[NewsContext]
     ) -> None:
-        """Test that order is based on first reference."""
-        narrative = "Tech [2] led, but Fed [1] was key. More on tech [2]."
+        """Test that order is based on first cite key occurrence."""
+        narrative = "Tech [#BEEFC0DE] led, but Fed [#A1B2C3D4] was key. More on tech [#BEEFC0DE]."
         ids = extract_referenced_ids(narrative, sample_news_contexts)
 
-        # Order should be [2, 1] since [2] appears first
         assert ids == [2, 1]
 
     def test_deduplicates_references(self, sample_news_contexts: list[NewsContext]) -> None:
-        """Test that duplicate references are deduplicated."""
-        narrative = "Fed [1] led. More Fed [1]. Tech [2]."
+        """Test that duplicate cite keys are deduplicated."""
+        narrative = "Fed [#A1B2C3D4] led. More Fed [#A1B2C3D4]. Tech [#BEEFC0DE]."
         ids = extract_referenced_ids(narrative, sample_news_contexts)
 
         assert ids == [1, 2]
 
-    def test_ignores_invalid_references(self, sample_news_contexts: list[NewsContext]) -> None:
-        """Test that invalid reference numbers are ignored."""
-        narrative = "Markets [1] and something else [99]."
-        ids = extract_referenced_ids(narrative, sample_news_contexts)
+    def test_rejects_unknown_keys(self, sample_news_contexts: list[NewsContext]) -> None:
+        """Test that unknown cite keys are rejected (strict mode)."""
+        narrative = "Markets [#A1B2C3D4] and something else [#FFFFFFFF]."
 
-        assert ids == [1]
+        with pytest.raises(ValueError, match="Unknown cite keys"):
+            extract_referenced_ids(narrative, sample_news_contexts)
 
 
 class TestCountWords:
@@ -781,7 +781,7 @@ class TestMessageGenerator:
                 {
                     "message": {
                         "content": """{
-                            "narrative": "Test narrative with [1] reference.",
+                            "narrative": "Test narrative with [#3F0D7FA3] reference.",
                             "takeaways": ["Bullet 1", "Bullet 2", "Bullet 3"],
                             "watch_next": ["Watch 1"]
                         }"""
@@ -818,7 +818,7 @@ class TestMessageGenerator:
                     "message": {
                         "content": """```json
 {
-    "narrative": "Wrapped in code block [1].",
+    "narrative": "Wrapped in code block [#3F0D7FA3].",
     "takeaways": ["Bullet", "Bullet 2", "Bullet 3"],
     "watch_next": ["Watch"]
 }

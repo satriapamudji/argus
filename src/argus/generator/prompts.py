@@ -4,6 +4,8 @@ Contains system prompts for each generation mode and user prompt builders.
 The LLM generates narrative content using [n] references to news items.
 """
 
+import hashlib
+
 from argus.facts_bundle.types import FactsBundle
 from argus.generator.types import GenerationMode, NewsContext
 
@@ -17,10 +19,16 @@ Your task is to write a concise, professional market narrative based ONLY on the
 
 CRITICAL RULES:
 1. ONLY use information from the provided facts bundle - never invent data
-2. Reference news items using their [n] numbers (e.g., "[1]", "[2]")
+2. Reference news items using ONLY their provided citation keys in the exact format "[#A1B2C3D4]".
+   - Copy/paste the key from the news list. Never invent keys.
+   - Do NOT cite using numeric "[1]", "[2]", etc.
 3. Use neutral, professional tone - no hype or sensationalism
 4. Focus on what matters to investors
 5. Be concise - every word should add value
+
+CITATION EXAMPLES:
+- Correct: "Investors digested the Fed signals closely [#A1B2C3D4]."
+- Incorrect: "... [1]" or "... [#DEADBEEF]" (if not provided)
 
 OUTPUT FORMAT (JSON):
 You must respond with valid JSON containing exactly these fields:
@@ -120,7 +128,10 @@ def build_news_contexts(bundle: FactsBundle) -> list[NewsContext]:
         if item.published_at:
             published_date = item.published_at.strftime("%d %b %Y")
 
+        cite_key = hashlib.sha256(item.source_url.encode("utf-8")).hexdigest()[:8].upper()
+
         context = NewsContext(
+            cite_key=cite_key,
             ref_number=i,
             news_item_id=item.id,
             title=item.title,

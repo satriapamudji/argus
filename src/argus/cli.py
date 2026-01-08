@@ -1123,6 +1123,93 @@ def calendar_status(ctx: click.Context) -> None:
     click.echo(f"  Data stale: {'Yes' if status_info['stale'] else 'No'}")
 
 
+@cli.command(name="show")
+@click.option("--message-id", type=int, help="Message ID to display")
+@click.option("--run-id", type=int, help="Run ID to display the most recent message for")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["raw", "escaped", "both"], case_sensitive=False),
+    default="both",
+    show_default=True,
+    help="Which message variant to print",
+)
+@click.pass_context
+def show_message(
+    ctx: click.Context,
+    message_id: Optional[int],
+    run_id: Optional[int],
+    output_format: str,
+) -> None:
+    """Show a generated message from the database.
+
+    Useful to verify the exact Telegram payload after an online run.
+
+    Examples:
+        argus show --message-id 15
+        argus show --run-id 15
+        argus show --run-id 15 --format raw
+    """
+
+    from dotenv import load_dotenv
+
+    from argus.db.connection import get_connection
+    from argus.db.repository import get_message_by_id, get_messages_by_run_id
+    from argus.generator.renderer import escape_markdown_v2
+
+    load_dotenv()
+
+    if (message_id is None and run_id is None) or (message_id is not None and run_id is not None):
+        click.echo("Error: Must specify exactly one of --message-id or --run-id", err=True)
+        raise SystemExit(1)
+
+    try:
+        conn = get_connection()
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+    try:
+        if message_id is not None:
+            message = get_message_by_id(conn, message_id)
+            if message is None:
+                click.echo(f"Error: Message not found: {message_id}", err=True)
+                raise SystemExit(1)
+        else:
+            assert run_id is not None
+            messages = get_messages_by_run_id(conn, run_id)
+            if not messages:
+                click.echo(f"Error: No messages found for run_id={run_id}", err=True)
+                raise SystemExit(1)
+            message = messages[-1]
+
+        raw = message.content
+        escaped = escape_markdown_v2(raw)
+
+        click.echo(f"Message ID: {message.id}")
+        click.echo(f"Run ID: {message.run_id}")
+        click.echo(f"Validation: {message.validation_status}")
+        click.echo(f"Publish: {message.publish_status}")
+        if message.telegram_message_id is not None:
+            click.echo(f"Telegram Message ID: {message.telegram_message_id}")
+        click.echo(f"Created at: {message.created_at}")
+        if message.published_at is not None:
+            click.echo(f"Published at: {message.published_at}")
+        click.echo()
+
+        if output_format.lower() in ("raw", "both"):
+            click.echo("--- MESSAGE (Raw) ---")
+            click.echo(raw)
+            click.echo()
+
+        if output_format.lower() in ("escaped", "both"):
+            click.echo("--- MESSAGE (Escaped / MarkdownV2) ---")
+            click.echo(escaped)
+            click.echo()
+    finally:
+        conn.close()
+
+
 @cli.command()
 @click.option("--message-id", type=int, help="ID of message to publish from database")
 @click.option(
@@ -1141,6 +1228,17 @@ def publish(
     dry_run: bool,
     silent: bool,
 ) -> None:
+    """Publish a message to Telegram.
+
+    Publish a message from the database by ID, or from a file for testing.
+    Use --dry-run to see the exact payload without sending.
+
+    Examples:
+        argus publish --message-id 123
+        argus publish --message-id 123 --dry-run
+        argus publish --file message.txt --dry-run
+        argus publish --file message.txt --silent
+    """
     """Publish a message to Telegram.
 
     Publish a message from the database by ID, or from a file for testing.
@@ -1282,7 +1380,8 @@ def smoke(fixtures_dir: Optional[Path], verbose: bool, test_invalid: bool) -> No
     from argus.config import ConstraintsConfig
     from argus.facts_bundle.types import FactsBundle
     from argus.generator import build_news_contexts
-    from argus.generator.types import GenerationMode, GeneratorResult
+    from argus.generator.renderer import extract_referenced_ids, render_message
+    from argus.generator.types import GenerationMode, GeneratorResult, LLMGeneratedContent
     from argus.validator.validator import MessageValidator
 
     click.echo("=== Argus Smoke Test ===")
@@ -1337,29 +1436,48 @@ def smoke(fixtures_dir: Optional[Path], verbose: bool, test_invalid: bool) -> No
 
     click.echo()
 
-    # 3. Load valid message fixture
+    # 3. Render a deterministic “LLM output” fixture through the renderer.
+    # The fixture is treated as LLM-generated narrative content and may contain cite keys
+    # like [#A1B2C3D4]. The renderer will renumber these to [1]..[k] and filter Sources.
     valid_message_path = fixtures_dir / "generated_message_valid.md"
     if not valid_message_path.exists():
         click.echo(f"Error: generated_message_valid.md not found in {fixtures_dir}", err=True)
         raise SystemExit(1)
 
-    valid_message = valid_message_path.read_text(encoding="utf-8")
-    word_count = len(valid_message.split())
+    fixture_text = valid_message_path.read_text(encoding="utf-8")
     click.echo(click.style("[OK] Loaded generated_message_valid.md", fg="green"))
-    click.echo(f"  - Length: {len(valid_message)} chars, ~{word_count} words")
+    click.echo(f"  - Length: {len(fixture_text)} chars, ~{len(fixture_text.split())} words")
 
     click.echo()
 
-    # 4. Create GeneratorResult for validation
-    # Count sources referenced in the message
-    source_refs = re.findall(r"\[(\d+)\]", valid_message)
-    unique_refs = len(set(source_refs))
+    # Parse referenced IDs from cite keys (strict) and render full final message.
+    referenced_ids = extract_referenced_ids(fixture_text, news_contexts)
 
+    # The smoke test validator expects a full message shape (incl. 3-5 takeaways, 2-3 watch items).
+    # We keep these deterministic and fixture-driven to remain offline.
+    llm_content = LLMGeneratedContent(
+        narrative=fixture_text,
+        takeaways=[
+            "Leadership is broadening—rotate exposure toward earnings quality and avoid single-theme concentration.",
+            'Cross-asset hedges still matter: the gold bid alongside equity strength points to "risk-on with protection."',
+            "Treat headline spikes as catalysts for positioning review, not automatic trend breaks, unless confirmed by follow-through in rates/FX.",
+        ],
+        watch_next=[
+            "Whether yields confirm the risk rally (further declines in real yields would support equities).",
+            "Follow-through in cyclicals vs. a quick reversal back to defensives.",
+        ],
+        referenced_item_ids=referenced_ids,
+        raw_response="smoke-test-fixture",
+    )
+
+    escaped_message, raw_message = render_message(bundle, news_contexts, llm_content, True)
+
+    word_count = len(raw_message.split())
     result = GeneratorResult(
-        message=valid_message,  # For smoke test, raw == escaped (no actual escaping needed)
-        message_raw=valid_message,
+        message=escaped_message,
+        message_raw=raw_message,
         word_count=word_count,
-        sources_count=unique_refs,
+        sources_count=len(referenced_ids),
         has_spotlight=bundle.spotlight is not None,
         model="smoke-test-fixture",
         generation_mode=GenerationMode.from_string(bundle.run_mode),
@@ -1368,7 +1486,11 @@ def smoke(fixtures_dir: Optional[Path], verbose: bool, test_invalid: bool) -> No
         llm_duration_seconds=0.0,
     )
 
-    click.echo(click.style(f"[OK] Created GeneratorResult ({unique_refs} sources)", fg="green"))
+    click.echo(
+        click.style(
+            f"[OK] Created GeneratorResult ({len(referenced_ids)} cited sources)", fg="green"
+        )
+    )
 
     click.echo()
 

@@ -139,11 +139,14 @@ class GeneratorResult:
 class NewsContext:
     """Pre-processed news item context for the LLM.
 
-    Each news item is assigned a reference number [1], [2], etc.
-    The LLM uses these references in the narrative.
+    Each news item is assigned a stable cite key and a reference number.
+
+    - cite_key is the ONLY allowed citation token in LLM output (e.g. [#A1B2C3D4])
+    - ref_number ([1], [2], etc.) is kept for readability in the prompt only
     """
 
-    ref_number: int  # 1-based reference number
+    cite_key: str  # 8-hex stable cite key (e.g. "A1B2C3D4")
+    ref_number: int  # 1-based reference number (prompt readability only)
     news_item_id: int
     title: str
     source_name: str
@@ -167,7 +170,7 @@ class NewsContext:
         topic_str = f" [{self.topic}]" if self.topic else ""
         date_str = f" ({self.published_date})" if self.published_date else ""
 
-        return f"""[{self.ref_number}] {self.title}
+        return f"""[#{self.cite_key}] [{self.ref_number}] {self.title}
 Source: {self.source_name}{date_str}{topic_str}
 Content: {content}"""
 

@@ -169,10 +169,10 @@ class MessageGenerator:
         sections.append("__What to Watch Next__")
         sections.append("• Upcoming scheduled events (see Key Dates)")
 
-        # 8. Sources - include all news items
+        # 8. Sources - strict only-cited behavior (fallback has none)
         sections.append("")
-        all_item_ids = [ctx.news_item_id for ctx in news_contexts]
-        sections.append(format_sources(news_contexts, all_item_ids))
+        sections.append("__Sources__")
+        sections.append("• No cited sources.")
 
         raw_message = "\n".join(sections)
 
@@ -237,6 +237,13 @@ class MessageGenerator:
                     raw_response = self._call_openrouter(system_prompt, user_prompt)
                     total_duration += time.time() - start
                     llm_content = self._parse_llm_response(raw_response, news_contexts)
+
+                    # Strict citations: require at least 1 cite key
+                    if not llm_content.referenced_item_ids:
+                        raise GenerationError(
+                            "LLM output contained no valid cite keys; expected at least one [#A1B2C3D4] citation"
+                        )
+
                     break
                 except Exception as e:
                     retry_count += 1
@@ -277,7 +284,10 @@ class MessageGenerator:
                 if val_attempt == 0:
                     # First validation failed - retry with corrective prompt
                     user_prompt += f"\n\nValidation errors to fix: {', '.join(val.errors)}"
-                    user_prompt += "\nPlease regenerate the content fixing these issues. Do not add any facts not in the provided data."
+                    user_prompt += (
+                        "\nPlease regenerate the content fixing these issues. Do not add any facts not in the provided data."
+                        "\nRemember: cite news ONLY using the provided cite keys in the exact format [#A1B2C3D4]."
+                    )
                     retry_count += 1
                     logger.warning(f"Validation failed, retrying: {val.errors}")
                 else:
