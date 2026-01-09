@@ -1,6 +1,6 @@
 # Argus - Market Update Bot
 
-Telegram bot that ingests news + prices, scores and curates items, generates WhatsApp/Telegram-style market updates across multiple run modes (e.g. `us_close`, `weekend_wrap`, `monday_preview`) within a stream (e.g. `us_close_basic`), and publishes on a schedule (SGT + NY DST-safe).
+Telegram bot that ingests news + prices, scores and curates items, generates WhatsApp/Telegram-style market updates across multiple run modes (e.g. `us_close`, `weekend_wrap`, `monday_preview`) within a stream (e.g. `us_markets`), and publishes on a schedule (SGT + NY DST-safe).
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ argus --version
 argus smoke
 
 # Run a dry-run to test configuration
-argus run --stream us_close_basic --mode us_close --dry-run
+argus run --stream us_markets --mode us_close --dry-run
 ```
 
 ## Environment Variables
@@ -58,7 +58,7 @@ Configuration is loaded from two sources:
 
 ```yaml
 stream:
-  name: us_close_basic
+  name: us_markets
   enabled: true
 
 schedule:
@@ -78,7 +78,7 @@ constraints:
 
 rss:
   allowlist_files:
-    - "rss/us_close_basic.txt"
+    - "rss/us_markets.txt"
   poll_interval_minutes: 10
 ```
 
@@ -88,7 +88,7 @@ RSS feeds are configured in text files under the `rss/` directory:
 
 ```
 rss/
-  us_close_basic.txt   # One URL per line, # for comments
+  us_markets.txt   # One URL per line, # for comments
 ```
 
 ## Telegram Control Plane (Onboarding + Subscriptions)
