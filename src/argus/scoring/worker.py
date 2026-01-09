@@ -154,13 +154,14 @@ class ScoringWorker:
             cur.execute(
                 """
                 INSERT INTO news_scores 
-                    (news_item_id, ingested_at, impact_score, quality_score, 
+                    (news_item_id, stream_name, ingested_at, impact_score, quality_score, 
                      confidence_score, topic, flags, reasons, scorer_version)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (
                     result.news_item_id,
+                    self.config.stream.name,
                     result.ingested_at,
                     result.impact_score,
                     result.quality_score,

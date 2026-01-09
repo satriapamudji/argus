@@ -109,7 +109,7 @@ def sample_facts_bundle(
     )
     return FactsBundle(
         version=BUNDLE_SCHEMA_VERSION,
-        stream_name="us_close_basic",
+        stream_name="us_markets",
         run_mode="us_close",
         generated_at=datetime(2025, 1, 7, 22, 0, 0, tzinfo=timezone.utc),
         trading_date=date(2025, 1, 7),
@@ -326,7 +326,7 @@ class TestFactsBundle:
     def test_creation(self, sample_facts_bundle: FactsBundle):
         """Test FactsBundle creation."""
         assert sample_facts_bundle.version == BUNDLE_SCHEMA_VERSION
-        assert sample_facts_bundle.stream_name == "us_close_basic"
+        assert sample_facts_bundle.stream_name == "us_markets"
         assert sample_facts_bundle.run_mode == "us_close"
         assert len(sample_facts_bundle.news_items) == 2
 
@@ -339,7 +339,7 @@ class TestFactsBundle:
         """Test FactsBundle serialization."""
         data = sample_facts_bundle.to_dict()
         assert data["version"] == BUNDLE_SCHEMA_VERSION
-        assert data["stream_name"] == "us_close_basic"
+        assert data["stream_name"] == "us_markets"
         assert data["run_mode"] == "us_close"
         assert len(data["news_items"]) == 2
 

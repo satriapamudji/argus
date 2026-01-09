@@ -18,6 +18,7 @@ def check_near_duplicate(
     threshold: int = 4,
     window_days: int = 14,
     exclude_fingerprint_id: Optional[int] = None,
+    stream_name: Optional[str] = None,
 ) -> Optional[int]:
     """Check if a SimHash has near-duplicates in the database.
 
@@ -30,6 +31,7 @@ def check_near_duplicate(
         threshold: Maximum Hamming distance for near-duplicates (default 4).
         window_days: Number of days to look back (default 14).
         exclude_fingerprint_id: Optional fingerprint ID to exclude from check.
+        stream_name: Optional stream name for per-stream deduplication.
 
     Returns:
         Fingerprint ID of the near-duplicate if found, None otherwise.
@@ -47,6 +49,10 @@ def check_near_duplicate(
               AND first_seen_at >= %s
         """
         params: list[object] = [cutoff]
+
+        if stream_name is not None:
+            query += " AND stream_name = %s"
+            params.append(stream_name)
 
         if exclude_fingerprint_id is not None:
             query += " AND id != %s"
@@ -70,6 +76,7 @@ def find_near_duplicates(
     threshold: int = 4,
     window_days: int = 14,
     limit: int = 10,
+    stream_name: Optional[str] = None,
 ) -> list[tuple[int, int, int]]:
     """Find all near-duplicates of a SimHash in the database.
 
@@ -79,6 +86,7 @@ def find_near_duplicates(
         threshold: Maximum Hamming distance for near-duplicates (default 4).
         window_days: Number of days to look back (default 14).
         limit: Maximum number of results to return.
+        stream_name: Optional stream name for per-stream deduplication.
 
     Returns:
         List of tuples (fingerprint_id, simhash, hamming_distance).
@@ -86,15 +94,19 @@ def find_near_duplicates(
     cutoff = datetime.now(timezone.utc) - timedelta(days=window_days)
 
     with conn.cursor() as cur:
-        cur.execute(
-            """
+        query = """
             SELECT id, simhash 
             FROM news_fingerprints 
             WHERE simhash IS NOT NULL 
               AND first_seen_at >= %s
-            """,
-            (cutoff,),
-        )
+        """
+        params: list[object] = [cutoff]
+
+        if stream_name is not None:
+            query += " AND stream_name = %s"
+            params.append(stream_name)
+
+        cur.execute(query, params)
         rows = cur.fetchall()
 
     # Find all matches and sort by distance

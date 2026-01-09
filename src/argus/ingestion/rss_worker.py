@@ -71,8 +71,10 @@ class RSSWorker:
         Returns:
             True if entry was new and inserted, False if duplicate.
         """
-        # Check for duplicate by URL
-        if check_duplicate_by_url(self.conn, entry.source_url):
+        stream_name = self.config.stream.name
+
+        # Check for duplicate by URL (per-stream deduplication)
+        if check_duplicate_by_url(self.conn, entry.source_url, stream_name=stream_name):
             logger.debug(f"Duplicate URL skipped: {entry.source_url}")
             return False
 
@@ -81,6 +83,7 @@ class RSSWorker:
             conn=self.conn,
             url=entry.source_url,
             source_name=entry.source_name,
+            stream_name=stream_name,
             title=entry.title,
             snippet=entry.snippet,
         )
@@ -97,6 +100,7 @@ class RSSWorker:
             source_name=entry.source_name,
             source_url=entry.source_url,
             title=entry.title,
+            stream_name=stream_name,
             snippet=entry.snippet,
             author=entry.author,
             published_at=entry.published_at,

@@ -567,7 +567,7 @@ class ArgusConfig:
             )
 
             return StreamConfig(
-                name=stream_raw.get("name", "us_close_basic"),
+                name=stream_raw.get("name", "us_markets"),
                 enabled=stream_raw.get("enabled", True),
                 providers=providers,
                 telegram=telegram,

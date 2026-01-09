@@ -15,10 +15,10 @@ class TestParseCommand:
         assert cmd.args == ""
 
     def test_args(self) -> None:
-        cmd = parse_command("/subscribe us_close_basic")
+        cmd = parse_command("/subscribe us_markets")
         assert cmd is not None
         assert cmd.name == "subscribe"
-        assert cmd.args == "us_close_basic"
+        assert cmd.args == "us_markets"
 
     def test_cmd_with_bot_username_matches(self) -> None:
         cmd = parse_command("/start@ArgusBot", bot_username="ArgusBot")

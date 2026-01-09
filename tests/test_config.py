@@ -39,7 +39,7 @@ class TestArgusConfigLoad:
     def test_load_default_config(self):
         """Test loading with no config file returns defaults."""
         config = ArgusConfig.load(config_path=Path("/nonexistent/config.yaml"))
-        assert config.stream.name == "us_close_basic"
+        assert config.stream.name == "us_markets"
         assert config.stream.enabled is True
         assert config.log_level == "INFO"
 

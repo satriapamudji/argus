@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 class BundleBuilderConfig:
     """Configuration for the bundle builder."""
 
-    stream_name: str = "us_close_basic"
+    stream_name: str = "us_markets"
     run_mode: str = "us_close"
     window_hours: int = 24
     min_items: int = 2

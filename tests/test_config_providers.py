@@ -21,10 +21,10 @@ def test_providers_defaults() -> None:
             tmpdir,
             """
 stream:
-  name: us_close_basic
+  name: us_markets
   rss:
     allowlist_files:
-      - rss/us_close_basic.txt
+      - rss/us_markets.txt
 """.lstrip(),
         )
 
@@ -42,7 +42,7 @@ def test_providers_override() -> None:
             tmpdir,
             """
 stream:
-  name: us_close_basic
+  name: us_markets
   providers:
     ingestion: rss
   rss:

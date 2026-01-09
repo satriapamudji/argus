@@ -1,4 +1,4 @@
-# Whitelisted RSS feeds for the `us_close_basic` stream.
+# Whitelisted RSS feeds for the `us_markets` stream.
 # One URL per line. Blank lines and lines starting with "#" are ignored.
 
 # CNBC - Major financial news

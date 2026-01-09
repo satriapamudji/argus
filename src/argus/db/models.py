@@ -13,9 +13,11 @@ class NewsFingerprintRow:
     """Row type for news_fingerprints table.
 
     Long-lived fingerprints for deduplication. Retained 1-10 years.
+    Per-stream deduplication: same URL can exist in multiple streams.
     """
 
     id: int
+    stream_name: str  # Stream this fingerprint belongs to
     hash_url: str  # sha256 of normalized URL
     hash_text: Optional[str]  # sha256 of normalized title + snippet
     simhash: Optional[int]  # 64-bit SimHash signature
@@ -28,12 +30,13 @@ class NewsFingerprintRow:
         """Create from database row tuple."""
         return cls(
             id=row[0],
-            hash_url=row[1],
-            hash_text=row[2],
-            simhash=row[3],
-            source_name=row[4],
-            first_seen_at=row[5],
-            last_seen_at=row[6],
+            stream_name=row[1],
+            hash_url=row[2],
+            hash_text=row[3],
+            simhash=row[4],
+            source_name=row[5],
+            first_seen_at=row[6],
+            last_seen_at=row[7],
         )
 
 
@@ -41,10 +44,12 @@ class NewsFingerprintRow:
 class NewsItemRow:
     """Row type for news_items table.
 
-    Partitioned by day on ingested_at. Retained 60 days by default.
+    Partitioned by stream_name (list) then by day on ingested_at.
+    Retained 60 days by default.
     """
 
     id: int
+    stream_name: str  # Stream this item belongs to (partition key)
     fingerprint_id: int
     source_name: str
     source_url: str
@@ -60,15 +65,16 @@ class NewsItemRow:
         """Create from database row tuple."""
         return cls(
             id=row[0],
-            fingerprint_id=row[1],
-            source_name=row[2],
-            source_url=row[3],
-            title=row[4],
-            snippet=row[5],
-            author=row[6],
-            published_at=row[7],
-            ingested_at=row[8],
-            raw_metadata=row[9],
+            stream_name=row[1],
+            fingerprint_id=row[2],
+            source_name=row[3],
+            source_url=row[4],
+            title=row[5],
+            snippet=row[6],
+            author=row[7],
+            published_at=row[8],
+            ingested_at=row[9],
+            raw_metadata=row[10],
         )
 
 
