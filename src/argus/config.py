@@ -351,9 +351,210 @@ class StreamProvidersConfig:
     """
 
     ingestion: str = "rss"
-    scoring: str = "heuristic_v1"
+    scoring: str = "heuristic_v2"
     enrichment: str = "fetch_extract"
     publisher: str = "telegram"
+
+
+@dataclass
+class NewsApiConfig:
+    """NewsAPI configuration.
+
+    Handles TheNewsAPI.com integration with multi-key rotation.
+
+    Config File (apis/newsapi_{stream}.txt):
+        key=value format, one per line
+        Example:
+            locale=us
+            language=en
+            categories=business,technology
+            rotation_strategy=round_robin
+            timeout_seconds=10
+
+    Environment Variables:
+        NEWS_API_KEYS: Comma-separated API keys (key1,key2,key3)
+        NEWS_API_DEFAULT_LANGUAGE: Default if not in config file
+        NEWS_API_ROTATION_STRATEGY: Default if not in config file
+        NEWS_API_TIMEOUT_SECONDS: Default if not in config file
+
+    Usage Headers:
+        X-UsageLimit-Limit: Monthly limit for the key
+        X-UsageLimit-Remaining: Remaining requests for the month
+
+    Error Codes:
+        402: Usage limit reached
+        429: Rate limit exceeded
+    """
+
+    keys_env: str = "NEWS_API_KEYS"
+    config_file: Optional[str] = None
+    _parsed_config: dict = field(default_factory=dict, repr=False)
+
+    def __post_init__(self) -> None:
+        """Parse config file if provided."""
+        self._parsed_config = self._parse_config_file()
+
+    def _parse_config_file(self) -> dict:
+        """Parse the config file.
+
+        Returns:
+            Dict of parsed config values.
+        """
+        if not self.config_file:
+            return {}
+
+        filepath = Path(self.config_file)
+        if not filepath.is_absolute():
+            repo_root = Path(__file__).parent.parent.parent
+            filepath = repo_root / self.config_file
+
+        if not filepath.exists():
+            return {}
+
+        config: dict = {}
+        with open(filepath, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    config[key.strip()] = value.strip()
+        return config
+
+    @property
+    def api_keys(self) -> list[str]:
+        """Get API keys from environment, comma-separated."""
+        keys_raw = os.getenv(self.keys_env, "")
+        if not keys_raw:
+            return []
+        return [k.strip() for k in keys_raw.split(",") if k.strip()]
+
+    def is_configured(self) -> bool:
+        """Check if at least one API key is configured."""
+        return len(self.api_keys) > 0
+
+    @property
+    def locale(self) -> str:
+        """Get locale from config file or default."""
+        return self._parsed_config.get("locale", "us")
+
+    @property
+    def language(self) -> str:
+        """Get language from config file or environment default."""
+        if "language" in self._parsed_config:
+            return self._parsed_config["language"]
+        return os.getenv("NEWS_API_DEFAULT_LANGUAGE", "en")
+
+    @property
+    def categories(self) -> list[str]:
+        """Get categories from config file."""
+        cats = self._parsed_config.get("categories", "")
+        if not cats:
+            return []
+        return [c.strip() for c in cats.split(",") if c.strip()]
+
+    @property
+    def rotation_strategy(self) -> str:
+        """Get rotation strategy from config file or environment default."""
+        if "rotation_strategy" in self._parsed_config:
+            return self._parsed_config["rotation_strategy"]
+        return os.getenv("NEWS_API_ROTATION_STRATEGY", "round_robin")
+
+    @property
+    def timeout_seconds(self) -> int:
+        """Get timeout from config file or environment default."""
+        if "timeout_seconds" in self._parsed_config:
+            try:
+                return int(self._parsed_config["timeout_seconds"])
+            except ValueError:
+                pass
+        return int(os.getenv("NEWS_API_TIMEOUT_SECONDS", "10"))
+
+    @property
+    def domains(self) -> list[str]:
+        """Get domains to filter articles by.
+
+        Example: ['reuters.com', 'bloomberg.com', 'wsj.com']
+        """
+        doms = self._parsed_config.get("domains", "")
+        if not doms:
+            return []
+        return [d.strip() for d in doms.split(",") if d.strip()]
+
+    @property
+    def lookback_hours(self) -> int:
+        """Get lookback window in hours for published_after filter.
+
+        Default: 1 hour.
+        """
+        if "lookback_hours" in self._parsed_config:
+            try:
+                return int(self._parsed_config["lookback_hours"])
+            except ValueError:
+                pass
+        return 1
+
+    @property
+    def max_pages_safety_limit(self) -> int:
+        """Get safety limit for maximum pages to fetch.
+
+        This is a safety limit to prevent infinite loops, not the primary
+        stop condition. Pagination stops on duplicate detection (sliding
+        window) or end of results.
+
+        Default: 50 pages.
+        """
+        if "max_pages_safety_limit" in self._parsed_config:
+            try:
+                return int(self._parsed_config["max_pages_safety_limit"])
+            except ValueError:
+                pass
+        return 50
+
+    @property
+    def articles_per_request(self) -> int:
+        """Get number of articles to request per API call.
+
+        Default: 3 (matches free tier limit).
+        """
+        if "articles_per_request" in self._parsed_config:
+            try:
+                return int(self._parsed_config["articles_per_request"])
+            except ValueError:
+                pass
+        return 3
+
+    @property
+    def max_new_per_run(self) -> int:
+        """Get maximum new articles to ingest per run.
+
+        Prevents over-fetching on initial/bootstrap runs.
+        Default: 50 articles.
+        """
+        if "max_new_per_run" in self._parsed_config:
+            try:
+                return int(self._parsed_config["max_new_per_run"])
+            except ValueError:
+                pass
+        return 50
+
+    @property
+    def min_remaining_budget(self) -> int:
+        """Minimum remaining API requests to preserve.
+
+        Ingestion stops when usage_remaining drops to or below this threshold.
+        This prevents burning through the entire monthly quota in one run.
+
+        Set to 0 to disable budget enforcement (not recommended).
+        Default: 10 requests.
+        """
+        if "min_remaining_budget" in self._parsed_config:
+            try:
+                return int(self._parsed_config["min_remaining_budget"])
+            except ValueError:
+                pass
+        return 10
 
 
 @dataclass
@@ -376,6 +577,7 @@ class StreamConfig:
     generator: GeneratorConfig = field(default_factory=GeneratorConfig)
     economic_calendar: EconomicCalendarConfig = field(default_factory=EconomicCalendarConfig)
     holiday_behavior: HolidayBehaviorConfig = field(default_factory=HolidayBehaviorConfig)
+    news_api: NewsApiConfig = field(default_factory=NewsApiConfig)
 
 
 @dataclass
@@ -425,6 +627,9 @@ class ArgusConfig:
             """
 
             providers_raw = stream_raw.get("providers", {})
+            # Merge root-level providers with stream-level overrides
+            root_providers = root_raw.get("providers", {})
+            providers_raw = {**root_providers, **providers_raw}
 
             def merge_config(key: str) -> dict:
                 root = root_raw.get(key, {})
@@ -447,7 +652,7 @@ class ArgusConfig:
 
             providers = StreamProvidersConfig(
                 ingestion=providers_raw.get("ingestion", "rss"),
-                scoring=providers_raw.get("scoring", "heuristic_v1"),
+                scoring=providers_raw.get("scoring", "heuristic_v2"),
                 enrichment=providers_raw.get("enrichment", "fetch_extract"),
                 publisher=providers_raw.get("publisher", "telegram"),
             )
@@ -566,6 +771,12 @@ class ArgusConfig:
                 half_day_behavior=holiday_behavior_raw.get("half_day_behavior", "label_half_day"),
             )
 
+            # Build NewsAPI config file path from stream name
+            stream_name = stream_raw.get("name", "us_markets")
+            newsapi_config_file = f"apis/newsapi_{stream_name}.txt"
+
+            news_api = NewsApiConfig(config_file=newsapi_config_file)
+
             return StreamConfig(
                 name=stream_raw.get("name", "us_markets"),
                 enabled=stream_raw.get("enabled", True),
@@ -583,6 +794,7 @@ class ArgusConfig:
                 generator=generator,
                 economic_calendar=economic_calendar,
                 holiday_behavior=holiday_behavior,
+                news_api=news_api,
             )
 
         # Build stream config(s) from YAML.

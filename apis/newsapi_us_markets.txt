@@ -1,0 +1,29 @@
+# NewsAPI configuration for us_markets stream
+# Format: key=value (one per line)
+# Supported locales: us, gb, ca, au, de, fr, jp, kr, cn, in, br, mx, es, it, and more
+# Supported categories: business, technology, economy, finance, markets, politics, science, health, entertainment, sports
+
+# Core settings
+locale=us
+language=en
+categories=business,technology,finance,markets
+timeout_seconds=10
+
+# Rotation strategy: round_robin or failover
+rotation_strategy=round_robin
+
+# Domain filtering (Tier-1 sources only)
+domains=bbc.co.uk, businessinsider.com, theatlantic.com
+
+# Ingestion settings
+# Pagination stops when ALL articles on a page are duplicates (caught up).
+# max_new_per_run prevents over-fetching on initial/bootstrap runs.
+lookback_hours=24
+articles_per_request=3
+max_new_per_run=30
+
+# Budget enforcement
+# Stop ingestion when remaining API requests drop to this threshold.
+# Prevents burning through entire monthly quota in one run.
+# Set to 0 to disable (not recommended).
+min_remaining_budget=10

@@ -2,6 +2,17 @@ stream:
   name: us_markets
   enabled: true
 
+# Provider selection for each pipeline stage
+# Options:
+#   ingestion: "rss" (default) | "api_newsapi"
+#   scoring: "heuristic_v2" (default) | "heuristic_v1"
+#   enrichment: "fetch_extract" (default)
+#   publisher: "telegram" (default) | "null"
+providers:
+  ingestion: rss
+  scoring: heuristic_v2
+  # ingestion: api_newsapi  # Uncomment to use TheNewsAPI instead of RSS
+
 telegram:
   # Prefer env vars; allow optional override per stream
   bot_token_env: TELEGRAM_BOT_TOKEN
@@ -47,6 +58,11 @@ rss:
   allowlist_files:
     - "rss/us_markets.txt"
   poll_interval_minutes: 10
+
+# TheNewsAPI configuration (when providers.ingestion = "api_newsapi")
+# API keys: Set NEWS_API_KEYS env var (comma-separated for rotation)
+# Settings: See apis/newsapi_us_markets.txt for domains, lookback, etc.
+# To list available sources: argus newsapi sources --categories business
 
 constraints:
   max_words_daily: 420

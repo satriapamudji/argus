@@ -16,6 +16,7 @@ from psycopg2.extensions import connection as Connection
 from argus.config import ArgusConfig, ScoringConfig
 from argus.db.connection import get_connection
 from argus.scoring.heuristics import HeuristicScorer
+from argus.scoring.heuristics_v2 import score_candidates_v2
 from argus.scoring.llm_triage import apply_llm_triage
 from argus.scoring.types import ScoringCandidate, ScoringResult, ScoringStats
 
@@ -35,6 +36,7 @@ class ScoringWorker:
         conn: Optional[Connection] = None,
         window_hours: Optional[int] = None,
         dry_run: bool = False,
+        use_v2: bool = False,
     ) -> None:
         """Initialize the scoring worker.
 
@@ -43,6 +45,7 @@ class ScoringWorker:
             conn: Optional database connection. If not provided, creates one.
             window_hours: Look back window in hours. Defaults to config value.
             dry_run: If True, don't write to database.
+            use_v2: If True, use heuristic_v2 scoring with macro-first prioritization.
         """
         self.config = config
         self.scoring_config: ScoringConfig = config.stream.scoring
@@ -50,6 +53,7 @@ class ScoringWorker:
         self._owns_connection = conn is None
         self.window_hours = window_hours or self.scoring_config.window_hours
         self.dry_run = dry_run
+        self.use_v2 = use_v2
 
     @property
     def conn(self) -> Connection:
@@ -81,7 +85,9 @@ class ScoringWorker:
                 ni.snippet,
                 ni.published_at,
                 ni.ingested_at,
-                nf.simhash
+                nf.simhash,
+                ni.raw_metadata->>'feed_url' AS feed_url,
+                ni.author
             FROM news_items ni
             JOIN news_fingerprints nf ON ni.fingerprint_id = nf.id
             LEFT JOIN news_scores ns ON ni.id = ns.news_item_id
@@ -106,6 +112,8 @@ class ScoringWorker:
                 published_at=row[6],
                 ingested_at=row[7],
                 simhash=row[8],
+                feed_url=row[9],
+                author=row[10],
             )
             for row in rows
         ]
@@ -206,21 +214,26 @@ class ScoringWorker:
         recent_simhashes = self._get_recent_simhashes()
         logger.debug(f"Loaded {len(recent_simhashes)} recent SimHashes for comparison")
 
-        # Create scorer and score candidates
-        scorer = HeuristicScorer(self.scoring_config)
-        scorer.set_recent_simhashes(recent_simhashes)
+        # Score candidates using v2 or v1
+        if self.use_v2:
+            results = score_candidates_v2(candidates, self.scoring_config, recent_simhashes)
+            logger.info("Using heuristic_v2 scorer with macro-first prioritization")
+        else:
+            # Create v1 scorer and score candidates
+            scorer = HeuristicScorer(self.scoring_config)
+            scorer.set_recent_simhashes(recent_simhashes)
 
-        results: list[ScoringResult] = []
-        for candidate in candidates:
-            try:
-                result = scorer.score_candidate(candidate)
-                results.append(result)
-            except Exception as e:
-                logger.warning(f"Error scoring item {candidate.news_item_id}: {e}")
-                stats.errors += 1
+            results = []
+            for candidate in candidates:
+                try:
+                    result = scorer.score_candidate(candidate)
+                    results.append(result)
+                except Exception as e:
+                    logger.warning(f"Error scoring item {candidate.news_item_id}: {e}")
+                    stats.errors += 1
 
-        # Sort by impact score descending
-        results.sort(key=lambda r: r.impact_score, reverse=True)
+            # Sort by impact score descending
+            results.sort(key=lambda r: r.impact_score, reverse=True)
 
         # Apply LLM triage if enabled
         if self.scoring_config.llm_triage_enabled:

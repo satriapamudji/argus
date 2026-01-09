@@ -1,0 +1,866 @@
+[
+  {
+    "rank": 1,
+    "id": 531,
+    "impact_score": 45,
+    "class": "A",
+    "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+    "url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Anniek Bao",
+      "published_at": "2026-01-09T00:00:00+00:00",
+      "ingested_at": "2026-01-09T05:56:19.615700+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "Luo Yunfei | China News Service | Getty Images\n\nChina's consumer inflation accelerated in December to the fastest pace in nearly three years as spending picked up ahead of the New Year holiday, while factory-gate deflation remained entrenched, signaling that underlying demand stayed weak.\n\nConsumer prices rose 0.8% from a year earlier, their highest level since February 2023, according to data from the National Bureau of Statistics on Friday. The improvement followed a 0.7% climb in November and",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+      "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+      "snippet": "China's consumer inflation accelerated in December to the fastest pace in more than two years, while factory-gate deflation extended for over three years."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 2,
+    "id": 516,
+    "impact_score": 40,
+    "class": "A",
+    "title": "3 of the Most Important Charts to Watch Right Now",
+    "url": "https://www.nasdaq.com/articles/3-most-important-charts-watch-right-now",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "MarketBeat",
+      "published_at": "2026-01-07T18:31:00+00:00",
+      "ingested_at": "2026-01-09T00:13:27.137996+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+      "content_status": "success",
+      "content_excerpt": "Markets enter 2026 at a crossroads. Oil prices remain subdued but volatile, interest rates are holding steady despite rate-cut hopes, and the S&P 500 continues to climb on the back of strong earnings.\n\nEach of these trends reflects deeper macro shifts—from energy supply dynamics to Fed policy uncertainty to renewed corporate momentum.\n\nThese three charts—WTI crude, the 10-year Treasury yield, and the S&P 500—offer early signals that could shape investor behavior and market performance in the mon",
+      "source_name": "Earnings",
+      "source_url": "https://www.nasdaq.com/articles/3-most-important-charts-watch-right-now",
+      "title": "3 of the Most Important Charts to Watch Right Now",
+      "snippet": "Markets enter 2026 at a crossroads. Oil prices remain subdued but volatile, interest rates are holding steady despite rate-cut hopes, and the S&P 500 continues to climb on the back of strong earnings. Each of these trends reflects deeper macro shifts—from energy supply dynamics"
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/3-most-important-charts-watch-right-now",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 285674,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "MarketBeat",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 3,
+    "id": 446,
+    "impact_score": 38,
+    "class": "A",
+    "title": "Where Trump's $2,000 tariff dividend checks stand now",
+    "url": "https://www.cnbc.com/2026/01/08/stimulus-check-trump-tariffs-2000.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Jessica Dickler",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-08T16:48:35.762965+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "watch now\n\nMonths after President Donald Trump suggested sending Americans a $2,000 tariff dividend check, many households are waiting to see if that stimulus could come in 2026, despite political and legal obstacles.\n\n\"We have taken in, and will soon be receiving, more than 600 Billion Dollars in Tariffs,\" Trump wrote in a Truth Social post on Monday.\n\nThe president first floated the idea of making direct payments to Americans in the form of a \"tariff dividend\" in July. Later in the fall, Trump",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/stimulus-check-trump-tariffs-2000.html",
+      "title": "Where Trump's $2,000 tariff dividend checks stand now",
+      "snippet": "President Trump says the U.S. raised more than $600 billion in tariff revenue. He previously suggested sending Americans $2,000 checks as a \"dividend\" payment."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/stimulus-check-trump-tariffs-2000.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 4,
+    "id": 518,
+    "impact_score": 38,
+    "class": "B",
+    "title": "Crude Oil Soars As U.S. Data Indicates Stronger Demand",
+    "url": "https://www.nasdaq.com/articles/crude-oil-soars-us-data-indicates-stronger-demand",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2026-01-08T14:41:00+00:00",
+      "ingested_at": "2026-01-09T00:13:29.769696+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - Snapping two days of decline, crude oil skyrocketed on Thursday as data showing a decline in the U.S. crude inventories allayed global oversupply concerns and supported prices.\n\nWTI Crude Oil for February delivery was last seen trading up by $1.70 (or 3.04%) at $57.69 per barrel.\n\nAccording to the U.S. Energy Information Administration, for the week ending January 2, crude oil inventories in the U.S. fell by 3.831 million barrels, the largest draw since late October. Economists had a",
+      "source_name": "Commodities",
+      "source_url": "https://www.nasdaq.com/articles/crude-oil-soars-us-data-indicates-stronger-demand",
+      "title": "Crude Oil Soars As U.S. Data Indicates Stronger Demand",
+      "snippet": "(RTTNews) - Snapping two days of decline, crude oil skyrocketed on Thursday as data showing a decline in the U.S. crude inventories allayed global oversupply concerns and supported prices."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/crude-oil-soars-us-data-indicates-stronger-demand",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 279672,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 5,
+    "id": 450,
+    "impact_score": 36,
+    "class": "A",
+    "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger econom",
+    "url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Jeff Cox",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-08T16:48:38.767060+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "Treasury Secretary Scott Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth.\n\nIn a speech he will deliver before the Economic Club of Minnesota, Bessent backed President Donald Trump's economic agenda and said easier monetary policy will help pave the way for gains ahead.\n\n\"Cutting interest rates will have a tangible impact on the lives of every Minnesotan,\" he said, according to excerpts obtained from a source in t",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+      "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger economy",
+      "snippet": "Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 6,
+    "id": 517,
+    "impact_score": 33,
+    "class": "B",
+    "title": "Ironwood Pharmaceuticals’ 2026 Guidance Shock Sparks a Major Re-Rating",
+    "url": "https://www.nasdaq.com/articles/ironwood-pharmaceuticals-2026-guidance-shock-sparks-major-re-rating",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "MarketBeat",
+      "published_at": "2026-01-07T15:25:00+00:00",
+      "ingested_at": "2026-01-09T00:13:28.005786+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+      "content_status": "success",
+      "content_excerpt": "The pharmaceutical sector is famously volatile, usually driven by the binary outcomes of clinical trials. A drug either works, sending the stock to the moon, or it fails, causing a crash. However, investors in Ironwood Pharmaceuticals (NASDAQ: IRWD) witnessed a different kind of surge to kick off 2026. Between Friday, Jan. 2, and Tuesday, Jan. 6, Ironwood shares rallied approximately 26%, climbing aggressively into the $4.50 range.\n\nThis move was not triggered by a medical breakthrough or a take",
+      "source_name": "Earnings",
+      "source_url": "https://www.nasdaq.com/articles/ironwood-pharmaceuticals-2026-guidance-shock-sparks-major-re-rating",
+      "title": "Ironwood Pharmaceuticals’ 2026 Guidance Shock Sparks a Major Re-Rating",
+      "snippet": "The pharmaceutical sector is famously volatile, usually driven by the binary outcomes of clinical trials. A drug either works, sending the stock to the moon, or it fails, causing a crash. However, investors in Ironwood Pharmaceuticals (NASDAQ: IRWD) witnessed a different kind o"
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/ironwood-pharmaceuticals-2026-guidance-shock-sparks-major-re-rating",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 288179,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "MarketBeat",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 7,
+    "id": 519,
+    "impact_score": 30,
+    "class": "B",
+    "title": "Gold Ends Flat Amid Increasing Dollar, U.S. Jobs Data, Geopolitical Tensions",
+    "url": "https://www.nasdaq.com/articles/gold-ends-flat-amid-increasing-dollar-us-jobs-data-geopolitical-tensions",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2026-01-08T13:54:00+00:00",
+      "ingested_at": "2026-01-09T00:13:30.564797+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - As investors parsed today's U.S. economic reports, gold prices held ground on Thursday, while the U.S. dollar index moved higher and geopolitical tensions continued to intensify.\n\nFront Month Comex Gold for January delivery gained incrementally by 40 cents (or 0.01%) to $4,449.70 per troy ounce.\n\nFront Month Comex Silver for January delivery tumbled by $2.4190 (or 3.14%) to $74.716 per troy ounce.\n\nIn the U.S. today, data released by Challenger, Gray and Christmas revealed that emplo",
+      "source_name": "Commodities",
+      "source_url": "https://www.nasdaq.com/articles/gold-ends-flat-amid-increasing-dollar-us-jobs-data-geopolitical-tensions",
+      "title": "Gold Ends Flat Amid Increasing Dollar, U.S. Jobs Data, Geopolitical Tensions",
+      "snippet": "(RTTNews) - As investors parsed today's U.S. economic reports, gold prices held ground on Thursday, while the U.S. dollar index moved higher and geopolitical tensions continued to intensify."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/gold-ends-flat-amid-increasing-dollar-us-jobs-data-geopolitical-tensions",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 280365,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 8,
+    "id": 474,
+    "impact_score": 30,
+    "class": "B",
+    "title": "Gold Extends Losses As Dollar Firms Before Jobs Data",
+    "url": "https://www.nasdaq.com/articles/gold-extends-losses-dollar-firms-jobs-data",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2026-01-08T04:41:00+00:00",
+      "ingested_at": "2026-01-08T16:49:01.930692+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - Gold extended losses on Thursday, after having fallen more than 1 percent in the previous session due to profit taking.\n\nSpot gold dipped 0.6 percent to $4,430.42 an ounce while U.S. gold futures were down 0.6 percent at $4,435.89.\n\nA stronger dollar dented appeal for bullion after a slew of U.S. economic reports released overnight reinforced the view of a slowing yet resilient economy.\n\nThe JOLTS report hinted at a cooling labor market, while ADP reported a modest rebound in private",
+      "source_name": "Commodities",
+      "source_url": "https://www.nasdaq.com/articles/gold-extends-losses-dollar-firms-jobs-data",
+      "title": "Gold Extends Losses As Dollar Firms Before Jobs Data",
+      "snippet": "(RTTNews) - Gold extended losses on Thursday, after having fallen more than 1 percent in the previous session due to profit taking."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/gold-extends-losses-dollar-firms-jobs-data",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 270945,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 9,
+    "id": 540,
+    "impact_score": 29,
+    "class": "A",
+    "title": "Indian Shares Seen Tad Higher At Open",
+    "url": "https://www.nasdaq.com/articles/indian-shares-seen-tad-higher-open-1",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2026-01-08T21:49:00+00:00",
+      "ingested_at": "2026-01-09T05:56:20.788944+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - Indian shares are seen opening a tad higher on Friday after a recent string of losses. That said, heightened risk aversion due to geopolitical tensions, tariff-related concerns and continued foreign portfolio outflows may lead to volatility as the session progresses.\n\nBenchmark indexes Sensex and Nifty fell around 1 percent each to extend losses for a fourth consecutive session on Thursday after reports emerged that U.S. President Donald Trump has okayed a bipartisan bill that could ",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/indian-shares-seen-tad-higher-open-1",
+      "title": "Indian Shares Seen Tad Higher At Open",
+      "snippet": "(RTTNews) - Indian shares are seen opening a tad higher on Friday after a recent string of losses. That said, heightened risk aversion due to geopolitical tensions, tariff-related concerns and continued foreign portfolio outflows may lead to volatility as the session progresses."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/indian-shares-seen-tad-higher-open-1",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 279155,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 10,
+    "id": 477,
+    "impact_score": 29,
+    "class": "A",
+    "title": "The December jobs report is due out Friday. Here's what it is expected to show",
+    "url": "https://www.cnbc.com/2026/01/08/the-december-jobs-report-is-due-out-friday-what-its-expected-to-show.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Jeff Cox",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-09T00:12:52.167335+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "The U.S. labor market likely showed modest improvement in December, providing some encouragement for the year ahead but nothing to get too excited about.\n\nNonfarm payrolls likely rose by 73,000 last month while the unemployment rate edged lower to 4.5%, according to the Dow Jones consensus. The Bureau of Labor Statistics will release the report Friday at 8:30 a.m. ET.\n\nIf those numbers are near accurate, it would represent a slight step up from the 55,000 average monthly gain during the prior 11",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/the-december-jobs-report-is-due-out-friday-what-its-expected-to-show.html",
+      "title": "The December jobs report is due out Friday. Here's what it is expected to show",
+      "snippet": "Nonfarm payrolls likely rose by 73,000 last month while the unemployment rate edged lower to 4.5%, according to the Dow Jones consensus."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/the-december-jobs-report-is-due-out-friday-what-its-expected-to-show.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 11,
+    "id": 533,
+    "impact_score": 28,
+    "class": "A",
+    "title": "European Shares Seen Higher At Open; US Tariff Ruling Awaited",
+    "url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2026-01-09T00:30:00+00:00",
+      "ingested_at": "2026-01-09T05:56:20.370107+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - European stocks look set to open on a positive note Friday, even as overall gains may remain modest as investors await U.S. nonfarm payrolls data later in the day for direction ahead of the Federal Reserve's policy meeting later this month.\n\nEconomists expect employment to increase by 60,000 jobs in December after an increase of 64,000 jobs in November. The unemployment rate is expected to edge down to 4.5 percent from 4.6 percent.\n\nMarkets currently expect the Fed to leave interest ",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+      "title": "European Shares Seen Higher At Open; US Tariff Ruling Awaited",
+      "snippet": "(RTTNews) - European stocks look set to open on a positive note Friday, even as overall gains may remain modest as investors await U.S. nonfarm payrolls data later in the day for direction ahead of the Federal Reserve's policy meeting later this month."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 279398,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 12,
+    "id": 535,
+    "impact_score": 28,
+    "class": "A",
+    "title": "Indian Shares Little Changed; IT Stocks Rebound In Cautious Trade",
+    "url": "https://www.nasdaq.com/articles/indian-shares-little-changed-it-stocks-rebound-cautious-trade",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2026-01-08T23:32:00+00:00",
+      "ingested_at": "2026-01-09T05:56:20.488681+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - Indian shares were moving in a narrow range on Friday after four straight days of losses on the back of geopolitical tensions and tariff-related concerns.\n\nThe benchmark BSE Sensex was down 52 points at 84,128 in early trade while the broader NSE Nifty index was marginally higher at 25,880.\n\nAdani Ports and ICICI Bank were down more than 1 percent each, while Eternal surged nearly 3 percent.\n\nBEL, HCL Technologies, Power Grid Corp, Asian Paints and Tech Mahindra all rose over 1 perce",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/indian-shares-little-changed-it-stocks-rebound-cautious-trade",
+      "title": "Indian Shares Little Changed; IT Stocks Rebound In Cautious Trade",
+      "snippet": "(RTTNews) - Indian shares were moving in a narrow range on Friday after four straight days of losses on the back of geopolitical tensions and tariff-related concerns."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/indian-shares-little-changed-it-stocks-rebound-cautious-trade",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 271673,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 13,
+    "id": 439,
+    "impact_score": 27,
+    "class": "C",
+    "title": "Senate votes to block Trump from future military strikes on Venezuela",
+    "url": "https://www.cnbc.com/2026/01/08/venezuela-senate-voting-on-halting-military-action-after-maduro-capture.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Garrett Downs",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-08T16:48:30.484062+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "The Senate on Thursday voted 52-47 to block President Donald Trump from further military action in Venezuela.\n\nThe move came less than a week after Trump authorized a strike that captured the country's leader, Nicolás Maduro.\n\nThe measure, known as a War Powers Resolution, only needed a simple majority to pass in the Republican-controlled Senate and would require Trump to seek the approval of Congress before using the U.S. military again in Venezuela. The measure was brought by Democratic Sen. T",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/venezuela-senate-voting-on-halting-military-action-after-maduro-capture.html",
+      "title": "Senate votes to block Trump from future military strikes on Venezuela",
+      "snippet": "The Trump administration used to military to snatch Venezuelan President Nicolas Maduro last week."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/venezuela-senate-voting-on-halting-military-action-after-maduro-capture.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 14,
+    "id": 499,
+    "impact_score": 27,
+    "class": "A",
+    "title": "Supreme Court tariff decision:  U.S. Customs has new deadline for companies seeking refunds",
+    "url": "https://www.cnbc.com/2026/01/08/supreme-court-trump-tariff-ruling-refunds.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Lori Ann LaRocco",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-09T00:13:12.038816+00:00",
+      "feed_url": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "There is a new deadline for U.S. importers to file for electronic refunds if the Supreme Court rules President Donald Trump's IEEPA tariffs are illegal.\n\nU.S. Customs published details of a new electronic refund process on Jan. 2, established as part of a March 25 Trump executive order on modernizing government payments and phasing out physical checks.\n\nA Supreme Court ruling on the legality of the Trump tariffs could come as early as this Friday. The mandatory deadline for importers to sign up ",
+      "source_name": "International: Top News And Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/supreme-court-trump-tariff-ruling-refunds.html",
+      "title": "Supreme Court tariff decision:  U.S. Customs has new deadline for companies seeking refunds",
+      "snippet": "The window for U.S. importers to file for electronic refunds if the Supreme Court rules Trump's IEEPA tariffs are illegal is approaching."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/supreme-court-trump-tariff-ruling-refunds.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 15,
+    "id": 498,
+    "impact_score": 27,
+    "class": "A",
+    "title": "The Supreme Court may rule Friday on Trump's tariffs. Here's what's at stake for the economy",
+    "url": "https://www.cnbc.com/2026/01/08/the-supreme-court-may-rule-friday-on-trumps-tariffs-heres-whats-at-stake-for-the-economy.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Jeff Cox",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-09T00:13:10.452401+00:00",
+      "feed_url": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "The U.S. Supreme Court on Friday could rule on the legality of President Donald Trump's tariffs, a decision poised to have far-reaching impacts on not only trade policy, but also the U.S. fiscal situation.\n\nThough it's not certain that the high court will make its ruling, it has scheduled Friday as a \"decision day\" for handing down opinions, and there is widespread speculation that the tariff case will come up.\n\nAt its core, the ruling will address two issues: whether the administration can use ",
+      "source_name": "International: Top News And Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/the-supreme-court-may-rule-friday-on-trumps-tariffs-heres-whats-at-stake-for-the-economy.html",
+      "title": "The Supreme Court may rule Friday on Trump's tariffs. Here's what's at stake for the economy",
+      "snippet": "The decision is poised to have far-reaching impacts on not only trade policy but also the U.S. fiscal situation."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/the-supreme-court-may-rule-friday-on-trumps-tariffs-heres-whats-at-stake-for-the-economy.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 16,
+    "id": 492,
+    "impact_score": 26,
+    "class": "C",
+    "title": "Consumer outlook improves despite job worries, New York Fed survey finds",
+    "url": "https://www.cnbc.com/2026/01/08/new-york-fed-consumer-outlook-job-worries.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Jessica Dickler",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-09T00:13:04.609736+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "Angela Weiss | AFP | Getty Images\n\nAmericans are slightly more bullish about 2026, according to a New York Federal Reserve survey released Thursday.\n\nThe central bank's monthly Survey of Consumer Expectations found that consumers expect inflation to be higher in the short term, but households, overall, are more optimistic about their future financial standing.\n\nPerceptions about current financial conditions and year-ahead expectations both improved, with a smaller share of Americans expecting a ",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/new-york-fed-consumer-outlook-job-worries.html",
+      "title": "Consumer outlook improves despite job worries, New York Fed survey finds",
+      "snippet": "The New York Fed’s monthly Survey of Consumer Expectations found that more households expect to be better off a year from now."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/new-york-fed-consumer-outlook-job-worries.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 17,
+    "id": 537,
+    "impact_score": 25,
+    "class": "B",
+    "title": "Alphabet vs. Meta Platforms: Is One the Better Long-Term Play?",
+    "url": "https://www.nasdaq.com/articles/alphabet-vs-meta-platforms-one-better-long-term-play",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "The Motley Fool",
+      "published_at": "2026-01-08T23:00:00+00:00",
+      "ingested_at": "2026-01-09T05:56:20.607144+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "Key Points\n\nBoth of these tech stocks trade at reasonable forward price-to-earnings ratios.\n\nThe ongoing growth of digital advertising will propel revenue and profit.\n\n10 stocks we like better than Meta Platforms ›\n\nAlphabet (NASDAQ: GOOGL) (NASDAQ: GOOG) and Meta Platforms (NASDAQ: META) dominate the tech landscape, and their products and services have billions of users. They're investing aggressively in artificial intelligence (AI) capabilities, and it's hard to argue with their remarkable fin",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/alphabet-vs-meta-platforms-one-better-long-term-play",
+      "title": "Alphabet vs. Meta Platforms: Is One the Better Long-Term Play?",
+      "snippet": "Key PointsBoth of these tech stocks trade at reasonable forward price-to-earnings ratios."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/alphabet-vs-meta-platforms-one-better-long-term-play",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 280541,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "The Motley Fool",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 18,
+    "id": 523,
+    "impact_score": 23,
+    "class": "C",
+    "title": "Simulations Plus, Inc. Q1 Profit Increases, But Misses Estimates",
+    "url": "https://www.nasdaq.com/articles/simulations-plus-inc-q1-profit-increases-misses-estimates",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2026-01-08T18:57:00+00:00",
+      "ingested_at": "2026-01-09T00:25:15.034866+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - Simulations Plus, Inc. (SLP) released earnings for its first quarter that Increased from last year but missed the Street estimates.\n\nThe company's earnings came in at $0.68 million, or $0.03 per share. This compares with $0.21 million, or $0.01 per share, last year.\n\nExcluding items, Simulations Plus, Inc. reported adjusted earnings of $2.59 million or $0.13 per share for the period.\n\nAnalysts on average had expected the company to earn $0.20 per share. Analysts' estimates typically ",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/simulations-plus-inc-q1-profit-increases-misses-estimates",
+      "title": "Simulations Plus, Inc. Q1 Profit Increases, But Misses Estimates",
+      "snippet": "(RTTNews) - Simulations Plus, Inc. (SLP) released earnings for its first quarter that Increased from last year but missed the Street estimates."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/simulations-plus-inc-q1-profit-increases-misses-estimates",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 271913,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 19,
+    "id": 470,
+    "impact_score": 22,
+    "class": "B",
+    "title": "This Impinj Insider Sold 45,000 Shares Worth $7.7 Million. Did They Miss Out on Even Bigger Gains?",
+    "url": "https://www.nasdaq.com/articles/impinj-insider-sold-45000-shares-worth-77-million-did-they-miss-out-even-bigger-gains",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "The Motley Fool",
+      "published_at": "2026-01-08T10:51:00+00:00",
+      "ingested_at": "2026-01-08T16:48:57.526510+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "Key Points\n\nSylebra Capital LLC disposed of 45,761 shares in aggregate open-market sales across three days, representing a transaction value of approximately $7.7 million based on a weighted average price of $167.25 per share.\n\nAll shares sold were attributable to indirect ownership through entities such as Sylebra Capital Partners Master Fund and related advisory clients, with no direct holdings before or after the transaction.\n\nImpinj continues to benefit as retail behemoth Walmart expands its",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/impinj-insider-sold-45000-shares-worth-77-million-did-they-miss-out-even-bigger-gains",
+      "title": "This Impinj Insider Sold 45,000 Shares Worth $7.7 Million. Did They Miss Out on Even Bigger Gains?",
+      "snippet": "Key PointsSylebra Capital LLC disposed of 45,761 shares in aggregate open-market sales across three days, representing a transaction value of approximately $7.7 million based on a weighted average price of $167.25 per share."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/impinj-insider-sold-45000-shares-worth-77-million-did-they-miss-out-even-bigger-gains",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 293819,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "The Motley Fool",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 20,
+    "id": 438,
+    "impact_score": 21,
+    "class": "A",
+    "title": "Trade deficit in October hits smallest since 2009 after Trump's tariff moves",
+    "url": "https://www.cnbc.com/2026/01/08/trade-deficit-in-october-hits-smallest-since-2009-after-trumps-tariff-moves.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Jeff Cox",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-08T16:48:29.731679+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "The U.S. trade deficit six months into President Donald Trump's tariffs tumbled to its lowest level since mid-2009, the Commerce Department reported Thursday.\n\nWith exports rising and imports falling, the trade shortfall was just $29.4 billion for October, down 39% from the prior month. Exports increased 2.6% while imports slipped 3.2%.\n\nThe total was the lowest since the second quarter of 2009 as the U.S. was just coming out of the financial crisis and the Great Recession.\n\nThe numbers reflect ",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/trade-deficit-in-october-hits-smallest-since-2009-after-trumps-tariff-moves.html",
+      "title": "Trade deficit in October hits smallest since 2009 after Trump's tariff moves",
+      "snippet": "The trade shortfall was just $29.4 billion for October, down 39% from the prior month."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/trade-deficit-in-october-hits-smallest-since-2009-after-trumps-tariff-moves.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 21,
+    "id": 522,
+    "impact_score": 21,
+    "class": "C",
+    "title": "Singapore Bourse May Extend Thursday's Losses",
+    "url": "https://www.nasdaq.com/articles/singapore-bourse-may-extend-thursdays-losses-0",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "RTTNews",
+      "published_at": "2024-10-03T20:01:00+00:00",
+      "ingested_at": "2026-01-09T00:25:14.266349+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "(RTTNews) - The Singapore stock market has alternated between positive and negative finishes through the last four trading days since the end of the four-day losing streak in which it had slumped more than 65 points or 1.8 percent. The Straits Times Index now sits just above the 3,575-point plateau and it's likely to open under pressure again on Friday.\n\nThe global forecast for the Asian markets is fairly flat ahead of key U.S. employment data later in the day. The European and U.S. markets were",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/singapore-bourse-may-extend-thursdays-losses-0",
+      "title": "Singapore Bourse May Extend Thursday's Losses",
+      "snippet": "(RTTNews) - The Singapore stock market on Thursday snapped the four-day winning streak in which it had jumped more than 100 points or 2.1 percent to a record closing high. The Straight Times Index now sits just beneath the 4,740-point plateau and it may tick lower again on Friday"
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/singapore-bourse-may-extend-thursdays-losses-0",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 276033,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "RTTNews",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 22,
+    "id": 539,
+    "impact_score": 21,
+    "class": "C",
+    "title": "Shopify Stock Soared Last Year. Can It Do It Again?",
+    "url": "https://www.nasdaq.com/articles/shopify-stock-soared-last-year-can-it-do-it-again",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "The Motley Fool",
+      "published_at": "2026-01-08T21:51:00+00:00",
+      "ingested_at": "2026-01-09T05:56:20.728505+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "Key Points\n\nShopify's revenue growth rate improved in 2025.\n\nAgentic commerce looks like a promising growth opportunity for the tech company.\n\nAfter a big run-up, Shopify's valuation leaves little room for error in a fiercely competitive payments market.\n\n10 stocks we like better than Shopify ›\n\nAfter a big run in 2025, e-commerce platform and digital payments specialist Shopify (NASDAQ: SHOP) is leaving investors with a dilemma: It's a great business, but is it worth its high price?\n\nShares ros",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/shopify-stock-soared-last-year-can-it-do-it-again",
+      "title": "Shopify Stock Soared Last Year. Can It Do It Again?",
+      "snippet": "Key PointsShopify's revenue growth rate improved in 2025."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/shopify-stock-soared-last-year-can-it-do-it-again",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 288207,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "The Motley Fool",
+        "TipRanks"
+      ]
+    }
+  },
+  {
+    "rank": 23,
+    "id": 457,
+    "impact_score": 21,
+    "class": "C",
+    "title": "Family office deals cooled off in December, but heirs placed bets in health and media",
+    "url": "https://www.cnbc.com/2026/01/08/family-office-deals-bets-december.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Hayley Cuccinello",
+      "published_at": "2026-01-08T00:00:00+00:00",
+      "ingested_at": "2026-01-08T16:48:44.092701+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "Kristy Sparow | Getty Images Entertainment | Getty Images\n\nA version of this article first appeared in CNBC's Inside Wealth newsletter with Robert Frank, a weekly guide to the high-net-worth investor and consumer. Sign up to receive future editions, straight to your inbox.\n\nWall Street advisors were kept busy in December — from the Warner Bros. Discovery bidding war to Trump Media's $6 billion merger with a nuclear fusion company. However, private investment firms of ultra-rich families were in ",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/08/family-office-deals-bets-december.html",
+      "title": "Family office deals cooled off in December, but heirs placed bets in health and media",
+      "snippet": "Investment firms of the ultra-rich didn't jump into the M&A frenzy during the holiday season."
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/08/family-office-deals-bets-december.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 24,
+    "id": 520,
+    "impact_score": 20,
+    "class": "C",
+    "title": "Federal agents in Portland involved in shooting of two people, police say",
+    "url": "https://www.cnbc.com/2026/01/09/portland-shooting-federal-agents.html",
+    "domain": "cnbc.com",
+    "db": {
+      "author": "Dan Mangan",
+      "published_at": "2026-01-09T00:00:00+00:00",
+      "ingested_at": "2026-01-09T00:25:07.797692+00:00",
+      "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "content_status": "success",
+      "content_excerpt": "Federal agents in Portland, Oregon, were involved in a shooting Thursday afternoon that sent a man and a woman to the hospital, Portland Police said.\n\nThe shooting occurred a day after a U.S. Immigration and Customs Enforcement agent shot and killed a 37-year-old woman, Renee Nicole Good, as she was driving away in an SUV in Minneapolis, Minnesota.\n\n\"We are still in the early stages of this incident,\" said Portland Police Chief Bob Day in a statement, which did not identify the federal agency wh",
+      "source_name": "US Top News and Analysis",
+      "source_url": "https://www.cnbc.com/2026/01/09/portland-shooting-federal-agents.html",
+      "title": "Federal agents in Portland involved in shooting of two people, police say",
+      "snippet": ""
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.cnbc.com/2026/01/09/portland-shooting-federal-agents.html",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 600000,
+      "meta": {
+        "meta_publisher": "CNBC"
+      },
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": []
+    }
+  },
+  {
+    "rank": 25,
+    "id": 538,
+    "impact_score": 20,
+    "class": "B",
+    "title": "Wealth Enhancement Leans Into USVM for Structured Small and Mid Cap Exposure",
+    "url": "https://www.nasdaq.com/articles/wealth-enhancement-leans-usvm-structured-small-and-mid-cap-exposure",
+    "domain": "nasdaq.com",
+    "db": {
+      "author": "The Motley Fool",
+      "published_at": "2026-01-08T22:55:00+00:00",
+      "ingested_at": "2026-01-09T05:56:20.666869+00:00",
+      "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "content_status": "success",
+      "content_excerpt": "Key Points\n\nBought 618,272 shares of USVM; estimated trade size $56.00 million (quarterly average price)\n\nQuarter-end position value rose by $92.68 million, reflecting both purchases and price movement\n\nTransaction represented approximately 0.08% change in 13F AUM\n\nPost-trade holding: 8,775,986 shares worth $829.51 million\n\nUSVM now accounts for approximately 1.13% of fund AUM, placing it outside the fund's top five holdings\n\nThese 10 stocks could mint the next wave of millionaires ›\n\nWhat happe",
+      "source_name": "Markets",
+      "source_url": "https://www.nasdaq.com/articles/wealth-enhancement-leans-usvm-structured-small-and-mid-cap-exposure",
+      "title": "Wealth Enhancement Leans Into USVM for Structured Small and Mid Cap Exposure",
+      "snippet": "Key PointsBought 618,272 shares of USVM; estimated trade size $56.00 million (quarterly average price)"
+    },
+    "fetch": {
+      "ok": true,
+      "status": 200,
+      "final_url": "https://www.nasdaq.com/articles/wealth-enhancement-leans-usvm-structured-small-and-mid-cap-exposure",
+      "content_type": "text/html; charset=UTF-8",
+      "bytes": 286187,
+      "meta": {},
+      "ld_authors": [],
+      "ld_publishers": [],
+      "provider_markers": [
+        "The Motley Fool",
+        "TipRanks"
+      ]
+    }
+  }
+]

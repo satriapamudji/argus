@@ -1,0 +1,887 @@
+{
+  "meta": {
+    "created_at": "20260109_172619",
+    "days": 1.0,
+    "limit": 300,
+    "movers_requested": 10
+  },
+  "old": {
+    "summary": {
+      "name": "OLD (DB: news_scores.impact_score)",
+      "contract": {
+        "pass": false,
+        "violations": [
+          "Top12 composition fail: {'A': 5, 'B': 3, 'C': 3, 'D': 1}",
+          "Top50 D-rate fail: D=3/50 (6.0%)",
+          "Hard inversion fail (Top50): D above A/B count=3",
+          "Spam fail (Top12): market_wrap_templates=3 > 1"
+        ]
+      },
+      "top12": {
+        "counts": {
+          "A": 5,
+          "B": 3,
+          "C": 3,
+          "D": 1
+        },
+        "spam_market_today": 3
+      },
+      "top20": {
+        "counts": {
+          "A": 9,
+          "B": 5,
+          "C": 5,
+          "D": 1
+        }
+      },
+      "top50": {
+        "counts": {
+          "A": 10,
+          "B": 13,
+          "C": 24,
+          "D": 3
+        },
+        "inversions_hard_D_over_A_or_B": 3,
+        "D_rate": 0.06
+      }
+    },
+    "top_items": [
+      {
+        "rank": 1,
+        "id": 450,
+        "impact_score": 53,
+        "class": "A",
+        "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger econom",
+        "snippet": "Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 2,
+        "id": 513,
+        "impact_score": 49,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 8: Defense Stocks Rally and Tech Retreats",
+        "snippet": "S&P 500 (SNPINDEX:^GSPC) finished almost flat at 6,921.46, the Nasdaq Composite (NASDAQINDEX:^IXIC) declined 0.44% to 23,480.02 on tech weakness, while the Dow Jones Industrial Average (DJINDEX: ^DJI) gained 0.55% to 49,266.11 as defense and staples outperformed.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-8-defense-stocks-rally-and-tech-retreats",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 3,
+        "id": 533,
+        "impact_score": 48,
+        "class": "A",
+        "title": "European Shares Seen Higher At Open; US Tariff Ruling Awaited",
+        "snippet": "(RTTNews) - European stocks look set to open on a positive note Friday, even as overall gains may remain modest as investors await U.S. nonfarm payrolls data later in the day for direction ahead of the Federal Reserve's policy meeting later this month.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:central_bank",
+          "A:macro_data",
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 4,
+        "id": 531,
+        "impact_score": 45,
+        "class": "A",
+        "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+        "snippet": "China's consumer inflation accelerated in December to the fastest pace in more than two years, while factory-gate deflation extended for over three years.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 5,
+        "id": 483,
+        "impact_score": 45,
+        "class": "A",
+        "title": "Asia-Pacific markets set for higher open; China inflation data in focus",
+        "snippet": "Asia-Pacific markets were set to trade higher Friday as investors keep an eye on China's inflation data coming out later in the day.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/asia-pacific-markets-china-cpi-hang-seng-index-kospi-nikkei-225.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 6,
+        "id": 438,
+        "impact_score": 44,
+        "class": "A",
+        "title": "Trade deficit in October hits smallest since 2009 after Trump's tariff moves",
+        "snippet": "The trade shortfall was just $29.4 billion for October, down 39% from the prior month.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/trade-deficit-in-october-hits-smallest-since-2009-after-trumps-tariff-moves.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 7,
+        "id": 523,
+        "impact_score": 44,
+        "class": "C",
+        "title": "Simulations Plus, Inc. Q1 Profit Increases, But Misses Estimates",
+        "snippet": "(RTTNews) - Simulations Plus, Inc. (SLP) released earnings for its first quarter that Increased from last year but missed the Street estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/simulations-plus-inc-q1-profit-increases-misses-estimates",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 8,
+        "id": 503,
+        "impact_score": 44,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 8: Nvidia Slides as AI Demand Forecasts Top $500 Billion",
+        "snippet": "Nvidia (NASDAQ:NVDA), a GPU and AI solutions leader, closed Thursday's session at $185, down 2.17%. Nvidia IPO'd in 1999 and has grown an astounding 450,934% since going public. Trading volume reached 163.5 million shares, coming in nearly 12% below versus its three-month average",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-8-nvidia-slides-ai-demand-forecasts-top-500-billion",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 9,
+        "id": 520,
+        "impact_score": 43,
+        "class": "C",
+        "title": "Federal agents in Portland involved in shooting of two people, police say",
+        "snippet": "",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/portland-shooting-federal-agents.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 10,
+        "id": 512,
+        "impact_score": 42,
+        "class": "D",
+        "title": "Why Broadcom Stock Fell 14.1% in December",
+        "snippet": "Key PointsFiscal fourth-quarter results, released on Dec. 11, were robust, with both revenue and earnings beating Wall Street's estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/why-broadcom-stock-fell-141-december",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "D:why_stock_moved"
+        ]
+      },
+      {
+        "rank": 11,
+        "id": 471,
+        "impact_score": 42,
+        "class": "C",
+        "title": "AXIL Brands Inc. Q2 Profit Climbs",
+        "snippet": "(RTTNews) - AXIL Brands Inc. (AXIL) released earnings for its second quarter that Increased, from last year",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/axil-brands-inc-q2-profit-climbs",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 12,
+        "id": 506,
+        "impact_score": 41,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 8: Apple Slips After Alphabet Overtakes it on Market Cap",
+        "snippet": "Leading tech giant, Apple (NASDAQ:AAPL), closed Thursday’s session at $259.04, down 0.42%. Trading volume reached 50.2 million shares, coming in roughly 10% above its three-month average of 45.6 million shares.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-8-apple-slips-after-alphabet-overtakes-it-market-cap",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 13,
+        "id": 534,
+        "impact_score": 40,
+        "class": "B",
+        "title": "11 S&P 500 Stocks Doubled in 2025. This Is the Best Bet To Do It Again This Year",
+        "snippet": "Key PointsTech stocks led the S&P 500 last year and made up most of its biggest winners.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/11-sp-500-stocks-doubled-2025-best-bet-do-it-again-year",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 14,
+        "id": 535,
+        "impact_score": 40,
+        "class": "A",
+        "title": "Indian Shares Little Changed; IT Stocks Rebound In Cautious Trade",
+        "snippet": "(RTTNews) - Indian shares were moving in a narrow range on Friday after four straight days of losses on the back of geopolitical tensions and tariff-related concerns.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-little-changed-it-stocks-rebound-cautious-trade",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 15,
+        "id": 446,
+        "impact_score": 40,
+        "class": "A",
+        "title": "Where Trump's $2,000 tariff dividend checks stand now",
+        "snippet": "President Trump says the U.S. raised more than $600 billion in tariff revenue. He previously suggested sending Americans $2,000 checks as a \"dividend\" payment.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/stimulus-check-trump-tariffs-2000.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 16,
+        "id": 492,
+        "impact_score": 39,
+        "class": "C",
+        "title": "Consumer outlook improves despite job worries, New York Fed survey finds",
+        "snippet": "The New York Fed’s monthly Survey of Consumer Expectations found that more households expect to be better off a year from now.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/new-york-fed-consumer-outlook-job-worries.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 17,
+        "id": 537,
+        "impact_score": 39,
+        "class": "B",
+        "title": "Alphabet vs. Meta Platforms: Is One the Better Long-Term Play?",
+        "snippet": "Key PointsBoth of these tech stocks trade at reasonable forward price-to-earnings ratios.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/alphabet-vs-meta-platforms-one-better-long-term-play",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 18,
+        "id": 540,
+        "impact_score": 39,
+        "class": "A",
+        "title": "Indian Shares Seen Tad Higher At Open",
+        "snippet": "(RTTNews) - Indian shares are seen opening a tad higher on Friday after a recent string of losses. That said, heightened risk aversion due to geopolitical tensions, tariff-related concerns and continued foreign portfolio outflows may lead to volatility as the session progresses.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-seen-tad-higher-open-1",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 19,
+        "id": 500,
+        "impact_score": 39,
+        "class": "C",
+        "title": "Aritzia Inc. Q3 Profit Increases, Beats Estimates",
+        "snippet": "(RTTNews) - Aritzia Inc. (ATZAF) announced a profit for its third quarter that Increased from last year and beat the Street estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/aritzia-inc-q3-profit-increases-beats-estimates",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 20,
+        "id": 541,
+        "impact_score": 38,
+        "class": "A",
+        "title": "Asian Shares Mostly Higher Ahead Of Trump Tariff Ruling",
+        "snippet": "(RTTNews) - Asian stocks were mostly higher in cautious trade on Friday as investors braced for the release of all-important U.S. jobs data as well as a Supreme Court ruling on the legality of President Donald Trump's sweeping tariffs.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/asian-shares-mostly-higher-ahead-trump-tariff-ruling",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 21,
+        "id": 505,
+        "impact_score": 38,
+        "class": "C",
+        "title": "3 Tailwinds for 2026",
+        "snippet": "Despite headline-grabbing news in 2025, economies around the world saw slower, but steady growth. The outlook for 2026 is more of the same — although the reasons why are evolving.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/3-tailwinds-2026",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 22,
+        "id": 464,
+        "impact_score": 38,
+        "class": "B",
+        "title": "Why These 3 Oil Stocks Surged After Venezuelan President Maduro's Capture",
+        "snippet": "Key PointsChevron, the only U.S. oil company operating inside Venezuela, saw the biggest gains Monday.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/why-these-3-oil-stocks-surged-after-venezuelan-president-maduros-capture",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 23,
+        "id": 463,
+        "impact_score": 38,
+        "class": "B",
+        "title": "Lamb Weston To Close Argentina Plant, Consolidate Regional Production",
+        "snippet": "(RTTNews) - Lamb Weston Holdings, Inc. (LW) said it will close its Munro, Argentina, manufacturing facility and consolidate production for the Latin America region at its newer plant in Mar del Plata as part of efforts to improve profitability and operational efficiency.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/lamb-weston-close-argentina-plant-consolidate-regional-production",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 24,
+        "id": 477,
+        "impact_score": 38,
+        "class": "A",
+        "title": "The December jobs report is due out Friday. Here's what it is expected to show",
+        "snippet": "Nonfarm payrolls likely rose by 73,000 last month while the unemployment rate edged lower to 4.5%, according to the Dow Jones consensus.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/the-december-jobs-report-is-due-out-friday-what-its-expected-to-show.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 25,
+        "id": 484,
+        "impact_score": 38,
+        "class": "D",
+        "title": "Jim Cramer says the market rotation is punishing last year’s winners and reviving beaten-down stocks",
+        "snippet": "Jim Cramer said investors are witnessing a classic market rotation, as capital flows from last year’s biggest winners into stocks that had fallen out of favor.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/jim-cramer-stock-market-rotation.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "D:pundit_content"
+        ]
+      }
+    ]
+  },
+  "new": {
+    "summary": {
+      "name": "NEW (in-memory: heuristic_v2)",
+      "contract": {
+        "pass": false,
+        "violations": [
+          "Top20 composition fail: {'A': 9, 'B': 5, 'C': 6, 'D': 0}"
+        ]
+      },
+      "top12": {
+        "counts": {
+          "A": 6,
+          "B": 4,
+          "C": 2,
+          "D": 0
+        },
+        "spam_market_today": 0
+      },
+      "top20": {
+        "counts": {
+          "A": 9,
+          "B": 5,
+          "C": 6,
+          "D": 0
+        }
+      },
+      "top50": {
+        "counts": {
+          "A": 13,
+          "B": 14,
+          "C": 23,
+          "D": 0
+        },
+        "inversions_hard_D_over_A_or_B": 0,
+        "D_rate": 0.0
+      }
+    },
+    "top_items": [
+      {
+        "rank": 1,
+        "id": 533,
+        "impact_score": 63,
+        "class": "A",
+        "title": "European Shares Seen Higher At Open; US Tariff Ruling Awaited",
+        "snippet": "(RTTNews) - European stocks look set to open on a positive note Friday, even as overall gains may remain modest as investors await U.S. nonfarm payrolls data later in the day for direction ahead of the Federal Reserve's policy meeting later this month.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:central_bank",
+          "A:macro_data",
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 2,
+        "id": 516,
+        "impact_score": 48,
+        "class": "A",
+        "title": "3 of the Most Important Charts to Watch Right Now",
+        "snippet": "Markets enter 2026 at a crossroads. Oil prices remain subdued but volatile, interest rates are holding steady despite rate-cut hopes, and the S&P 500 continues to climb on the back of strong earnings. Each of these trends reflects deeper macro shifts—from energy supply dynamics",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/3-most-important-charts-watch-right-now",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 3,
+        "id": 531,
+        "impact_score": 46,
+        "class": "A",
+        "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+        "snippet": "China's consumer inflation accelerated in December to the fastest pace in more than two years, while factory-gate deflation extended for over three years.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 4,
+        "id": 450,
+        "impact_score": 36,
+        "class": "A",
+        "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger econom",
+        "snippet": "Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 5,
+        "id": 523,
+        "impact_score": 33,
+        "class": "C",
+        "title": "Simulations Plus, Inc. Q1 Profit Increases, But Misses Estimates",
+        "snippet": "(RTTNews) - Simulations Plus, Inc. (SLP) released earnings for its first quarter that Increased from last year but missed the Street estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/simulations-plus-inc-q1-profit-increases-misses-estimates",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 6,
+        "id": 517,
+        "impact_score": 33,
+        "class": "B",
+        "title": "Ironwood Pharmaceuticals’ 2026 Guidance Shock Sparks a Major Re-Rating",
+        "snippet": "The pharmaceutical sector is famously volatile, usually driven by the binary outcomes of clinical trials. A drug either works, sending the stock to the moon, or it fails, causing a crash. However, investors in Ironwood Pharmaceuticals (NASDAQ: IRWD) witnessed a different kind o",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/ironwood-pharmaceuticals-2026-guidance-shock-sparks-major-re-rating",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 7,
+        "id": 446,
+        "impact_score": 32,
+        "class": "A",
+        "title": "Where Trump's $2,000 tariff dividend checks stand now",
+        "snippet": "President Trump says the U.S. raised more than $600 billion in tariff revenue. He previously suggested sending Americans $2,000 checks as a \"dividend\" payment.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/stimulus-check-trump-tariffs-2000.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 8,
+        "id": 519,
+        "impact_score": 30,
+        "class": "B",
+        "title": "Gold Ends Flat Amid Increasing Dollar, U.S. Jobs Data, Geopolitical Tensions",
+        "snippet": "(RTTNews) - As investors parsed today's U.S. economic reports, gold prices held ground on Thursday, while the U.S. dollar index moved higher and geopolitical tensions continued to intensify.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-ends-flat-amid-increasing-dollar-us-jobs-data-geopolitical-tensions",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 9,
+        "id": 539,
+        "impact_score": 30,
+        "class": "C",
+        "title": "Shopify Stock Soared Last Year. Can It Do It Again?",
+        "snippet": "Key PointsShopify's revenue growth rate improved in 2025.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/shopify-stock-soared-last-year-can-it-do-it-again",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 10,
+        "id": 518,
+        "impact_score": 30,
+        "class": "B",
+        "title": "Crude Oil Soars As U.S. Data Indicates Stronger Demand",
+        "snippet": "(RTTNews) - Snapping two days of decline, crude oil skyrocketed on Thursday as data showing a decline in the U.S. crude inventories allayed global oversupply concerns and supported prices.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/crude-oil-soars-us-data-indicates-stronger-demand",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 11,
+        "id": 483,
+        "impact_score": 28,
+        "class": "A",
+        "title": "Asia-Pacific markets set for higher open; China inflation data in focus",
+        "snippet": "Asia-Pacific markets were set to trade higher Friday as investors keep an eye on China's inflation data coming out later in the day.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/asia-pacific-markets-china-cpi-hang-seng-index-kospi-nikkei-225.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 12,
+        "id": 534,
+        "impact_score": 28,
+        "class": "B",
+        "title": "11 S&P 500 Stocks Doubled in 2025. This Is the Best Bet To Do It Again This Year",
+        "snippet": "Key PointsTech stocks led the S&P 500 last year and made up most of its biggest winners.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/11-sp-500-stocks-doubled-2025-best-bet-do-it-again-year",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 13,
+        "id": 535,
+        "impact_score": 28,
+        "class": "A",
+        "title": "Indian Shares Little Changed; IT Stocks Rebound In Cautious Trade",
+        "snippet": "(RTTNews) - Indian shares were moving in a narrow range on Friday after four straight days of losses on the back of geopolitical tensions and tariff-related concerns.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-little-changed-it-stocks-rebound-cautious-trade",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 14,
+        "id": 500,
+        "impact_score": 28,
+        "class": "C",
+        "title": "Aritzia Inc. Q3 Profit Increases, Beats Estimates",
+        "snippet": "(RTTNews) - Aritzia Inc. (ATZAF) announced a profit for its third quarter that Increased from last year and beat the Street estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/aritzia-inc-q3-profit-increases-beats-estimates",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 15,
+        "id": 439,
+        "impact_score": 27,
+        "class": "C",
+        "title": "Senate votes to block Trump from future military strikes on Venezuela",
+        "snippet": "The Trump administration used to military to snatch Venezuelan President Nicolas Maduro last week.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/venezuela-senate-voting-on-halting-military-action-after-maduro-capture.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 16,
+        "id": 492,
+        "impact_score": 26,
+        "class": "C",
+        "title": "Consumer outlook improves despite job worries, New York Fed survey finds",
+        "snippet": "The New York Fed’s monthly Survey of Consumer Expectations found that more households expect to be better off a year from now.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/new-york-fed-consumer-outlook-job-worries.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 17,
+        "id": 537,
+        "impact_score": 26,
+        "class": "B",
+        "title": "Alphabet vs. Meta Platforms: Is One the Better Long-Term Play?",
+        "snippet": "Key PointsBoth of these tech stocks trade at reasonable forward price-to-earnings ratios.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/alphabet-vs-meta-platforms-one-better-long-term-play",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 18,
+        "id": 541,
+        "impact_score": 25,
+        "class": "A",
+        "title": "Asian Shares Mostly Higher Ahead Of Trump Tariff Ruling",
+        "snippet": "(RTTNews) - Asian stocks were mostly higher in cautious trade on Friday as investors braced for the release of all-important U.S. jobs data as well as a Supreme Court ruling on the legality of President Donald Trump's sweeping tariffs.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/asian-shares-mostly-higher-ahead-trump-tariff-ruling",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 19,
+        "id": 528,
+        "impact_score": 25,
+        "class": "C",
+        "title": "Why Neogen Stock Blasted More Than 31% Higher Today",
+        "snippet": "Key PointsThe specialized healthcare company posted a beat-and-raise fiscal second quarter.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/why-neogen-stock-blasted-more-31-higher-today",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 20,
+        "id": 477,
+        "impact_score": 23,
+        "class": "A",
+        "title": "The December jobs report is due out Friday. Here's what it is expected to show",
+        "snippet": "Nonfarm payrolls likely rose by 73,000 last month while the unemployment rate edged lower to 4.5%, according to the Dow Jones consensus.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/the-december-jobs-report-is-due-out-friday-what-its-expected-to-show.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 21,
+        "id": 471,
+        "impact_score": 22,
+        "class": "C",
+        "title": "AXIL Brands Inc. Q2 Profit Climbs",
+        "snippet": "(RTTNews) - AXIL Brands Inc. (AXIL) released earnings for its second quarter that Increased, from last year",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/axil-brands-inc-q2-profit-climbs",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 22,
+        "id": 470,
+        "impact_score": 22,
+        "class": "B",
+        "title": "This Impinj Insider Sold 45,000 Shares Worth $7.7 Million. Did They Miss Out on Even Bigger Gains?",
+        "snippet": "Key PointsSylebra Capital LLC disposed of 45,761 shares in aggregate open-market sales across three days, representing a transaction value of approximately $7.7 million based on a weighted average price of $167.25 per share.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/impinj-insider-sold-45000-shares-worth-77-million-did-they-miss-out-even-bigger-gains",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 23,
+        "id": 438,
+        "impact_score": 21,
+        "class": "A",
+        "title": "Trade deficit in October hits smallest since 2009 after Trump's tariff moves",
+        "snippet": "The trade shortfall was just $29.4 billion for October, down 39% from the prior month.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/trade-deficit-in-october-hits-smallest-since-2009-after-trumps-tariff-moves.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 24,
+        "id": 520,
+        "impact_score": 21,
+        "class": "C",
+        "title": "Federal agents in Portland involved in shooting of two people, police say",
+        "snippet": "",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/portland-shooting-federal-agents.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 25,
+        "id": 499,
+        "impact_score": 21,
+        "class": "A",
+        "title": "Supreme Court tariff decision:  U.S. Customs has new deadline for companies seeking refunds",
+        "snippet": "The window for U.S. importers to file for electronic refunds if the Supreme Court rules Trump's IEEPA tariffs are illegal is approaching.",
+        "source_name": "International: Top News And Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/supreme-court-trump-tariff-ruling-refunds.html",
+        "feed_url": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      }
+    ]
+  },
+  "movers": [
+    {
+      "id": 513,
+      "delta": -96,
+      "old_rank": 2,
+      "new_rank": 98,
+      "old": 49,
+      "new": 0,
+      "title": "Stock Market Today, Jan. 8: Defense Stocks Rally and Tech Retreats"
+    },
+    {
+      "id": 503,
+      "delta": -91,
+      "old_rank": 8,
+      "new_rank": 99,
+      "old": 44,
+      "new": 0,
+      "title": "Stock Market Today, Jan. 8: Nvidia Slides as AI Demand Forecasts Top $500 Billion"
+    },
+    {
+      "id": 517,
+      "delta": 90,
+      "old_rank": 96,
+      "new_rank": 6,
+      "old": 27,
+      "new": 33,
+      "title": "Ironwood Pharmaceuticals’ 2026 Guidance Shock Sparks a Major Re-Rating"
+    },
+    {
+      "id": 506,
+      "delta": -88,
+      "old_rank": 12,
+      "new_rank": 100,
+      "old": 41,
+      "new": 0,
+      "title": "Stock Market Today, Jan. 8: Apple Slips After Alphabet Overtakes it on Market Cap"
+    },
+    {
+      "id": 464,
+      "delta": -79,
+      "old_rank": 22,
+      "new_rank": 101,
+      "old": 38,
+      "new": 0,
+      "title": "Why These 3 Oil Stocks Surged After Venezuelan President Maduro's Capture"
+    },
+    {
+      "id": 528,
+      "delta": 79,
+      "old_rank": 98,
+      "new_rank": 19,
+      "old": 27,
+      "new": 25,
+      "title": "Why Neogen Stock Blasted More Than 31% Higher Today"
+    },
+    {
+      "id": 484,
+      "delta": -77,
+      "old_rank": 25,
+      "new_rank": 102,
+      "old": 38,
+      "new": 0,
+      "title": "Jim Cramer says the market rotation is punishing last year’s winners and reviving beaten-down stocks"
+    },
+    {
+      "id": 518,
+      "delta": 76,
+      "old_rank": 86,
+      "new_rank": 10,
+      "old": 30,
+      "new": 30,
+      "title": "Crude Oil Soars As U.S. Data Indicates Stronger Demand"
+    },
+    {
+      "id": 532,
+      "delta": 75,
+      "old_rank": 104,
+      "new_rank": 29,
+      "old": 26,
+      "new": 21,
+      "title": "CNBC Daily Open: U.S. moves over Greenland are heating up quickly"
+    },
+    {
+      "id": 530,
+      "delta": 66,
+      "old_rank": 101,
+      "new_rank": 35,
+      "old": 26,
+      "new": 18,
+      "title": "Why Tilray Brands Stock Is Rising in After-Hours Trading"
+    }
+  ]
+}

@@ -30,7 +30,7 @@ stream:
 
         cfg = ArgusConfig.load(cfg_path)
         assert cfg.stream.providers.ingestion == "rss"
-        assert cfg.stream.providers.scoring == "heuristic_v1"
+        assert cfg.stream.providers.scoring == "heuristic_v2"
         assert cfg.stream.providers.enrichment == "fetch_extract"
         assert cfg.stream.providers.publisher == "telegram"
 

@@ -4,6 +4,99 @@
 
 Implement the Scoring v2 system as designed in `docs/design/scoring_v2_macro_first.md`. Replace `heuristic_v1` with `heuristic_v2` to fix source tier resolution, add macro-first category buckets, implement penalty system for clickbait, and provide CLI evaluation tooling.
 
+## Current Status (2026-01-09)
+
+- v2 is currently **evaluation-only** (in-memory scoring for A/B/C/D contract checks) and **MUST NOT** write to DB.
+- Deterministic contract in `analysis/eval_framework.py` currently **passes** on the latest comparison run:
+  - Report: `analysis/reports/20260109_181331__comparison_eval__days1.0__limit300.json`
+  - Top12: `A=8 B=4 C=0 D=0`
+  - Top20: `A=11 B=6 C=3 D=0`
+  - Top50: `D=0` and no hard inversions
+- A URL/content audit was generated to validate “what the links actually are”:
+  - `analysis/reports/20260109_181331__comparison_eval__days1.0__limit300__url_audit.json`
+
+### Feed Coverage + Enrichment Reality Check
+
+- RSS allowlist updated: `rss/us_markets.txt` now includes CNBC Finance plus high-signal official sources (Fed, BEA, EIA).
+- RSS is mostly snippet-only; full content comes from fetch+extract (`src/argus/enrichment/worker.py`).
+- `sec.gov` requires a User-Agent with a contact email; set `ARGUS_USER_AGENT` (see `.env.example`) then uncomment the SEC feed in `rss/us_markets.txt`.
+- Bundle building now ignores failed enrichment rows (`content_status != 'success'`) so prompts fall back to RSS snippets instead of `"[Fetch failed: ...]"`.
+
+### Full DB Evaluation (All Candidates)
+
+Current DB is small and recent:
+
+- last 1d: 110 items
+- last 3d: 547 items
+- last 7d/14d/30d/60d: still 547 items (no older data)
+
+So “full database” right now = the 3-day window. Results on the full window:
+
+- Report: `analysis/reports/20260109_185004__comparison_eval__days3.0__limit5000.json`
+- OLD contract: **FAIL**
+  - Top12: `A=6 B=5 C=0 D=1` (spam `Stock Market Today`=2; D leakage present)
+  - Top50: `D=5` with hard inversions (D above A/B)
+- NEW contract: **PASS**
+  - Top12: `A=6 B=6 C=0 D=0`
+  - Top20: `A=9 B=11 C=0 D=0`
+  - Top50: `D=0` and no hard inversions
+
+Full-window URL audit artifact (top50 old + top50 new):
+
+- `analysis/reports/20260109_185004__comparison_eval__days3.0__limit5000__url_audit__old50_new50.json`
+
+### What’s Still “Off” In NEW (Even When Contract Passes)
+
+NEW removes the obvious junk (Cramer, “Stock Market Today” spam, millionaire-maker bait) but the top-of-stack is still dominated by low-signal Nasdaq syndication templates because we don’t use provider identity:
+
+- NEW Top20 domains: `nasdaq.com` 14 / `cnbc.com` 6
+- NEW Top20 providers by `news_items.author`:
+  - `RTTNews`: 6
+  - `BNK Invest`: 5 (e.g., **ETF Inflow Alert** series)
+  - `MarketBeat`: 2 (contributor “analysis/explainers”)
+
+Concrete NEW Top20 mismatches vs macro-first intent:
+
+- Multiple **BNK Invest “ETF Inflow Alert”** items rank in the top 15 (noise vs catalysts).
+- Technical-analysis template: “Breaks Above 200-Day Moving Average” ranks top 10.
+- MarketBeat contributor equity-analysis (“Good fit for 2026…”) ranks top 12.
+
+This means the limiting factor is **not just data quantity**; it’s **missing publisher/provider signal** plus insufficient penalties for high-volume Nasdaq template families.
+
+### Findings From URL Audit (ranking quality vs macro-first intent)
+
+Confirmed mismatches in the **top-of-stack** despite contract pass:
+
+- **Rank #2** (`nasdaq.com`) is **MarketBeat** contributor content (“Charts to Watch”), not a primary macro catalyst.
+- Multiple high-ranked `nasdaq.com` items are **The Motley Fool** templates (e.g., “long-term play”, insider sales, “Key Points”) and should be downranked for `us_close` macro-first.
+- **RTTNews** “seen higher / awaited / due out” previews are correctly no longer #1, but still appear in Top12 when the candidate window is thin.
+- Some real macro releases/policy outcomes (e.g., **trade deficit release**) can sit too low (rank ~20) because they lack explicit high-value keyword support and/or are crowded out by contributor/templates.
+
+### Immediate Next Steps (smallest high-leverage fixes)
+
+1) **Add provider-quality signal without network fetch**
+   - Extend `ScoringCandidate` to include `author` (already present in `news_items.author` for many feeds).
+   - Apply deterministic penalties by `author` for known low-signal providers:
+     - Strong downrank: `The Motley Fool`, `MarketBeat`
+     - Moderate downrank (especially for previews): `RTTNews`
+     - Strong downrank: `BNK Invest` (ETF inflow/technical template content)
+
+2) **Tighten outcome/preview language detection**
+   - Current “outcome” matching can false-positive on phrases like “rate-cut hopes”.
+   - Make “cut/raise/hike” require context like `cut rates`, `rate cut`, `raised rates`, and/or exclude “hopes/expected/may/could”.
+
+3) **Fix listicle/number heuristics to avoid year false-positives**
+   - Ensure listicle penalties trigger on “Top 5 / 3 charts / 7 stocks” patterns, not on years like “2026”.
+
+4) **Add penalties for Nasdaq template families that aren’t macro-relevant**
+   - Regex penalties for:
+     - `ETF Inflow Alert` / `Big ETF Outflows`
+     - `Noteworthy ... Option Activity`
+     - `Breaks Above ... Moving Average`
+
+5) **Expand macro keyword coverage for underweighted releases**
+   - Add explicit macro terms like `trade deficit`, `trade balance` (and similar) to avoid under-ranking legitimate releases.
+
 ## Background
 
 Task 22 produced a comprehensive design document addressing three critical deficiencies in the current scoring system:
