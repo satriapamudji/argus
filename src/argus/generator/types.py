@@ -164,8 +164,9 @@ class NewsContext:
         """
         content = self.content_excerpt or self.snippet or "(no content)"
         # Truncate content to avoid overly long prompts
-        if len(content) > 500:
-            content = content[:497] + "..."
+        # Using 1000 chars to capture more specific data points
+        if len(content) > 1000:
+            content = content[:997] + "..."
 
         topic_str = f" [{self.topic}]" if self.topic else ""
         date_str = f" ({self.published_date})" if self.published_date else ""

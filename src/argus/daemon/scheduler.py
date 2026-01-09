@@ -187,8 +187,9 @@ class ArgusDaemon:
             if self.daemon_config.is_job_enabled(JOB_INGEST):
                 jid = self._job_key(JOB_INGEST, stream_name)
                 self._scheduler.add_job(
-                    lambda _stream=stream_name: self._run_ingest_for_stream(_stream),
+                    self._run_ingest_for_stream,
                     IntervalTrigger(minutes=rss_config.poll_interval_minutes),
+                    args=[stream_name],
                     id=jid,
                     name=f"RSS Ingestion ({stream_name})",
                     replace_existing=True,
@@ -200,13 +201,14 @@ class ArgusDaemon:
                 hour, minute = self._parse_time(schedule.daily_us_close_sgt)
                 jid = self._job_key(JOB_US_CLOSE, stream_name)
                 self._scheduler.add_job(
-                    lambda _stream=stream_name: self._run_us_close_for_stream(_stream),
+                    self._run_us_close_for_stream,
                     CronTrigger(
                         hour=hour,
                         minute=minute,
                         day_of_week="mon-fri",
                         timezone="Asia/Singapore",
                     ),
+                    args=[stream_name],
                     id=jid,
                     name=f"US Close Update ({stream_name})",
                     replace_existing=True,
@@ -218,13 +220,14 @@ class ArgusDaemon:
                 hour, minute = self._parse_time(schedule.weekend_wrap_sgt)
                 jid = self._job_key(JOB_WEEKEND_WRAP, stream_name)
                 self._scheduler.add_job(
-                    lambda _stream=stream_name: self._run_weekend_wrap_for_stream(_stream),
+                    self._run_weekend_wrap_for_stream,
                     CronTrigger(
                         hour=hour,
                         minute=minute,
                         day_of_week="sat",
                         timezone="Asia/Singapore",
                     ),
+                    args=[stream_name],
                     id=jid,
                     name=f"Weekend Wrap ({stream_name})",
                     replace_existing=True,
@@ -238,13 +241,14 @@ class ArgusDaemon:
                 hour, minute = self._parse_time(time_str)
                 jid = self._job_key(JOB_MONDAY_PREVIEW, stream_name)
                 self._scheduler.add_job(
-                    lambda _stream=stream_name: self._run_monday_preview_for_stream(_stream),
+                    self._run_monday_preview_for_stream,
                     CronTrigger(
                         hour=hour,
                         minute=minute,
                         day_of_week="sun",
                         timezone="America/New_York",
                     ),
+                    args=[stream_name],
                     id=jid,
                     name=f"Monday Preview ({stream_name})",
                     replace_existing=True,
@@ -256,8 +260,9 @@ class ArgusDaemon:
                 retention_hour = self.daemon_config.retention_hour
                 jid = self._job_key(JOB_RETENTION, stream_name)
                 self._scheduler.add_job(
-                    lambda _stream=stream_name: self._run_retention_for_stream(_stream),
+                    self._run_retention_for_stream,
                     CronTrigger(hour=retention_hour, minute=0, timezone="UTC"),
+                    args=[stream_name],
                     id=jid,
                     name=f"Retention Cleanup ({stream_name})",
                     replace_existing=True,
