@@ -6,7 +6,7 @@
 
 ## 1) Overview
 
-**Argus** produces three run types for the initial stream (`us_close_basic`):
+**Argus** produces three run types for the initial stream (`us_markets`):
 
 - **Mon–Fri 06:00 SGT**: Daily “US Close” update
 - **Sat 10:00 SGT**: Weekend Wrap (weekly recap + next week catalysts)
@@ -121,11 +121,11 @@ Persist the breakdown (`calendar_score`, `market_score`, `headline_score`) on th
 ### Cron examples (timezone-aware)
 ```cron
 CRON_TZ=Asia/Singapore
-0 6 * * 1-5 /app/bin/argus run --stream us_close_basic --mode us_close
-0 10 * * 6 /app/bin/argus run --stream us_close_basic --mode weekend_wrap
+0 6 * * 1-5 /app/bin/argus run --stream us_markets --mode us_close
+0 10 * * 6 /app/bin/argus run --stream us_markets --mode weekend_wrap
 
 CRON_TZ=America/New_York
-10 18 * * 0 /app/bin/argus run --stream us_close_basic --mode monday_preview --conditional true
+10 18 * * 0 /app/bin/argus run --stream us_markets --mode monday_preview --conditional true
 ```
 
 ### US Holidays & Half-days
@@ -346,7 +346,7 @@ Notes:
 
 ```yaml
 stream:
-  name: us_close_basic
+  name: us_markets
   enabled: true
 
 telegram:
@@ -392,7 +392,7 @@ rss:
   # Whitelisted RSS feeds are defined in files under ./rss so adding feeds is a file edit, not a code change.
   # Each line: URL (optionally "#" comments). Blank lines ignored.
   allowlist_files:
-    - "rss/us_close_basic.txt"
+    - "rss/us_markets.txt"
   poll_interval_minutes: 10
 
 constraints:
@@ -416,6 +416,6 @@ Recommended repository layout:
 
 ```
 rss/
-  us_close_basic.txt
+  us_close.txt
   # later: crypto_close.txt, asia_open.txt, etc.
 ```

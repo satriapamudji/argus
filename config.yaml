@@ -1,5 +1,5 @@
 stream:
-  name: us_close_basic
+  name: us_markets
   enabled: true
 
 telegram:
@@ -45,7 +45,7 @@ rss:
   # Whitelisted RSS feeds are defined in files under ./rss so adding feeds is a file edit, not a code change.
   # Each line: URL (optionally "#" comments). Blank lines ignored.
   allowlist_files:
-    - "rss/us_close_basic.txt"
+    - "rss/us_markets.txt"
   poll_interval_minutes: 10
 
 constraints:

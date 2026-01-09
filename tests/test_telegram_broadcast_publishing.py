@@ -54,7 +54,7 @@ def test_broadcast_publishes_to_all_recipients_best_effort(
     telegram_cfg = object()
     config = cast(
         ArgusConfig,
-        SimpleNamespace(stream=SimpleNamespace(name="us_close_basic", telegram=telegram_cfg)),
+        SimpleNamespace(stream=SimpleNamespace(name="us_markets", telegram=telegram_cfg)),
     )
 
     conn = MagicMock()
@@ -122,7 +122,7 @@ def test_broadcast_dry_run_does_not_update_db(monkeypatch: pytest.MonkeyPatch) -
     telegram_cfg = object()
     config = cast(
         ArgusConfig,
-        SimpleNamespace(stream=SimpleNamespace(name="us_close_basic", telegram=telegram_cfg)),
+        SimpleNamespace(stream=SimpleNamespace(name="us_markets", telegram=telegram_cfg)),
     )
 
     conn = MagicMock()

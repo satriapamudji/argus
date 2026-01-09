@@ -20,6 +20,7 @@ class TestNewsFingerprintRow:
         now = datetime.now(timezone.utc)
         row = (
             1,
+            "us_markets",  # stream_name
             "abc123def456",
             "text_hash_value",
             1234567890,
@@ -30,6 +31,7 @@ class TestNewsFingerprintRow:
         fingerprint = NewsFingerprintRow.from_row(row)
 
         assert fingerprint.id == 1
+        assert fingerprint.stream_name == "us_markets"
         assert fingerprint.hash_url == "abc123def456"
         assert fingerprint.hash_text == "text_hash_value"
         assert fingerprint.simhash == 1234567890
@@ -46,6 +48,7 @@ class TestNewsItemRow:
         now = datetime.now(timezone.utc)
         row = (
             1,
+            "us_markets",  # stream_name
             10,
             "reuters",
             "https://reuters.com/article",
@@ -59,6 +62,7 @@ class TestNewsItemRow:
         news_item = NewsItemRow.from_row(row)
 
         assert news_item.id == 1
+        assert news_item.stream_name == "us_markets"
         assert news_item.fingerprint_id == 10
         assert news_item.source_name == "reuters"
         assert news_item.source_url == "https://reuters.com/article"
@@ -136,7 +140,7 @@ class TestRunRow:
         now = datetime.now(timezone.utc)
         row = (
             1,
-            "us_close_basic",
+            "us_markets",
             "us_close",
             now,
             now,
@@ -152,7 +156,7 @@ class TestRunRow:
         run = RunRow.from_row(row)
 
         assert run.id == 1
-        assert run.stream_name == "us_close_basic"
+        assert run.stream_name == "us_markets"
         assert run.run_mode == "us_close"
         assert run.started_at == now
         assert run.completed_at == now

@@ -118,19 +118,19 @@ def run(
     Examples:
 
         # Basic dry run to see configuration
-        argus run --stream us_close_basic --mode us_close --dry-run
+        argus run --stream us_markets --mode us_close --dry-run
 
         # Full execution
-        argus run --stream us_close_basic --mode us_close
+        argus run --stream us_markets --mode us_close
 
         # Skip publishing (generate message but don't send)
-        argus run --stream us_close_basic --mode us_close --skip-publish
+        argus run --stream us_markets --mode us_close --skip-publish
 
         # Monday preview with conditional gate
-        argus run --stream us_close_basic --mode monday_preview --conditional
+        argus run --stream us_markets --mode monday_preview --conditional
 
         # Force publish monday preview regardless of risk score
-        argus run --stream us_close_basic --mode monday_preview --force-publish
+        argus run --stream us_markets --mode monday_preview --force-publish
     """
     from argus.orchestrator import OrchestratorOptions, RunOrchestrator, RunMode, RunStatus
 
@@ -493,7 +493,7 @@ def insert_test(url: str, title: str, source: str, snippet: Optional[str]) -> No
     click.echo(f"  News item: id={news_item.id}")
 
     # Create run
-    run_record = create_run(conn, stream_name="us_close_basic", run_mode="us_close")
+    run_record = create_run(conn, stream_name="us_markets", run_mode="us_close")
     click.echo(f"  Run: id={run_record.id}, status={run_record.status}")
 
     # Create message

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "stream_name": "us_close_basic",
+  "stream_name": "us_markets",
   "run_mode": "us_close",
   "generated_at": "2026-01-06T22:00:00+00:00",
   "trading_date": "2026-01-06",

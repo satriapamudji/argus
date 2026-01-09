@@ -6,31 +6,37 @@ from typing import Optional
 from psycopg2.extensions import connection as Connection
 
 
-def create_partition_for_date(conn: Connection, partition_date: date) -> str:
-    """Create a partition for a specific date.
+def create_partition_for_date(
+    conn: Connection, partition_date: date, stream_name: str = "us_markets"
+) -> str:
+    """Create a partition for a specific date and stream.
 
     Args:
         conn: Database connection.
         partition_date: Date to create partition for.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
 
     Returns:
         Name of the created partition.
     """
     with conn.cursor() as cur:
-        cur.execute("SELECT create_news_items_partition(%s)", (partition_date,))
+        cur.execute("SELECT create_news_items_partition(%s, %s)", (stream_name, partition_date))
         result = cur.fetchone()
         partition_name = result[0] if result else ""
     conn.commit()
     return partition_name
 
 
-def create_partitions_for_range(conn: Connection, start_date: date, end_date: date) -> list[str]:
+def create_partitions_for_range(
+    conn: Connection, start_date: date, end_date: date, stream_name: str = "us_markets"
+) -> list[str]:
     """Create partitions for a date range.
 
     Args:
         conn: Database connection.
         start_date: First date to create partition for.
         end_date: Last date (inclusive) to create partition for.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
 
     Returns:
         List of created partition names.
@@ -38,25 +44,28 @@ def create_partitions_for_range(conn: Connection, start_date: date, end_date: da
     created = []
     current = start_date
     while current <= end_date:
-        partition_name = create_partition_for_date(conn, current)
+        partition_name = create_partition_for_date(conn, current, stream_name)
         created.append(partition_name)
         current += timedelta(days=1)
     return created
 
 
-def ensure_partition_exists(conn: Connection, partition_date: date) -> str:
-    """Ensure a partition exists for the given date.
+def ensure_partition_exists(
+    conn: Connection, partition_date: date, stream_name: str = "us_markets"
+) -> str:
+    """Ensure a partition exists for the given date and stream.
 
     Creates the partition if it doesn't exist.
 
     Args:
         conn: Database connection.
         partition_date: Date to ensure partition for.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
 
     Returns:
         Name of the partition.
     """
-    return create_partition_for_date(conn, partition_date)
+    return create_partition_for_date(conn, partition_date, stream_name)
 
 
 def drop_old_partitions(conn: Connection, retention_days: int) -> list[str]:

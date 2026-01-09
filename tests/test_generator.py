@@ -150,7 +150,7 @@ def sample_facts_bundle(
     """Sample facts bundle for tests."""
     return FactsBundle(
         version="1.0",
-        stream_name="us_close_basic",
+        stream_name="us_markets",
         run_mode="us_close",
         generated_at=datetime(2025, 1, 7, 22, 0, 0, tzinfo=timezone.utc),
         trading_date=date(2025, 1, 7),

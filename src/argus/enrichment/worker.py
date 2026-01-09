@@ -120,10 +120,18 @@ class EnrichmentWorker:
             cur.execute(
                 """
                 INSERT INTO news_content 
-                    (news_item_id, ingested_at, content_type, content, content_hash, content_status)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                    (news_item_id, stream_name, ingested_at, content_type, content, content_hash, content_status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                (news_item_id, ingested_at, content_type, content, content_hash, status),
+                (
+                    news_item_id,
+                    self.config.stream.name,
+                    ingested_at,
+                    content_type,
+                    content,
+                    content_hash,
+                    status,
+                ),
             )
         self.conn.commit()
 
@@ -138,11 +146,12 @@ class EnrichmentWorker:
             cur.execute(
                 """
                 INSERT INTO news_content 
-                    (news_item_id, ingested_at, content_type, content, content_hash, content_status)
-                VALUES (%s, %s, 'excerpt', %s, %s, 'failed')
+                    (news_item_id, stream_name, ingested_at, content_type, content, content_hash, content_status)
+                VALUES (%s, %s, %s, 'excerpt', %s, %s, 'failed')
                 """,
                 (
                     news_item_id,
+                    self.config.stream.name,
                     ingested_at,
                     f"[Fetch failed: {error}]",
                     hashlib.sha256(error.encode()).hexdigest(),

@@ -58,7 +58,7 @@ class TestCLI:
                 "argus",
                 "run",
                 "--stream",
-                "us_close_basic",
+                "us_markets",
                 "--mode",
                 "us_close",
                 "--dry-run",
@@ -71,7 +71,7 @@ class TestCLI:
 
         assert result.returncode == 0
         assert "=== Argus Dry Run ===" in result.stdout
-        assert "Stream: us_close_basic" in result.stdout
+        assert "Stream: us_markets" in result.stdout
         assert "Mode: us_close" in result.stdout
         assert "Configuration loaded" in result.stdout
         assert "Schedule:" in result.stdout

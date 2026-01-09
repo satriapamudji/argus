@@ -73,6 +73,7 @@ def get_or_create_fingerprint(
     conn: Connection,
     url: str,
     source_name: str,
+    stream_name: str = "us_markets",
     title: Optional[str] = None,
     snippet: Optional[str] = None,
     simhash: Optional[int] = None,
@@ -83,6 +84,7 @@ def get_or_create_fingerprint(
         conn: Database connection.
         url: News item URL.
         source_name: Source name.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
         title: Optional title for text hash.
         snippet: Optional snippet for text hash.
         simhash: Optional SimHash value.
@@ -94,8 +96,11 @@ def get_or_create_fingerprint(
     text_hash = hash_text(title, snippet) if title else None
 
     with conn.cursor() as cur:
-        # Try to find existing fingerprint
-        cur.execute("SELECT * FROM news_fingerprints WHERE hash_url = %s", (url_hash,))
+        # Try to find existing fingerprint (per-stream deduplication)
+        cur.execute(
+            "SELECT * FROM news_fingerprints WHERE stream_name = %s AND hash_url = %s",
+            (stream_name, url_hash),
+        )
         row = cur.fetchone()
 
         if row:
@@ -110,11 +115,11 @@ def get_or_create_fingerprint(
         cur.execute(
             """
             INSERT INTO news_fingerprints 
-                (hash_url, hash_text, simhash, source_name)
-            VALUES (%s, %s, %s, %s)
+                (stream_name, hash_url, hash_text, simhash, source_name)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING *
             """,
-            (url_hash, text_hash, simhash, source_name),
+            (stream_name, url_hash, text_hash, simhash, source_name),
         )
         row = cur.fetchone()
         conn.commit()
@@ -130,6 +135,7 @@ def insert_news_item(
     source_name: str,
     source_url: str,
     title: str,
+    stream_name: str = "us_markets",
     snippet: Optional[str] = None,
     author: Optional[str] = None,
     published_at: Optional[datetime] = None,
@@ -144,6 +150,7 @@ def insert_news_item(
         source_name: Source name.
         source_url: Full URL.
         title: Title text.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
         snippet: Optional snippet.
         author: Optional author.
         published_at: Optional publication timestamp.
@@ -158,19 +165,20 @@ def insert_news_item(
     if ingested_at is None:
         ingested_at = datetime.now(timezone.utc)
 
-    # Ensure partition exists for this date
-    ensure_partition_exists(conn, ingested_at.date())
+    # Ensure partition exists for this stream and date
+    ensure_partition_exists(conn, ingested_at.date(), stream_name=stream_name)
 
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO news_items 
-                (fingerprint_id, source_name, source_url, title, snippet, 
+                (stream_name, fingerprint_id, source_name, source_url, title, snippet, 
                  author, published_at, ingested_at, raw_metadata)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
             """,
             (
+                stream_name,
                 fingerprint_id,
                 source_name,
                 source_url,
@@ -376,37 +384,52 @@ def update_message(
     conn.commit()
 
 
-def check_duplicate_by_url(conn: Connection, url: str) -> bool:
-    """Check if a URL has already been ingested.
+def check_duplicate_by_url(
+    conn: Connection,
+    url: str,
+    stream_name: str = "us_markets",
+) -> bool:
+    """Check if a URL has already been ingested for this stream.
 
     Args:
         conn: Database connection.
         url: URL to check.
+        stream_name: Stream name for per-stream deduplication.
 
     Returns:
-        True if duplicate exists.
+        True if duplicate exists in this stream.
     """
     url_hash = hash_url(url)
     with conn.cursor() as cur:
-        cur.execute("SELECT 1 FROM news_fingerprints WHERE hash_url = %s LIMIT 1", (url_hash,))
+        cur.execute(
+            "SELECT 1 FROM news_fingerprints WHERE stream_name = %s AND hash_url = %s LIMIT 1",
+            (stream_name, url_hash),
+        )
         return cur.fetchone() is not None
 
 
-def check_duplicate_by_text(conn: Connection, title: str, snippet: Optional[str] = None) -> bool:
-    """Check if text content has already been ingested.
+def check_duplicate_by_text(
+    conn: Connection,
+    title: str,
+    snippet: Optional[str] = None,
+    stream_name: str = "us_markets",
+) -> bool:
+    """Check if text content has already been ingested for this stream.
 
     Args:
         conn: Database connection.
         title: Title text.
         snippet: Optional snippet.
+        stream_name: Stream name for per-stream deduplication.
 
     Returns:
-        True if duplicate exists.
+        True if duplicate exists in this stream.
     """
     text_hash_value = hash_text(title, snippet)
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT 1 FROM news_fingerprints WHERE hash_text = %s LIMIT 1", (text_hash_value,)
+            "SELECT 1 FROM news_fingerprints WHERE stream_name = %s AND hash_text = %s LIMIT 1",
+            (stream_name, text_hash_value),
         )
         return cur.fetchone() is not None
 
@@ -417,6 +440,7 @@ def check_near_duplicate_by_simhash(
     threshold: int = 4,
     window_days: int = 14,
     exclude_fingerprint_id: Optional[int] = None,
+    stream_name: Optional[str] = None,
 ) -> Optional[int]:
     """Check if a SimHash has near-duplicates in the database.
 
@@ -428,6 +452,7 @@ def check_near_duplicate_by_simhash(
         threshold: Maximum Hamming distance for near-duplicates (default 4).
         window_days: Number of days to look back (default 14).
         exclude_fingerprint_id: Optional fingerprint ID to exclude from check.
+        stream_name: Optional stream name for per-stream deduplication.
 
     Returns:
         Fingerprint ID of the near-duplicate if found, None otherwise.
@@ -440,6 +465,7 @@ def check_near_duplicate_by_simhash(
         threshold=threshold,
         window_days=window_days,
         exclude_fingerprint_id=exclude_fingerprint_id,
+        stream_name=stream_name,
     )
 
 
@@ -447,6 +473,7 @@ def get_or_create_fingerprint_with_dedupe(
     conn: Connection,
     url: str,
     source_name: str,
+    stream_name: str = "us_markets",
     title: Optional[str] = None,
     snippet: Optional[str] = None,
     simhash_enabled: bool = True,
@@ -456,7 +483,7 @@ def get_or_create_fingerprint_with_dedupe(
     """Get or create a fingerprint with full dedupe checking.
 
     Performs:
-    1. Exact URL hash check
+    1. Exact URL hash check (per-stream)
     2. SimHash near-duplicate check (if enabled and title provided)
     3. Creates fingerprint with computed SimHash
 
@@ -464,6 +491,7 @@ def get_or_create_fingerprint_with_dedupe(
         conn: Database connection.
         url: News item URL.
         source_name: Source name.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
         title: Optional title for SimHash/text hash.
         snippet: Optional snippet for SimHash/text hash.
         simhash_enabled: Whether to check/compute SimHash.
@@ -479,8 +507,11 @@ def get_or_create_fingerprint_with_dedupe(
     url_hash = hash_url(url)
 
     with conn.cursor() as cur:
-        # Check for exact URL match first
-        cur.execute("SELECT * FROM news_fingerprints WHERE hash_url = %s", (url_hash,))
+        # Check for exact URL match first (per-stream deduplication)
+        cur.execute(
+            "SELECT * FROM news_fingerprints WHERE stream_name = %s AND hash_url = %s",
+            (stream_name, url_hash),
+        )
         row = cur.fetchone()
 
         if row:
@@ -503,12 +534,13 @@ def get_or_create_fingerprint_with_dedupe(
             text += " " + snippet
         simhash_value = compute_simhash(text)
 
-        # Check for near-duplicates
+        # Check for near-duplicates (within the same stream)
         near_duplicate_id = check_near_duplicate_by_simhash(
             conn=conn,
             simhash=simhash_value,
             threshold=simhash_threshold,
             window_days=simhash_window_days,
+            stream_name=stream_name,
         )
 
     # Create new fingerprint (even if near-duplicate found - caller decides what to do)
@@ -518,11 +550,11 @@ def get_or_create_fingerprint_with_dedupe(
         cur.execute(
             """
             INSERT INTO news_fingerprints 
-                (hash_url, hash_text, simhash, source_name)
-            VALUES (%s, %s, %s, %s)
+                (stream_name, hash_url, hash_text, simhash, source_name)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING *
             """,
-            (url_hash, text_hash, simhash_value, source_name),
+            (stream_name, url_hash, text_hash, simhash_value, source_name),
         )
         row = cur.fetchone()
         conn.commit()
@@ -596,6 +628,7 @@ def insert_news_content(
     content: str,
     content_hash: str,
     content_status: str = "success",
+    stream_name: str = "us_markets",
 ) -> int:
     """Insert content into news_content table.
 
@@ -607,6 +640,7 @@ def insert_news_content(
         content: The content text.
         content_hash: SHA256 hash of content.
         content_status: 'success', 'failed', or 'pending'.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
 
     Returns:
         ID of the inserted row.
@@ -615,11 +649,19 @@ def insert_news_content(
         cur.execute(
             """
             INSERT INTO news_content 
-                (news_item_id, ingested_at, content_type, content, content_hash, content_status)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                (news_item_id, stream_name, ingested_at, content_type, content, content_hash, content_status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
-            (news_item_id, ingested_at, content_type, content, content_hash, content_status),
+            (
+                news_item_id,
+                stream_name,
+                ingested_at,
+                content_type,
+                content,
+                content_hash,
+                content_status,
+            ),
         )
         row = cur.fetchone()
         conn.commit()
@@ -733,6 +775,7 @@ def insert_news_score(
     quality_score: int,
     confidence_score: int,
     scorer_version: str,
+    stream_name: str = "us_markets",
     topic: Optional[str] = None,
     flags: Optional[list[str]] = None,
     reasons: Optional[list[str]] = None,
@@ -747,6 +790,7 @@ def insert_news_score(
         quality_score: Quality score (0-100).
         confidence_score: Confidence score (0-100).
         scorer_version: Version string of the scorer.
+        stream_name: Stream name (e.g., 'us_markets', 'asia_markets').
         topic: Optional detected topic.
         flags: Optional list of flags.
         reasons: Optional list of score reasons.
@@ -760,13 +804,14 @@ def insert_news_score(
         cur.execute(
             """
             INSERT INTO news_scores 
-                (news_item_id, ingested_at, impact_score, quality_score, 
+                (news_item_id, stream_name, ingested_at, impact_score, quality_score, 
                  confidence_score, topic, flags, reasons, scorer_version)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
                 news_item_id,
+                stream_name,
                 ingested_at,
                 impact_score,
                 quality_score,
