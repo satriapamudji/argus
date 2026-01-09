@@ -16,6 +16,7 @@ from argus.pipeline.providers.ingestion_rss import RSSIngestionProvider
 from argus.pipeline.providers.publisher_null import NullPublisherProvider
 from argus.pipeline.providers.publisher_telegram import TelegramPublisherProvider
 from argus.pipeline.providers.scoring_heuristic_v1 import HeuristicV1ScoringProvider
+from argus.pipeline.providers.scoring_heuristic_v2 import HeuristicV2ScoringProvider
 
 
 @dataclass(frozen=True)
@@ -35,22 +36,32 @@ def _require_key(*, stage: str, key: str, supported: set[str]) -> None:
 
 def get_ingestion_provider(stream: StreamConfig) -> IngestionProvider:
     key = stream.providers.ingestion
-    supported = {"rss"}
+    supported = {"rss", "api_newsapi"}
     _require_key(stage="ingestion", key=key, supported=supported)
 
     if key == "rss":
         return RSSIngestionProvider()
+
+    if key == "api_newsapi":
+        from argus.pipeline.providers.ingestion_api_newsapi import (
+            NewsApiIngestionProvider,
+        )
+
+        return NewsApiIngestionProvider()
 
     raise AssertionError("unreachable")
 
 
 def get_scoring_provider(stream: StreamConfig) -> ScoringProvider:
     key = stream.providers.scoring
-    supported = {"heuristic_v1"}
+    supported = {"heuristic_v1", "heuristic_v2"}
     _require_key(stage="scoring", key=key, supported=supported)
 
     if key == "heuristic_v1":
         return HeuristicV1ScoringProvider()
+
+    if key == "heuristic_v2":
+        return HeuristicV2ScoringProvider()
 
     raise AssertionError("unreachable")
 

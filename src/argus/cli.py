@@ -525,7 +525,7 @@ def insert_test(url: str, title: str, source: str, snippet: Optional[str]) -> No
     click.echo("  Message updated to published")
 
     conn.close()
-    click.echo("\n✓ Test data inserted successfully!")
+    click.echo("\nTest data inserted successfully.")
 
 
 def main() -> None:
@@ -540,13 +540,16 @@ def main() -> None:
 @click.option("--dry-run", is_flag=True, help="Parse feeds but don't insert into DB")
 @click.pass_context
 def ingest(ctx: click.Context, stream: Optional[str], dry_run: bool) -> None:
-    """Run RSS feed ingestion.
+    """Run news ingestion using configured provider.
 
-    Polls all configured RSS feeds and ingests new items into the database.
+    Uses the ingestion provider configured in stream.providers.ingestion:
+    - 'rss': Poll RSS feeds from allowlist files
+    - 'api_newsapi': Fetch from TheNewsAPI.com
+
     Designed to be run via cron at regular intervals (e.g., every 10 minutes).
     """
-    from argus.ingestion import run_ingestion
-    from argus.ingestion.rss_parser import parse_feed
+    from argus.db.connection import get_connection
+    from argus.pipeline.registry import get_ingestion_provider
 
     config_path = ctx.obj.get("config_path")
     config = ArgusConfig.load(config_path)
@@ -569,13 +572,19 @@ def ingest(ctx: click.Context, stream: Optional[str], dry_run: bool) -> None:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(2)
 
-    feed_urls = config.get_rss_feeds()
+    provider_key = config.stream.providers.ingestion
+    click.echo(f"Ingestion provider: {provider_key}")
 
-    if not feed_urls:
-        click.echo("No RSS feeds configured. Add feeds to rss/*.txt files.")
-        return
+    # Dry run for RSS only (API dry-run not implemented)
+    if dry_run and provider_key == "rss":
+        from argus.ingestion.rss_parser import parse_feed
 
-    if dry_run:
+        feed_urls = config.get_rss_feeds()
+
+        if not feed_urls:
+            click.echo("No RSS feeds configured. Add feeds to rss/*.txt files.")
+            return
+
         click.echo(f"Dry run: parsing {len(feed_urls)} feed(s)...")
         click.echo()
 
@@ -583,10 +592,10 @@ def ingest(ctx: click.Context, stream: Optional[str], dry_run: bool) -> None:
         for url in feed_urls:
             entries, error = parse_feed(url)
             if error:
-                click.echo(f"  ✗ {url}")
+                click.echo(f"  ERROR {url}")
                 click.echo(f"    Error: {error}")
             else:
-                click.echo(f"  ✓ {url}: {len(entries)} entries")
+                click.echo(f"  OK {url}: {len(entries)} entries")
                 total_entries += len(entries)
 
         click.echo()
@@ -594,13 +603,31 @@ def ingest(ctx: click.Context, stream: Optional[str], dry_run: bool) -> None:
         click.echo("Dry run complete. No items inserted.")
         return
 
-    click.echo(f"Ingesting from {len(feed_urls)} feed(s)...")
-    stats = run_ingestion(config)
+    if dry_run and provider_key != "rss":
+        click.echo(f"Dry run not supported for provider '{provider_key}'. Running normally...")
+
+    # Get the provider and run ingestion
+    try:
+        provider = get_ingestion_provider(config.stream)
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+    try:
+        conn = get_connection()
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+    try:
+        stats = provider.run(config=config, conn=conn)
+    finally:
+        conn.close()
 
     click.echo()
     click.echo("=== Ingestion Complete ===")
-    click.echo(f"Feeds processed: {stats.feeds_processed}")
-    click.echo(f"Feeds failed: {stats.feeds_failed}")
+    click.echo(f"Feeds/pages processed: {stats.feeds_processed}")
+    click.echo(f"Feeds/pages failed: {stats.feeds_failed}")
     click.echo(f"Entries found: {stats.entries_found}")
     click.echo(f"New entries: {stats.entries_new}")
     click.echo(f"Duplicates skipped: {stats.entries_duplicate}")
@@ -610,6 +637,102 @@ def ingest(ctx: click.Context, stream: Optional[str], dry_run: bool) -> None:
         click.echo("Errors:")
         for err in stats.errors:
             click.echo(f"  - {err}")
+
+
+@cli.group()
+def newsapi() -> None:
+    """TheNewsAPI utilities."""
+    pass
+
+
+@newsapi.command()
+@click.option("--language", default="en", help="Filter by language code (default: en)")
+@click.option("--locale", default="us", help="Filter by locale (default: us)")
+@click.option("--categories", default=None, help="Comma-separated categories to filter")
+@click.option("--limit", default=50, help="Maximum sources to display (default: 50)")
+def sources(language: str, locale: str, categories: Optional[str], limit: int) -> None:
+    """List available news sources from TheNewsAPI.
+
+    Fetches and displays available source domains that can be used
+    in the 'domains' setting in apis/newsapi_{stream}.txt.
+
+    Examples:
+
+        # List all US English business sources
+        argus newsapi sources --categories business
+
+        # List UK sources
+        argus newsapi sources --locale gb
+
+        # List all available sources
+        argus newsapi sources --limit 100
+    """
+    from argus.config import NewsApiConfig
+    from argus.pipeline.providers.news_api_client import NewsApiClient, NewsApiError
+
+    # Create minimal config for sources lookup
+    config = NewsApiConfig()
+
+    if not config.api_keys:
+        click.echo(
+            "Error: No API keys configured. Set NEWS_API_KEYS environment variable.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    # Parse categories if provided
+    cats = None
+    if categories:
+        cats = [c.strip() for c in categories.split(",") if c.strip()]
+
+    click.echo(f"Fetching sources (locale={locale}, language={language})...")
+
+    try:
+        with NewsApiClient(config) as client:
+            result = client.get_sources(
+                locale=locale,
+                language=language,
+                categories=cats,
+            )
+    except NewsApiError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise SystemExit(1)
+
+    sources_data = result.get("data", [])
+
+    if not sources_data:
+        click.echo("No sources found matching the criteria.")
+        return
+
+    click.echo()
+    click.echo(f"Found {len(sources_data)} source(s):")
+    click.echo()
+
+    # Display sources in a table format
+    displayed = 0
+    for source in sources_data:
+        if displayed >= limit:
+            click.echo(f"\n... and {len(sources_data) - limit} more (use --limit to show more)")
+            break
+
+        domain = source.get("domain_url", "unknown")
+        name = source.get("source_id", "unknown")
+        src_locale = source.get("locale", "?")
+        src_cats = source.get("categories", [])
+
+        click.echo(f"  {domain}")
+        click.echo(f"    Name: {name}, Locale: {src_locale}")
+        if src_cats:
+            click.echo(f"    Categories: {', '.join(src_cats)}")
+        click.echo()
+        displayed += 1
+
+    click.echo()
+    click.echo("To use these sources, add domains to apis/newsapi_{stream}.txt:")
+    click.echo("  domains=reuters.com,bloomberg.com,wsj.com")
 
 
 @cli.command()
@@ -698,17 +821,13 @@ def enrich(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
 def score(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
     """Score news items using heuristics and optional LLM triage.
 
-    Scores unscored news items from the window using:
-    - Recency (0-25 pts)
-    - Source tier (0-20 pts)
-    - Keyword relevance (0-30 pts)
-    - Uniqueness via SimHash (0-15 pts)
-    - Breaking/urgency indicators (0-10 pts)
+    Scores unscored news items from the window using the configured
+    scoring provider (heuristic_v1 or heuristic_v2).
 
-    Optionally applies LLM triage via OpenRouter for top candidates.
     Run this after ingestion to prepare items for enrichment.
     """
-    from argus.scoring import run_scoring
+    from argus.db.connection import get_connection
+    from argus.pipeline.registry import get_scoring_provider
 
     config_path = ctx.obj.get("config_path")
     config = ArgusConfig.load(config_path)
@@ -717,6 +836,9 @@ def score(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
         click.echo("Scoring is disabled in configuration.")
         return
 
+    provider_key = config.stream.providers.scoring
+    click.echo(f"Scoring provider: {provider_key}")
+
     if dry_run:
         click.echo(f"Dry run: scoring candidates (window: {window_hours} hours)...")
         click.echo()
@@ -724,23 +846,29 @@ def score(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
         # Show config
         click.echo("Scoring configuration:")
         click.echo(f"  Max items per run: {config.stream.scoring.max_items_per_run}")
-        click.echo(f"  Scorer version: {config.stream.scoring.scorer_version}")
+        click.echo(f"  Provider: {provider_key}")
         click.echo(f"  LLM triage enabled: {config.stream.scoring.llm_triage_enabled}")
         if config.stream.scoring.llm_triage_enabled:
             click.echo(f"  LLM model: {config.stream.scoring.llm_model}")
             click.echo(f"  LLM max items: {config.stream.scoring.llm_max_items}")
         click.echo()
 
-        # Show source tiers
-        click.echo("Source tiers:")
-        click.echo(f"  Tier 1 (20 pts): {', '.join(config.stream.scoring.source_tiers.tier_1)}")
-        click.echo(f"  Tier 2 (15 pts): {', '.join(config.stream.scoring.source_tiers.tier_2)}")
-        click.echo(f"  Tier 3 (10 pts): {', '.join(config.stream.scoring.source_tiers.tier_3)}")
-        click.echo("  Unlisted:  5 pts")
-        click.echo()
+    try:
+        conn = get_connection()
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
 
-    click.echo(f"Scoring items (window: {window_hours} hours)...")
-    stats = run_scoring(config, window_hours=window_hours, dry_run=dry_run)
+    try:
+        provider = get_scoring_provider(config.stream)
+        stats = provider.run(
+            config=config,
+            conn=conn,
+            window_hours=window_hours,
+            dry_run=dry_run,
+        )
+    finally:
+        conn.close()
 
     click.echo()
     click.echo("=== Scoring Complete ===")
@@ -755,6 +883,474 @@ def score(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
     if stats.scored > 0:
         click.echo()
         click.echo(f"Success rate: {stats.success_rate:.1f}%")
+
+
+@cli.command()
+@click.option("--days", default=1.0, type=float, help="Lookback window in days (default 1.0)")
+@click.option("--limit", default=800, type=int, help="Max items to load from DB (default 800)")
+@click.option(
+    "--movers", default=25, type=int, help="How many biggest movers to print (default 25)"
+)
+@click.option("--topk", default=12, type=int, help="How many top items in JSON output (default 12)")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON instead of text")
+@click.pass_context
+def evaluate(
+    ctx: click.Context,
+    days: float,
+    limit: int,
+    movers: int,
+    topk: int,
+    as_json: bool,
+) -> None:
+    """Compare old vs new scoring rankings and evaluate quality.
+
+    Runs deterministic evaluation on scored news items:
+    - Loads items with existing scores from DB (old)
+    - Re-scores with in-memory heuristic_v2 (new)
+    - Classifies items as A/B/C/D based on macro-heavy rubric
+    - Reports TopK composition, inversions, spam counts
+    - Shows biggest rank movers between old and new
+
+    Requires DATABASE_URL in environment.
+
+    Examples:
+        argus evaluate --days 1
+        argus evaluate --days 7 --limit 500
+        argus evaluate --topk 20 --movers 50
+        argus evaluate --json
+    """
+    import json as json_module
+    import os
+
+    from dotenv import load_dotenv
+    import psycopg2
+
+    from argus.config import ArgusConfig
+    from argus.scoring.heuristics_v2 import score_candidates_v2
+    from argus.scoring.types import ScoringCandidate
+
+    load_dotenv()
+
+    config_path = ctx.obj.get("config_path")
+    config = ArgusConfig.load(config_path)
+
+    # Load items from DB
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        click.echo("Error: DATABASE_URL not set in environment", err=True)
+        raise SystemExit(1)
+
+    click.echo(f"Loading scored items (days={days}, limit={limit})...")
+
+    try:
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        query = """
+        SELECT
+            ni.id,
+            ni.fingerprint_id,
+            ni.source_name,
+            ni.source_url,
+            ni.title,
+            COALESCE(ni.snippet, '') AS snippet,
+            ni.raw_metadata->>'feed_url' AS feed_url,
+            ni.ingested_at,
+            ni.published_at,
+            nf.simhash,
+            ns.impact_score,
+            ns.scorer_version
+        FROM news_items ni
+        JOIN news_fingerprints nf ON ni.fingerprint_id = nf.id
+        JOIN news_scores ns ON ni.id = ns.news_item_id
+        WHERE ni.ingested_at >= NOW() - INTERVAL %s
+        ORDER BY ns.impact_score DESC
+        LIMIT %s
+        """
+        cur.execute(query, (f"{days} days", limit))
+        rows = cur.fetchall()
+        conn.close()
+    except Exception as e:
+        click.echo(f"Error: Database query failed: {e}", err=True)
+        raise SystemExit(1)
+
+    if not rows:
+        click.echo("No scored items found in window.")
+        return
+
+    click.echo(f"Loaded {len(rows)} items.")
+    click.echo()
+
+    # Build data structures
+    class DbRow:
+        def __init__(self, row: tuple) -> None:
+            self.id = row[0]
+            self.fingerprint_id = row[1]
+            self.source_name = row[2]
+            self.source_url = row[3]
+            self.title = row[4]
+            self.snippet = row[5]
+            self.feed_url = row[6]
+            self.ingested_at = row[7]
+            self.published_at = row[8]
+            self.simhash = row[9]
+            self.old_impact_score = int(row[10])
+            self.old_scorer_version = row[11]
+
+    db_rows = [DbRow(r) for r in rows]
+
+    # OLD ranking (as loaded from DB)
+    def to_eval_item(row: DbRow, impact_score: int) -> dict:
+        return {
+            "id": row.id,
+            "source_name": row.source_name,
+            "source_url": row.source_url,
+            "title": row.title,
+            "snippet": row.snippet,
+            "feed_url": row.feed_url,
+            "impact_score": int(impact_score),
+        }
+
+    old_ranked = [to_eval_item(r, r.old_impact_score) for r in db_rows]
+
+    # NEW ranking (in-memory v2 scores)
+    candidates = [
+        ScoringCandidate(
+            news_item_id=r.id,
+            fingerprint_id=r.fingerprint_id,
+            source_name=r.source_name,
+            source_url=r.source_url,
+            title=r.title,
+            snippet=r.snippet,
+            published_at=r.published_at,
+            ingested_at=r.ingested_at,
+            simhash=r.simhash,
+        )
+        for r in db_rows
+    ]
+
+    recent_simhashes = [r.simhash for r in db_rows if r.simhash is not None]
+    v2_results = score_candidates_v2(
+        candidates, config.stream.scoring, recent_simhashes=recent_simhashes
+    )
+
+    v2_score_by_id = {res.news_item_id: res.impact_score for res in v2_results}
+    new_ranked = [to_eval_item(r, v2_score_by_id.get(r.id, 0)) for r in db_rows]
+    new_ranked.sort(key=lambda it: it["impact_score"], reverse=True)
+
+    # Import eval framework functions (inline to avoid dependency at module load)
+    import re
+
+    def _text(item: dict) -> str:
+        title = (item.get("title") or "").strip()
+        snippet = (item.get("snippet") or "").strip()
+        return f"{title} {snippet}".strip().lower()
+
+    def _has_keyword(text: str, kw: str) -> bool:
+        kw = kw.strip().lower()
+        if not kw:
+            return False
+        if any(ch.isspace() for ch in kw):
+            return kw in text
+        if len(kw) <= 4:
+            return re.search(rf"\\b{re.escape(kw)}\\b", text) is not None
+        return kw in text
+
+    # Classification patterns
+    D_PATTERNS = [
+        (
+            "pundit_content",
+            r"\b(jim\s+cramer|cramer\s+says|motley\s+fool|seeking\s+alpha|mad\s+money)\b",
+        ),
+        (
+            "stock_picks",
+            r"\b(stocks?\s+to\s+buy|top\s+\d+\s+stocks?|best\s+(dividend\s+)?stocks?|should\s+you\s+buy|hot\s+stocks?)\b",
+        ),
+        (
+            "fomo_bait",
+            r"\b(if\s+you('d|\s+had)\s+invested|millionaire[\s-]maker|could\s+(double|triple|10x)|get\s+rich|next\s+(amazon|apple|nvidia|tesla))\b",
+        ),
+        (
+            "why_stock_moved",
+            r"\bwhy\s+\w+\s+(stock\s+)?(crashed|soared|plunged|skyrocketed|fell|jumped)\b",
+        ),
+        (
+            "listicle",
+            r"\b(\d+\s+reasons?\s+why|\d+\s+best|\d+\s+worst|\d+\s+things?\s+to|top\s+\d+\s+reasons?)\b",
+        ),
+    ]
+    D_REGEX = [(name, re.compile(pat, re.IGNORECASE)) for name, pat in D_PATTERNS]
+
+    EARNINGS_ROUTINE = re.compile(
+        r"\b(beats?\s+estimates?|misses?\s+estimates?|tops?\s+expectations?|falls?\s+short|q\d\s+profit|q\d\s+earnings)\b",
+        re.IGNORECASE,
+    )
+    EARNINGS_SYSTEMIC = re.compile(
+        r"\b(profit\s+warning|guidance\s+cut|guidance\s+lower|sector[-\s]wide|industry[-\s]wide|bellwether|mass\s+layoffs|restructuring|large\s+layoffs)\b",
+        re.IGNORECASE,
+    )
+
+    A_KEYWORDS = {
+        "central_bank": [
+            "fed",
+            "federal reserve",
+            "fomc",
+            "powell",
+            "ecb",
+            "boe",
+            "boj",
+            "rate cut",
+            "rate hike",
+            "interest rate",
+            "qt",
+            "qe",
+        ],
+        "macro_data": [
+            "cpi",
+            "pce",
+            "inflation",
+            "deflation",
+            "gdp",
+            "nfp",
+            "nonfarm",
+            "payrolls",
+            "jobs report",
+            "jobless claims",
+            "ism",
+            "pmi",
+        ],
+        "geopolitics_policy": [
+            "tariff",
+            "tariffs",
+            "sanctions",
+            "embargo",
+            "trade war",
+            "war",
+            "conflict",
+            "invasion",
+        ],
+        "energy_shock": ["opec", "opec+", "supply disruption", "pipeline", "shipping", "hormuz"],
+        "credit_systemic": [
+            "credit spread",
+            "high yield",
+            "default",
+            "bank stress",
+            "liquidity",
+            "sovereign",
+            "sovereign debt",
+        ],
+    }
+
+    B_KEYWORDS = {
+        "market_wrap": [
+            "stock market today",
+            "markets",
+            "shares",
+            "stocks",
+            "s&p",
+            "dow",
+            "nasdaq",
+            "close",
+            "rally",
+            "selloff",
+        ],
+        "rates_fx": ["yield", "yields", "treasury", "treasuries", "dollar", "dxy", "fx", "forex"],
+        "commodities": ["oil", "crude", "wti", "brent", "gold", "silver", "copper", "natural gas"],
+    }
+
+    TEMPLATE_MARKET_TODAY = re.compile(r"\bstock\s+market\s+today\b", re.IGNORECASE)
+
+    def classify(item: dict) -> tuple[str, list[str]]:
+        t = _text(item)
+        reasons: list[str] = []
+
+        # D overrides
+        for name, rx in D_REGEX:
+            if rx.search(t):
+                reasons.append(f"D:{name}")
+        if reasons:
+            return "D", reasons
+
+        # Earnings handling
+        if EARNINGS_SYSTEMIC.search(t):
+            return "B", ["B:systemic_earnings"]
+        if EARNINGS_ROUTINE.search(t):
+            return "C", ["C:routine_earnings"]
+
+        # A detection
+        a_reasons = []
+        for group, kws in A_KEYWORDS.items():
+            if any(_has_keyword(t, kw) for kw in kws):
+                a_reasons.append(f"A:{group}")
+        if a_reasons:
+            return "A", a_reasons
+
+        # B detection
+        b_reasons = []
+        for group, kws in B_KEYWORDS.items():
+            if any(_has_keyword(t, kw) for kw in kws):
+                b_reasons.append(f"B:{group}")
+        if b_reasons:
+            return "B", b_reasons
+
+        return "C", ["C:default"]
+
+    def annotate(items: list[dict]) -> list[dict]:
+        out = []
+        for it in items:
+            label, reasons = classify(it)
+            it2 = dict(it)
+            it2["_class"] = {"label": label, "reasons": reasons}
+            out.append(it2)
+        return out
+
+    # Annotate both rankings
+    old_annotated = annotate(old_ranked)
+    new_annotated = annotate(new_ranked)
+
+    # Compute metrics
+    def topk_counts(items: list[dict], k: int) -> dict[str, int]:
+        counts = {"A": 0, "B": 0, "C": 0, "D": 0}
+        for item in items[:k]:
+            label = item["_class"]["label"]
+            counts[label] += 1
+        return counts
+
+    def spam_count(items: list[dict], k: int) -> int:
+        return sum(1 for it in items[:k] if TEMPLATE_MARKET_TODAY.search(_text(it)))
+
+    def inversions(items: list[dict], k: int) -> int:
+        top = items[:k]
+        hard = 0
+        for i, it in enumerate(top):
+            if it["_class"]["label"] == "D":
+                if any(it2["_class"]["label"] in ("A", "B") for it2 in top[i + 1 :]):
+                    hard += 1
+        return hard
+
+    # Print results
+    def print_eval(name: str, items: list[dict]) -> dict:
+        c12 = topk_counts(items, 12)
+        c20 = topk_counts(items, 20)
+        c50 = topk_counts(items, 50)
+        spam12 = spam_count(items, 12)
+        inv50 = inversions(items, 50)
+
+        summary = {
+            "name": name,
+            "top12": c12,
+            "top20": c20,
+            "top50": c50,
+            "spam12": spam12,
+            "inversions50_hard": inv50,
+        }
+
+        if not as_json:
+            click.echo("=" * 70)
+            click.echo(name)
+            click.echo("=" * 70)
+            click.echo(
+                f"Top12: A={c12['A']} B={c12['B']} C={c12['C']} D={c12['D']} | spam={spam12}"
+            )
+            click.echo(f"Top20: A={c20['A']} B={c20['B']} C={c20['C']} D={c20['D']}")
+            click.echo(
+                f"Top50: A={c50['A']} B={c50['B']} C={c50['C']} D={c50['D']} | inv_hard={inv50}"
+            )
+
+            # Contract check
+            violations = []
+            if not (c12["A"] >= 6 and c12["B"] >= 4 and c12["C"] <= 2 and c12["D"] == 0):
+                violations.append("Top12 composition")
+            if not (c20["A"] >= 8 and c20["C"] <= 5 and c20["D"] <= 1):
+                violations.append("Top20 composition")
+            d_rate = c50["D"] / 50.0
+            if d_rate > 0.05:
+                violations.append(f"Top50 D-rate ({d_rate:.1%})")
+            if inv50 > 0:
+                violations.append("Hard inversions")
+            if spam12 > 1:
+                violations.append("Spam")
+
+            if violations:
+                click.echo(click.style(f"Contract: FAIL ({', '.join(violations)})", fg="red"))
+            else:
+                click.echo(click.style("Contract: PASS", fg="green"))
+
+        # Top-k items
+        top_items = []
+        for i, it in enumerate(items[:topk], 1):
+            top_items.append(
+                {
+                    "rank": i,
+                    "id": it.get("id"),
+                    "impact_score": it.get("impact_score"),
+                    "class": it["_class"]["label"],
+                    "title": (it.get("title") or "")[:100],
+                    "reasons": it["_class"]["reasons"],
+                }
+            )
+
+        if not as_json:
+            click.echo(f"\nTop{topk}:")
+            for item in top_items:
+                click.echo(
+                    f"  [{item['rank']:2}] {item['class']} {item['impact_score']:3} | {item['title'][:60]}..."
+                )
+
+        summary["top_items"] = top_items
+        return summary
+
+    old_summary = print_eval("OLD (DB scores)", old_annotated)
+    if not as_json:
+        click.echo()
+    new_summary = print_eval("NEW (heuristic_v2)", new_annotated)
+
+    # Biggest movers
+    old_rank = {it["id"]: i for i, it in enumerate(old_annotated, 1)}
+    new_rank = {it["id"]: i for i, it in enumerate(new_annotated, 1)}
+
+    movers_list = []
+    for r in db_rows:
+        if r.id in old_rank and r.id in new_rank:
+            delta = old_rank[r.id] - new_rank[r.id]
+            movers_list.append(
+                {
+                    "id": r.id,
+                    "delta": delta,
+                    "old_rank": old_rank[r.id],
+                    "new_rank": new_rank[r.id],
+                    "old_score": r.old_impact_score,
+                    "new_score": v2_score_by_id.get(r.id, 0),
+                    "title": r.title,
+                }
+            )
+
+    movers_list.sort(key=lambda m: abs(m["delta"]), reverse=True)
+    top_movers = movers_list[:movers]
+
+    if not as_json:
+        click.echo()
+        click.echo("=" * 70)
+        click.echo(f"Biggest rank movers (top {movers})")
+        click.echo("=" * 70)
+        for m in top_movers:
+            sign = "+" if m["delta"] >= 0 else ""
+            click.echo(
+                f"{sign}{m['delta']:4} | {m['old_rank']:4} -> {m['new_rank']:4} | "
+                f"{m['old_score']:3} -> {m['new_score']:3} | {m['title'][:60]}..."
+            )
+
+    if as_json:
+        report = {
+            "meta": {
+                "days": days,
+                "limit": limit,
+                "items_loaded": len(db_rows),
+            },
+            "old": old_summary,
+            "new": new_summary,
+            "movers": top_movers,
+        }
+        click.echo(json_module.dumps(report, indent=2, ensure_ascii=False))
 
 
 @cli.command()

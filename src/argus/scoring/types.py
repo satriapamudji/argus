@@ -24,6 +24,8 @@ class ScoringCandidate:
     published_at: Optional[datetime]
     ingested_at: datetime
     simhash: Optional[int] = None  # From fingerprints table
+    feed_url: Optional[str] = None  # For domain-based tier resolution (v2)
+    author: Optional[str] = None  # For author/provider penalties (v2)
 
     @property
     def text_for_scoring(self) -> str:
@@ -32,6 +34,28 @@ class ScoringCandidate:
         if self.snippet:
             parts.append(self.snippet)
         return " ".join(parts)
+
+    @property
+    def source_domain(self) -> Optional[str]:
+        """Extract normalized domain from feed_url for tier matching.
+
+        Returns:
+            Lowercase domain without 'www.' or 'feeds.' prefix, or None.
+        """
+        if not self.feed_url:
+            return None
+        try:
+            from urllib.parse import urlparse
+
+            parsed = urlparse(self.feed_url)
+            domain = parsed.netloc.lower()
+            if domain.startswith("www."):
+                domain = domain[4:]
+            if domain.startswith("feeds."):
+                domain = domain[6:]
+            return domain if domain else None
+        except Exception:
+            return None
 
 
 @dataclass

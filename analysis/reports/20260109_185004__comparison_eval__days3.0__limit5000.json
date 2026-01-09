@@ -1,0 +1,1731 @@
+{
+  "meta": {
+    "created_at": "20260109_185004",
+    "days": 3.0,
+    "limit": 5000,
+    "movers_requested": 25
+  },
+  "old": {
+    "summary": {
+      "name": "OLD (DB: news_scores.impact_score)",
+      "contract": {
+        "pass": false,
+        "violations": [
+          "Top12 composition fail: {'A': 6, 'B': 5, 'C': 0, 'D': 1}",
+          "Top50 D-rate fail: D=5/50 (10.0%)",
+          "Hard inversion fail (Top50): D above A/B count=5",
+          "Spam fail (Top12): market_wrap_templates=2 > 1"
+        ]
+      },
+      "top12": {
+        "counts": {
+          "A": 6,
+          "B": 5,
+          "C": 0,
+          "D": 1
+        },
+        "spam_market_today": 2
+      },
+      "top20": {
+        "counts": {
+          "A": 8,
+          "B": 6,
+          "C": 5,
+          "D": 1
+        }
+      },
+      "top50": {
+        "counts": {
+          "A": 13,
+          "B": 14,
+          "C": 18,
+          "D": 5
+        },
+        "inversions_hard_D_over_A_or_B": 5,
+        "D_rate": 0.1
+      }
+    },
+    "top_items": [
+      {
+        "rank": 1,
+        "id": 450,
+        "impact_score": 53,
+        "class": "A",
+        "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger econom",
+        "snippet": "Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 2,
+        "id": 429,
+        "impact_score": 50,
+        "class": "A",
+        "title": "European Shares Likely To Drift Lower As US Jobs Data Looms",
+        "snippet": "(RTTNews) - European stocks may drift lower at open on Thursday after the S&P 500 and the Dow Jones Industrial Average snapped their three-day win streaks overnight amid rising geopolitical risks and caution ahead of the Supreme Court's opinions on the legality of tariffs imposed",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/european-shares-likely-drift-lower-us-jobs-data-looms",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 3,
+        "id": 513,
+        "impact_score": 49,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 8: Defense Stocks Rally and Tech Retreats",
+        "snippet": "S&P 500 (SNPINDEX:^GSPC) finished almost flat at 6,921.46, the Nasdaq Composite (NASDAQINDEX:^IXIC) declined 0.44% to 23,480.02 on tech weakness, while the Dow Jones Industrial Average (DJINDEX: ^DJI) gained 0.55% to 49,266.11 as defense and staples outperformed.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-8-defense-stocks-rally-and-tech-retreats",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 4,
+        "id": 58,
+        "impact_score": 48,
+        "class": "A",
+        "title": "Indian Shares Extend Losses For Third Day",
+        "snippet": "(RTTNews) - Indian shares ended slightly lower on Wednesday to extend losses for a third day running as rising geopolitical tensions and tariff-related concerns overshadowed investor optimism around the earnings outlook.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-extend-losses-third-day-1",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 5,
+        "id": 533,
+        "impact_score": 48,
+        "class": "A",
+        "title": "European Shares Seen Higher At Open; US Tariff Ruling Awaited",
+        "snippet": "(RTTNews) - European stocks look set to open on a positive note Friday, even as overall gains may remain modest as investors await U.S. nonfarm payrolls data later in the day for direction ahead of the Federal Reserve's policy meeting later this month.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:central_bank",
+          "A:macro_data",
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 6,
+        "id": 308,
+        "impact_score": 46,
+        "class": "B",
+        "title": "Dow, S&P 500 Give Back Ground But Nasdaq Moves Modestly Higher",
+        "snippet": "(RTTNews) - Stocks fluctuated over the course of the trading day on Wednesday before eventually ending the relatively lackluster session mixed.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/dow-sp-500-give-back-ground-nasdaq-moves-modestly-higher",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 7,
+        "id": 282,
+        "impact_score": 45,
+        "class": "B",
+        "title": "EMN Breaks Above 5% Yield Territory",
+        "snippet": "Looking at the universe of stocks we cover at Dividend Channel, in trading on Wednesday, shares of Eastman Chemical Co (Symbol: EMN) were yielding above the 5% mark based on its quarterly dividend (annualized to $3.36), with the stock changing hands as low as $65.83 on the day.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/emn-breaks-above-5-yield-territory",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 8,
+        "id": 367,
+        "impact_score": 45,
+        "class": "D",
+        "title": "Jim Cramer says investors should avoid buying stocks near their highs after the market's recent rall",
+        "snippet": "Jim Cramer warns investors not to chase stocks after big rallies, pointing to better entry points created by volatility and earnings season pullbacks.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/cramer-dont-chase-stocks-after-rally-volatility.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "D:pundit_content"
+        ]
+      },
+      {
+        "rank": 9,
+        "id": 483,
+        "impact_score": 45,
+        "class": "A",
+        "title": "Asia-Pacific markets set for higher open; China inflation data in focus",
+        "snippet": "Asia-Pacific markets were set to trade higher Friday as investors keep an eye on China's inflation data coming out later in the day.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/asia-pacific-markets-china-cpi-hang-seng-index-kospi-nikkei-225.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 10,
+        "id": 531,
+        "impact_score": 45,
+        "class": "A",
+        "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+        "snippet": "China's consumer inflation accelerated in December to the fastest pace in more than two years, while factory-gate deflation extended for over three years.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 11,
+        "id": 354,
+        "impact_score": 45,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 7: Banks Slide as Stock Rally Slows",
+        "snippet": "The S&P 500 (SNPINDEX:^GSPC) fell 0.34% to 6,920.93 after briefly touching fresh record territory today. The Nasdaq Composite (NASDAQINDEX:^IXIC) rose 0.16% to 23,584.28 on further AI‑driven tech strength, and the Dow Jones Industrial Average (DJINDEX: ^DJI) dropped 0.94% to",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-7-banks-slide-stock-rally-slows",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 12,
+        "id": 300,
+        "impact_score": 45,
+        "class": "B",
+        "title": "Is Now the Time to Buy 3 of the S&P 500's Worst-Performing Stocks of 2025?",
+        "snippet": "Key PointsDeckers Outdoor, Trade Desk, and Fiserv all crashed in 2025 even as the S&P 500 did well overall.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/now-time-buy-3-sp-500s-worst-performing-stocks-2025",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 13,
+        "id": 523,
+        "impact_score": 44,
+        "class": "C",
+        "title": "Simulations Plus, Inc. Q1 Profit Increases, But Misses Estimates",
+        "snippet": "(RTTNews) - Simulations Plus, Inc. (SLP) released earnings for its first quarter that Increased from last year but missed the Street estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/simulations-plus-inc-q1-profit-increases-misses-estimates",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 14,
+        "id": 503,
+        "impact_score": 44,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 8: Nvidia Slides as AI Demand Forecasts Top $500 Billion",
+        "snippet": "Nvidia (NASDAQ:NVDA), a GPU and AI solutions leader, closed Thursday's session at $185, down 2.17%. Nvidia IPO'd in 1999 and has grown an astounding 450,934% since going public. Trading volume reached 163.5 million shares, coming in nearly 12% below versus its three-month average",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-8-nvidia-slides-ai-demand-forecasts-top-500-billion",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 15,
+        "id": 438,
+        "impact_score": 44,
+        "class": "A",
+        "title": "Trade deficit in October hits smallest since 2009 after Trump's tariff moves",
+        "snippet": "The trade shortfall was just $29.4 billion for October, down 39% from the prior month.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/trade-deficit-in-october-hits-smallest-since-2009-after-trumps-tariff-moves.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 16,
+        "id": 94,
+        "impact_score": 43,
+        "class": "A",
+        "title": "Mortgage demand drops nearly 10% to end 2025, despite lower interest rates",
+        "snippet": "The Mortgage Bankers Association's seasonally adjusted index reported a 9.7% decline in total mortgage applications despite decreased mortgage rates.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/mortgage-demand-drops-nearly-10percent-to-end-2025.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 17,
+        "id": 520,
+        "impact_score": 43,
+        "class": "C",
+        "title": "Federal agents in Portland involved in shooting of two people, police say",
+        "snippet": "",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/portland-shooting-federal-agents.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 18,
+        "id": 46,
+        "impact_score": 43,
+        "class": "C",
+        "title": "Cal-Maine Foods Q2 Net Income Declines",
+        "snippet": "(RTTNews) - Cal-Maine Foods (CALM) reported second quarter net income attributable to Cal-Maine Foods of $102.8 million, down 53.1% from a year ago. Earnings per share was $2.13, down 52.3%. Net sales were $769.5 million, down 19.4% from prior year. Total shell egg sales decrease",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/cal-maine-foods-q2-net-income-declines",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 19,
+        "id": 92,
+        "impact_score": 43,
+        "class": "C",
+        "title": "eVTOL maker Joby buys new Ohio factory, more than doubles manufacturing footprint as it vies for FAA",
+        "snippet": "Joby's expansion comes as electric air taxi companies race to gain Federal Aviation Administration certification to start flying their aircrafts commercially.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/joby-faa-air-taxi-evtol.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 20,
+        "id": 399,
+        "impact_score": 42,
+        "class": "C",
+        "title": "PriceSmart, Inc. Profit Advances In Q1",
+        "snippet": "(RTTNews) - PriceSmart, Inc. (PSMT) revealed earnings for its first quarter that Increased, from last year",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/pricesmart-inc-profit-advances-q1",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 21,
+        "id": 322,
+        "impact_score": 42,
+        "class": "D",
+        "title": "Could This Millionaire-Maker Artificial Intelligence (AI) Stock Double Again In 2026?",
+        "snippet": "In this video, I will discuss Nebius (NASDAQ: NBIS) and share my thoughts on it as we begin 2026. Watch the short video to learn more, consider subscribing, and click the special offer link below.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/could-millionaire-maker-artificial-intelligence-ai-stock-double-again-2026",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "D:fomo_bait"
+        ]
+      },
+      {
+        "rank": 22,
+        "id": 21,
+        "impact_score": 42,
+        "class": "A",
+        "title": "Euro zone inflation hits 2% in December, in line with forecasts",
+        "snippet": "Euro zone inflation stood at 2% in December, flash data from Eurostat showed on Wednesday.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/euro-zone-inflation-hits-2percent-in-december-in-line-with-forecasts.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 23,
+        "id": 318,
+        "impact_score": 42,
+        "class": "B",
+        "title": "Canadian Stocks Slide Amid Profit Taking, Fall In Metals And Energy Stocks",
+        "snippet": "(RTTNews) - Following two consecutive days of gains, Canadian stocks gave back ground on Wednesday as investors resorted to profit taking. In addition, the decline was triggered by a retreat in mining and energy stocks due to profit taking in gold and the U.S. efforts to gain ful",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/canadian-stocks-slide-amid-profit-taking-fall-metals-and-energy-stocks",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 24,
+        "id": 471,
+        "impact_score": 42,
+        "class": "C",
+        "title": "AXIL Brands Inc. Q2 Profit Climbs",
+        "snippet": "(RTTNews) - AXIL Brands Inc. (AXIL) released earnings for its second quarter that Increased, from last year",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/axil-brands-inc-q2-profit-climbs",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 25,
+        "id": 420,
+        "impact_score": 42,
+        "class": "D",
+        "title": "If You'd Invested $2,000 in Nvidia 5 Years Ago, Here's How Much You'd Have Today",
+        "snippet": "Key PointsShares of Nvidia have trounced the S&P 500 in the past half-decade.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/if-youd-invested-2000-nvidia-5-years-ago-heres-how-much-youd-have-today",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "D:fomo_bait"
+        ]
+      },
+      {
+        "rank": 26,
+        "id": 249,
+        "impact_score": 42,
+        "class": "B",
+        "title": "Gold Moves Lower Amid Profit-Taking",
+        "snippet": "(RTTNews) - Gold prices gave back ground on Wednesday as investors opted for booking taking from the past two days of gains and pushed the geopolitical concerns that helped gold rally to the backburner. Multiple economic reports from the U.S. also drew the attention of traders.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-moves-lower-amid-profit-taking",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 27,
+        "id": 512,
+        "impact_score": 42,
+        "class": "D",
+        "title": "Why Broadcom Stock Fell 14.1% in December",
+        "snippet": "Key PointsFiscal fourth-quarter results, released on Dec. 11, were robust, with both revenue and earnings beating Wall Street's estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/why-broadcom-stock-fell-141-december",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "D:why_stock_moved"
+        ]
+      },
+      {
+        "rank": 28,
+        "id": 320,
+        "impact_score": 42,
+        "class": "D",
+        "title": "Why Globalstar Stock Crashed Today",
+        "snippet": "Key PointsGlobalstar got a nice hike to target price yesterday.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/why-globalstar-stock-crashed-today",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "D:why_stock_moved"
+        ]
+      },
+      {
+        "rank": 29,
+        "id": 312,
+        "impact_score": 41,
+        "class": "C",
+        "title": "Pre-Market Earnings Report for January 8, 2026 :  RPM, SNX, AYI, CMC, SMPL, NEOG, LNN, HELE, NTIC",
+        "snippet": "The following companies are expected to report earnings prior to market open on 01/08/2026. Visit our Earnings Calendar for a full list of expected earnings releases.RPM International Inc. (RPM)is reporting for the quarter ending November 30, 2025. The chemical company's consens",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/pre-market-earnings-report-january-8-2026-rpm-snx-ayi-cmc-smpl-neog-lnn-hele-ntic",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 30,
+        "id": 506,
+        "impact_score": 41,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 8: Apple Slips After Alphabet Overtakes it on Market Cap",
+        "snippet": "Leading tech giant, Apple (NASDAQ:AAPL), closed Thursday’s session at $259.04, down 0.42%. Trading volume reached 50.2 million shares, coming in roughly 10% above its three-month average of 45.6 million shares.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-8-apple-slips-after-alphabet-overtakes-it-market-cap",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 31,
+        "id": 99,
+        "impact_score": 41,
+        "class": "C",
+        "title": "Albertsons Trims FY25 Outlook As Q3 Sales Miss Estimates",
+        "snippet": "(RTTNews) - While reporting financial results for the third quarter on Wednesday, food and drug retailer Albertsons Cos., Inc. (ACI) trimmed its adjusted income and identical sales growth guidance for the full-year 2025.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/albertsons-trims-fy25-outlook-q3-sales-miss-estimates",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 32,
+        "id": 433,
+        "impact_score": 40,
+        "class": "C",
+        "title": "Trump’s Greenland gambit puts China on edge after Venezuela operation",
+        "snippet": "U.S. President Donald Trump's threat to take control of Greenland raised alarms in Beijing as nations vye for the vast mineral reserves in the Arctic nation.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/us-trump-china-greenland-denmark-arctic-tensions-trump-rare-earth-elements-minerals-mining.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 33,
+        "id": 100,
+        "impact_score": 40,
+        "class": "C",
+        "title": "Futures Point To Broadly Lower Open For Wall Street",
+        "snippet": "(RTTNews) - The Labor Department's JOLTS report, the Factory Orders as well as the ISM Services Index for December might be the focus on Wednesday. Geopolitical tensions and risks might continue to be counted by investors.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/futures-point-broadly-lower-open-wall-street",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 34,
+        "id": 415,
+        "impact_score": 40,
+        "class": "A",
+        "title": "Indian Shares Set To Follow Global Peers Lower",
+        "snippet": "(RTTNews) - Indian shares look set to open on a subdued note on Thursday due to ongoing geopolitical tensions and tariff-related concerns.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-set-follow-global-peers-lower-2",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 35,
+        "id": 534,
+        "impact_score": 40,
+        "class": "B",
+        "title": "11 S&P 500 Stocks Doubled in 2025. This Is the Best Bet To Do It Again This Year",
+        "snippet": "Key PointsTech stocks led the S&P 500 last year and made up most of its biggest winners.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/11-sp-500-stocks-doubled-2025-best-bet-do-it-again-year",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 36,
+        "id": 387,
+        "impact_score": 40,
+        "class": "B",
+        "title": "Will This Software Stock Have a Turnaround Story In 2026",
+        "snippet": "In today's video, I discuss recent updates affecting Adobe (NASDAQ: ADBE) and other AI stocks. To learn more, check out the short video, consider subscribing, and click the special offer link below.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/will-software-stock-have-turnaround-story-2026",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 37,
+        "id": 398,
+        "impact_score": 40,
+        "class": "B",
+        "title": "Amazon AWS Proves This Artificial Intelligence (AI) Bearish Thesis Wrong With This 1 Move",
+        "snippet": "In today's video, I discuss recent updates affecting Nvidia (NASDAQ: NVDA), Amazon (NASDAQ: AMZN), and other AI stocks. To learn more, check out the short video, consider subscribing, and click the special offer link below.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/amazon-aws-proves-artificial-intelligence-ai-bearish-thesis-wrong-1-move",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 38,
+        "id": 446,
+        "impact_score": 40,
+        "class": "A",
+        "title": "Where Trump's $2,000 tariff dividend checks stand now",
+        "snippet": "President Trump says the U.S. raised more than $600 billion in tariff revenue. He previously suggested sending Americans $2,000 checks as a \"dividend\" payment.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/stimulus-check-trump-tariffs-2000.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 39,
+        "id": 404,
+        "impact_score": 40,
+        "class": "C",
+        "title": "Samsung Electronics estimates nearly three-fold profit surge as memory prices skyrocket",
+        "snippet": "The memory giant projected an operating profit of 20 trillion won for the final quarter of 2025, a significant improvement from a year earlier.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/samsung-electronics-estimates-surge-skyrocket-profit-ai-memory-prices-q4.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 40,
+        "id": 535,
+        "impact_score": 40,
+        "class": "A",
+        "title": "Indian Shares Little Changed; IT Stocks Rebound In Cautious Trade",
+        "snippet": "(RTTNews) - Indian shares were moving in a narrow range on Friday after four straight days of losses on the back of geopolitical tensions and tariff-related concerns.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-little-changed-it-stocks-rebound-cautious-trade",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 41,
+        "id": 57,
+        "impact_score": 40,
+        "class": "C",
+        "title": "Oracle's Secret Weapon Against AI Customer Risk Has a Fatal Flaw",
+        "snippet": "Key PointsOracle addressed customer concentration risk in its latest earnings call.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/oracles-secret-weapon-against-ai-customer-risk-has-fatal-flaw",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 42,
+        "id": 311,
+        "impact_score": 40,
+        "class": "C",
+        "title": "Energy Transfer Expects to Stomp on the Gas in 2026",
+        "snippet": "Key PointsEnergy Transfer expects its earnings growth rate will accelerate in 2026.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/energy-transfer-expects-stomp-gas-2026",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 43,
+        "id": 289,
+        "impact_score": 40,
+        "class": "B",
+        "title": "The bottom may be in on cyber stocks — here are fundamental and technical reasons",
+        "snippet": "Shares of Club names CrowdStrike and Palo Alto Networks were each up roughly 5% in the third session of an early 2026 rally.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/bottom-may-be-in-on-cyber-stocks-here-are-fundamental-and-technical-reasons.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 44,
+        "id": 3,
+        "impact_score": 40,
+        "class": "C",
+        "title": "Trump says Venezuela to give up to 50 million barrels of oil to U.S.",
+        "snippet": "Trump's announcement came days after U.S. forces attacked Venezuela and captured its leader, Nicolas Maduro, to be prosecuted on drug-trafficking charges.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/06/trump-venezuela-oil.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 45,
+        "id": 369,
+        "impact_score": 40,
+        "class": "B",
+        "title": "Asia-Pacific markets set for lower open as Trump rattles defense firms and oil prices slide",
+        "snippet": "Overnight, the S&P 500 and the Down Jones Industrial Average snapped a three-day winning streak.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/asia-pacific-markets-today-nikkei-225-hang-seng-index-kospi-wall-street-trump-oil.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 46,
+        "id": 93,
+        "impact_score": 40,
+        "class": "C",
+        "title": "Watch Energy Secretary Chris Wright answer questions about Venezuela",
+        "snippet": "Wright will be interviewed by Goldman Sachs at the bank's annual energy conference in Miami.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/watch-energy-secretary-chris-wright-answer-questions-about-venezuela-.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 47,
+        "id": 500,
+        "impact_score": 39,
+        "class": "C",
+        "title": "Aritzia Inc. Q3 Profit Increases, Beats Estimates",
+        "snippet": "(RTTNews) - Aritzia Inc. (ATZAF) announced a profit for its third quarter that Increased from last year and beat the Street estimates.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/aritzia-inc-q3-profit-increases-beats-estimates",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:routine_earnings"
+        ]
+      },
+      {
+        "rank": 48,
+        "id": 492,
+        "impact_score": 39,
+        "class": "C",
+        "title": "Consumer outlook improves despite job worries, New York Fed survey finds",
+        "snippet": "The New York Fed’s monthly Survey of Consumer Expectations found that more households expect to be better off a year from now.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/new-york-fed-consumer-outlook-job-worries.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 49,
+        "id": 103,
+        "impact_score": 39,
+        "class": "A",
+        "title": "2 Dividend ETFs to Buy With $500 and Hold Forever",
+        "snippet": "Key PointsThe Schwab Dividend ETF is known for its high yield.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/2-dividend-etfs-buy-500-and-hold-forever",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:credit_systemic"
+        ]
+      },
+      {
+        "rank": 50,
+        "id": 418,
+        "impact_score": 39,
+        "class": "C",
+        "title": "LG Electronics Outlines 2026 Growth Strategy With AI And B2B Focus",
+        "snippet": "(RTTNews) - LG Electronics Chief Executive Officer Lyu Jae-chul unveiled a three-pillar strategy to boost competitiveness, accelerate portfolio transformation, and strengthen profitability. The plan includes raising quality, cost, and delivery standards, expanding B2B businesses",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/lg-electronics-outlines-2026-growth-strategy-ai-and-b2b-focus",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "C:default"
+        ]
+      }
+    ]
+  },
+  "new": {
+    "summary": {
+      "name": "NEW (in-memory: heuristic_v2)",
+      "contract": {
+        "pass": true,
+        "violations": []
+      },
+      "top12": {
+        "counts": {
+          "A": 6,
+          "B": 6,
+          "C": 0,
+          "D": 0
+        },
+        "spam_market_today": 0
+      },
+      "top20": {
+        "counts": {
+          "A": 9,
+          "B": 11,
+          "C": 0,
+          "D": 0
+        }
+      },
+      "top50": {
+        "counts": {
+          "A": 16,
+          "B": 31,
+          "C": 3,
+          "D": 0
+        },
+        "inversions_hard_D_over_A_or_B": 0,
+        "D_rate": 0.0
+      }
+    },
+    "top_items": [
+      {
+        "rank": 1,
+        "id": 531,
+        "impact_score": 45,
+        "class": "A",
+        "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+        "snippet": "China's consumer inflation accelerated in December to the fastest pace in more than two years, while factory-gate deflation extended for over three years.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 2,
+        "id": 83,
+        "impact_score": 41,
+        "class": "B",
+        "title": "Gold Prices Rally On Safe Haven Demand",
+        "snippet": "(RTTNews) - Gold prices soared on Monday amid strong safe-haven demand following U.S. action in Venezuela.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-prices-rally-safe-haven-demand",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 3,
+        "id": 516,
+        "impact_score": 40,
+        "class": "A",
+        "title": "3 of the Most Important Charts to Watch Right Now",
+        "snippet": "Markets enter 2026 at a crossroads. Oil prices remain subdued but volatile, interest rates are holding steady despite rate-cut hopes, and the S&P 500 continues to climb on the back of strong earnings. Each of these trends reflects deeper macro shifts—from energy supply dynamics",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/3-most-important-charts-watch-right-now",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 4,
+        "id": 76,
+        "impact_score": 39,
+        "class": "B",
+        "title": "Crude Oil Plunges As Traders Assess Impact Of U.S. Offensive In Venezuela",
+        "snippet": "(RTTNews) - Crude oil plummeted on Tuesday, giving away yesterday's gains, as investors resorted to profit-taking while analyzing the consequences of Saturday's swift U.S. military operation in Venezuela on global oil supply along with other geopolitical tensions.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/crude-oil-plunges-traders-assess-impact-us-offensive-venezuela",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 5,
+        "id": 446,
+        "impact_score": 38,
+        "class": "A",
+        "title": "Where Trump's $2,000 tariff dividend checks stand now",
+        "snippet": "President Trump says the U.S. raised more than $600 billion in tariff revenue. He previously suggested sending Americans $2,000 checks as a \"dividend\" payment.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/stimulus-check-trump-tariffs-2000.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 6,
+        "id": 169,
+        "impact_score": 38,
+        "class": "B",
+        "title": "VOO, BRK.B, WMT, GE: ETF Inflow Alert",
+        "snippet": "Looking today at week-over-week shares outstanding changes among the universe of ETFs covered at ETF Channel, one standout is the Vanguard S&P 500 ETF (Symbol: VOO) where we have detected an approximate $17.5 billion dollar inflow -- that's a 2.1% increase week over week in",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/voo-brkb-wmt-ge-etf-inflow-alert",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 7,
+        "id": 26,
+        "impact_score": 38,
+        "class": "A",
+        "title": "India’s state-owned refiners keep buying Russian oil even as New Delhi seeks U.S. tariff relief",
+        "snippet": "India’s efforts to secure U.S. tariff relief are being complicated by continued Russian crude purchases by state-owned refiners, offsetting a pullback by private buyers.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/india-state-refiners-russian-oil-us-tariffs-ioc-bpcl-psu-mukesh-ambani-reliance-trump.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 8,
+        "id": 77,
+        "impact_score": 38,
+        "class": "A",
+        "title": "Gold Advances Amid Geopolitical Tensions, Rate Cut Expectations",
+        "snippet": "(RTTNews) - Gold prices moved higher on Tuesday, extending yesterday's gains amid continuing geopolitical conflicts and sustained U.S. Federal Reserve rate cut expectations that drove demand for the yellow metal.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-advances-amid-geopolitical-tensions-rate-cut-expectations",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "A:central_bank",
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 9,
+        "id": 186,
+        "impact_score": 38,
+        "class": "B",
+        "title": "Schwab Long-Term U.S. Treasury Breaks Above 200-Day Moving Average - Bullish for SCHQ",
+        "snippet": "In trading on Wednesday, shares of the Schwab Long-Term U.S. Treasury ETF (Symbol: SCHQ) crossed above their 200 day moving average of $31.86, changing hands as high as $31.91 per share. Schwab Long-Term U.S. Treasury shares are currently trading up about 0.2% on the day. The",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/schwab-long-term-us-treasury-breaks-above-200-day-moving-average-bullish-schq",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 10,
+        "id": 518,
+        "impact_score": 38,
+        "class": "B",
+        "title": "Crude Oil Soars As U.S. Data Indicates Stronger Demand",
+        "snippet": "(RTTNews) - Snapping two days of decline, crude oil skyrocketed on Thursday as data showing a decline in the U.S. crude inventories allayed global oversupply concerns and supported prices.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/crude-oil-soars-us-data-indicates-stronger-demand",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 11,
+        "id": 74,
+        "impact_score": 38,
+        "class": "B",
+        "title": "Lululemon Is a Good Fit for 2026: Limited Downside, Ample Upside",
+        "snippet": "lululemon athletica's (NASDAQ: LULU) late-2025 price action is starting to look like a real bottom, not just a reflex rally. The bottom was catalyzed by performance, expansion plans, and the shifting analyst sentiment, which limits the downside and points to ample upside for inv",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/lululemon-good-fit-2026-limited-downside-ample-upside",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 12,
+        "id": 211,
+        "impact_score": 37,
+        "class": "A",
+        "title": "Oil ship seized by the U.S. over Venezuela sanctions was newly registered under Russian flag",
+        "snippet": "The seized ship, now named Marinera, is just one that Russia has reflagged to join its \"dark\" fleet.",
+        "source_name": "International: Top News And Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/oil-ship-seized-by-us-over-venezuela-ban-newly-listed-under-russian-flag.html",
+        "feed_url": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 13,
+        "id": 168,
+        "impact_score": 37,
+        "class": "B",
+        "title": "VT, AMAT, MS, TJX: ETF Inflow Alert",
+        "snippet": "Looking today at week-over-week shares outstanding changes among the universe of ETFs covered at ETF Channel, one standout is the Vanguard Total World Stock ETF (Symbol: VT) where we have detected an approximate $1.5 billion dollar inflow -- that's a 2.6% increase week over week",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/vt-amat-ms-tjx-etf-inflow-alert",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 14,
+        "id": 167,
+        "impact_score": 37,
+        "class": "B",
+        "title": "VEA, SHOP, GLXY, DEC: ETF Inflow Alert",
+        "snippet": "Looking today at week-over-week shares outstanding changes among the universe of ETFs covered at ETF Channel, one standout is the Vanguard FTSE Developed Markets ETF (Symbol: VEA) where we have detected an approximate $4.4 billion dollar inflow -- that's a 2.3% increase week ove",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/vea-shop-glxy-dec-etf-inflow-alert",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 15,
+        "id": 164,
+        "impact_score": 37,
+        "class": "B",
+        "title": "VUG, CRM, UBER, INTU: ETF Inflow Alert",
+        "snippet": "Looking today at week-over-week shares outstanding changes among the universe of ETFs covered at ETF Channel, one standout is the Vanguard Growth ETF (Symbol: VUG) where we have detected an approximate $1.6 billion dollar inflow -- that's a 0.8% increase week over week in outsta",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/vug-crm-uber-intu-etf-inflow-alert",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 16,
+        "id": 450,
+        "impact_score": 36,
+        "class": "A",
+        "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger econom",
+        "snippet": "Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 17,
+        "id": 249,
+        "impact_score": 36,
+        "class": "B",
+        "title": "Gold Moves Lower Amid Profit-Taking",
+        "snippet": "(RTTNews) - Gold prices gave back ground on Wednesday as investors opted for booking taking from the past two days of gains and pushed the geopolitical concerns that helped gold rally to the backburner. Multiple economic reports from the U.S. also drew the attention of traders.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-moves-lower-amid-profit-taking",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 18,
+        "id": 270,
+        "impact_score": 36,
+        "class": "B",
+        "title": "Crude Oil Plummets On New Supply Concerns From Venezuela",
+        "snippet": "(RTTNews) - Extending yesterday's decline, crude oil plunged today due to emerging supply side concerns following U.S. attempts to gain control of Venezuelan oil wealth.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/crude-oil-plummets-new-supply-concerns-venezuela",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 19,
+        "id": 271,
+        "impact_score": 36,
+        "class": "A",
+        "title": "US Oil Stocks Gain as Venezuela Intervention Stirs Uncertainty",
+        "snippet": "Oil prices moved uneasily at the start of the week as market participants digested the implications of a sudden US intervention in Venezuela over the weekend. Brent crude slipped as much as 1.2 percent in early trading on Monday (January 5), falling to around US$60 per barrel before recovering modestly to trade just above US$61.Since the removal of Venezuelan President Nicolás Maduro from power, US President Donald Trump has said Washington will assume control over the country’s oil sector and invite US companies to invest in rebuilding it.Venezuela holds about 303 billion barrels of proven crude reserves — roughly 17 percent of the global total, as per data published by the US Energy Information Administration — but currently produces only about 1 million barrels per day, less than 1 percent of global supply.That gap between geological potential and actual output explains why traders have so far resisted pricing in a near-term supply shock or surge. Venezuela’s exports are already constrained by US sanctions and a naval blockade, and analysts say it would take years and tens of billions of dollars to restore production to anything close to historical levels.“People are going to...",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/us-oil-stocks-gain-venezuela-intervention-stirs-uncertainty",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 20,
+        "id": 111,
+        "impact_score": 35,
+        "class": "A",
+        "title": "Oil sales from Venezuela to continue indefinitely and U.S. sanctions will be reduced, sources say",
+        "snippet": "The U.S. will ease sanctions against Venezuela in exchange for continued shipments of oil.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/oil-sales-from-venezuela-to-continue-indefinitely-sanctions-will-be-reduced-source-says.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 21,
+        "id": 330,
+        "impact_score": 33,
+        "class": "B",
+        "title": "Should AMD Stock Investors Be Worried After the Company's Latest Keynote Announcements Failed to Imp",
+        "snippet": "In today's video, I discuss recent updates affecting Advanced Micro Devices (NASDAQ: AMD) and other AI stocks. To learn more, check out the short video, consider subscribing, and click the special offer link below.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/should-amd-stock-investors-be-worried-after-companys-latest-keynote-announcements-failed",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 22,
+        "id": 517,
+        "impact_score": 33,
+        "class": "B",
+        "title": "Ironwood Pharmaceuticals’ 2026 Guidance Shock Sparks a Major Re-Rating",
+        "snippet": "The pharmaceutical sector is famously volatile, usually driven by the binary outcomes of clinical trials. A drug either works, sending the stock to the moon, or it fails, causing a crash. However, investors in Ironwood Pharmaceuticals (NASDAQ: IRWD) witnessed a different kind o",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/ironwood-pharmaceuticals-2026-guidance-shock-sparks-major-re-rating",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 23,
+        "id": 222,
+        "impact_score": 33,
+        "class": "B",
+        "title": "Is SoFi a Buy, Sell, or Hold in 2026?",
+        "snippet": "In this video, I will cover the recent updates regarding SoFi (NASDAQ: SOFI). Watch the short video to learn more, consider subscribing, and click the special offer link below.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/sofi-buy-sell-or-hold-2026-0",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 24,
+        "id": 282,
+        "impact_score": 31,
+        "class": "B",
+        "title": "EMN Breaks Above 5% Yield Territory",
+        "snippet": "Looking at the universe of stocks we cover at Dividend Channel, in trading on Wednesday, shares of Eastman Chemical Co (Symbol: EMN) were yielding above the 5% mark based on its quarterly dividend (annualized to $3.36), with the stock changing hands as low as $65.83 on the day.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/emn-breaks-above-5-yield-territory",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 25,
+        "id": 66,
+        "impact_score": 31,
+        "class": "B",
+        "title": "What to Expect From Amazon in the 4 Weeks Before Earnings",
+        "snippet": "Tech titan Amazon.com Inc. (NASDAQ: AMZN) is closing out the year and entering the final stretch before its next earnings report in an unusual spot. The stock is trading at roughly the same level it was this time last Christmas. In a year where the benchmark S&P 500 index manag",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/what-expect-amazon-4-weeks-earnings",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 26,
+        "id": 313,
+        "impact_score": 31,
+        "class": "B",
+        "title": "2 Very Different Ways to Trade Tesla as January Earnings Approach",
+        "snippet": "Automotive giant Tesla Inc. (NASDAQ: TSLA) is heading into its next earnings report at the end of January with momentum suddenly working against it. After finally hitting fresh all-time highs just before Christmas, the stock has since logged its longest run of red days in month",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/2-very-different-ways-trade-tesla-january-earnings-approach",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 27,
+        "id": 189,
+        "impact_score": 31,
+        "class": "B",
+        "title": "Organon Named Top Dividend Stock With Insider Buying and 0.99% Yield (OGN)",
+        "snippet": "In this series, we look through the most recent Dividend Channel ''DividendRank'' report, and then we cherry pick only those companies that have experienced insider buying within the past six months. The officers and directors of a company tend to have a unique insider's view of",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/organon-named-top-dividend-stock-insider-buying-and-099-yield-ogn",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 28,
+        "id": 81,
+        "impact_score": 31,
+        "class": "A",
+        "title": "Crude Oil Soars Amid OPEC Plans, Russia-Ukraine Conflict",
+        "snippet": "(RTTNews) - Crude oil surged on Monday after the OPEC+ alliance reaffirmed its plans to pause production increases for early 2026, thereby allaying oversupply concerns.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/crude-oil-soars-amid-opec-plans-russia-ukraine-conflict",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "A:geopolitics_policy",
+          "A:energy_shock"
+        ]
+      },
+      {
+        "rank": 29,
+        "id": 21,
+        "impact_score": 30,
+        "class": "A",
+        "title": "Euro zone inflation hits 2% in December, in line with forecasts",
+        "snippet": "Euro zone inflation stood at 2% in December, flash data from Eurostat showed on Wednesday.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/euro-zone-inflation-hits-2percent-in-december-in-line-with-forecasts.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 30,
+        "id": 318,
+        "impact_score": 30,
+        "class": "B",
+        "title": "Canadian Stocks Slide Amid Profit Taking, Fall In Metals And Energy Stocks",
+        "snippet": "(RTTNews) - Following two consecutive days of gains, Canadian stocks gave back ground on Wednesday as investors resorted to profit taking. In addition, the decline was triggered by a retreat in mining and energy stocks due to profit taking in gold and the U.S. efforts to gain ful",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/canadian-stocks-slide-amid-profit-taking-fall-metals-and-energy-stocks",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 31,
+        "id": 103,
+        "impact_score": 30,
+        "class": "A",
+        "title": "2 Dividend ETFs to Buy With $500 and Hold Forever",
+        "snippet": "Key PointsThe Schwab Dividend ETF is known for its high yield.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/2-dividend-etfs-buy-500-and-hold-forever",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:credit_systemic"
+        ]
+      },
+      {
+        "rank": 32,
+        "id": 339,
+        "impact_score": 30,
+        "class": "C",
+        "title": "Trump says Venezuela will purchase American products with revenue from oil deal",
+        "snippet": "Energy Secretary Chris Wright said Wednesday that the U.S. will control Venezuela's oil sales indefinitely.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/trump--venezuela-american-products-oil-deal.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 33,
+        "id": 33,
+        "impact_score": 30,
+        "class": "C",
+        "title": "CNBC's The China Connection newsletter: What's next after a 10-year 'experiment' with U.S.-China com",
+        "snippet": "For someone who's witnessed the ups and downs of U.S.-China tensions since the 1990s, AmCham China's new chair is strikingly optimistic about 2026.",
+        "source_name": "International: Top News And Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/07/cnbcs-the-china-connection-newsletter-turning-point-for-us-china-ties-in-2026.html",
+        "feed_url": "https://www.cnbc.com/id/100727362/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 34,
+        "id": 519,
+        "impact_score": 30,
+        "class": "B",
+        "title": "Gold Ends Flat Amid Increasing Dollar, U.S. Jobs Data, Geopolitical Tensions",
+        "snippet": "(RTTNews) - As investors parsed today's U.S. economic reports, gold prices held ground on Thursday, while the U.S. dollar index moved higher and geopolitical tensions continued to intensify.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-ends-flat-amid-increasing-dollar-us-jobs-data-geopolitical-tensions",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 35,
+        "id": 474,
+        "impact_score": 30,
+        "class": "B",
+        "title": "Gold Extends Losses As Dollar Firms Before Jobs Data",
+        "snippet": "(RTTNews) - Gold extended losses on Thursday, after having fallen more than 1 percent in the previous session due to profit taking.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-extends-losses-dollar-firms-jobs-data",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 36,
+        "id": 11,
+        "impact_score": 30,
+        "class": "C",
+        "title": "How Russia is benefiting from Trump's Venezuelan oil plan",
+        "snippet": "Russia is reflagging sanctioned vessels involved in the Venezuelan oil trade, quickly growing its dark fleet.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/06/oil-russia-venezuela.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "C:default"
+        ]
+      },
+      {
+        "rank": 37,
+        "id": 175,
+        "impact_score": 30,
+        "class": "B",
+        "title": "Noteworthy ETF Outflows: SHY",
+        "snippet": "Looking today at week-over-week shares outstanding changes among the universe of ETFs covered at ETF Channel, one standout is the iShares 1-3 Year Treasury Bond ETF (Symbol: SHY) where we have detected an approximate $132.6 million dollar outflow -- that's a 0.6% decrease week",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/noteworthy-etf-outflows-shy",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 38,
+        "id": 162,
+        "impact_score": 30,
+        "class": "B",
+        "title": "TLT, XFLX: Big ETF Outflows",
+        "snippet": "Looking at units outstanding versus one week prior within the universe of ETFs covered at ETF Channel, the biggest outflow was seen in the iShares 20+ Year Treasury Bond ETF, where 12,900,000 units were destroyed, or a 2.4% decrease week over week. And on a percentage change",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/tlt-xflx-big-etf-outflows",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 39,
+        "id": 143,
+        "impact_score": 30,
+        "class": "B",
+        "title": "Energy Yields Up to 8.4% While Herd Chases Orinoco Pipe Dream",
+        "snippet": "Wall Street is treating Venezuela like the next \"black gold\" rush.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/energy-yields-84-while-herd-chases-orinoco-pipe-dream",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 40,
+        "id": 154,
+        "impact_score": 30,
+        "class": "B",
+        "title": "If I Could Buy and Hold Only a Single Dividend Stock, This Would Be It.",
+        "snippet": "Key PointsThis high-yield stock has an investment-grade balance sheet and a reasonable payout ratio.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/if-i-could-buy-and-hold-only-single-dividend-stock-would-be-it",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:rates_fx"
+        ]
+      },
+      {
+        "rank": 41,
+        "id": 58,
+        "impact_score": 29,
+        "class": "A",
+        "title": "Indian Shares Extend Losses For Third Day",
+        "snippet": "(RTTNews) - Indian shares ended slightly lower on Wednesday to extend losses for a third day running as rising geopolitical tensions and tariff-related concerns overshadowed investor optimism around the earnings outlook.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-extend-losses-third-day-1",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 42,
+        "id": 540,
+        "impact_score": 29,
+        "class": "A",
+        "title": "Indian Shares Seen Tad Higher At Open",
+        "snippet": "(RTTNews) - Indian shares are seen opening a tad higher on Friday after a recent string of losses. That said, heightened risk aversion due to geopolitical tensions, tariff-related concerns and continued foreign portfolio outflows may lead to volatility as the session progresses.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/indian-shares-seen-tad-higher-open-1",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 43,
+        "id": 477,
+        "impact_score": 29,
+        "class": "A",
+        "title": "The December jobs report is due out Friday. Here's what it is expected to show",
+        "snippet": "Nonfarm payrolls likely rose by 73,000 last month while the unemployment rate edged lower to 4.5%, according to the Dow Jones consensus.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/the-december-jobs-report-is-due-out-friday-what-its-expected-to-show.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 44,
+        "id": 78,
+        "impact_score": 29,
+        "class": "A",
+        "title": "Gold Hovers Near One-week High On Dollar Weakness",
+        "snippet": "(RTTNews) - Gold added to strong overnight gains to hover above $4,460 an ounce on Tuesday amid geopolitical tensions and expectations of Federal Reserve interest-rate cuts.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/gold-hovers-near-one-week-high-dollar-weakness",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 45,
+        "id": 193,
+        "impact_score": 29,
+        "class": "B",
+        "title": "U.S. Crude Oil Inventories Unexpectedly Tumble By 3.8 Million Barrels",
+        "snippet": "(RTTNews) - A report released by the Energy Information Administration on Wednesday unexpectedly showed a continued decrease by U.S. crude oil inventories in the week ended January 2nd.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/us-crude-oil-inventories-unexpectedly-tumble-38-million-barrels",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 46,
+        "id": 73,
+        "impact_score": 29,
+        "class": "B",
+        "title": "3 Mining Companies to Fill Stockings With More Than Just Coal",
+        "snippet": "As 2025 comes to a close, the precious metals surge appears poised to continue well into the new year, despite some bumps in the fall. Gold and silver hit fresh all-time highs again in December after having already done so many times previously in recent months. A perfect storm",
+        "source_name": "Earnings",
+        "source_url": "https://www.nasdaq.com/articles/3-mining-companies-fill-stockings-more-just-coal",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Earnings",
+        "class_reasons": [
+          "B:market_wrap",
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 47,
+        "id": 323,
+        "impact_score": 29,
+        "class": "B",
+        "title": "David Morgan: Silver's Price Breakout — What's Next, Key Drivers",
+        "snippet": "David Morgan, publisher of the Morgan Report, weighs in on silver's record-setting price rise and what could be next for the white metal heading into 2026. \"We're still in price discovery. I truly believe that,\" he said. \"What the true price of silver is in US dollars, Canadian dollars, I do not know. I think it's north of $100 in US dollar terms, but it could be much higher than that.\"Don’t forget to follow us @INN_Resource for real-time updates!Securities Disclosure: I, Charlotte McLeod, hold no direct investment interest in any company mentioned in this article.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/david-morgan-silvers-price-breakout-whats-next-key-drivers",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:rates_fx",
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 48,
+        "id": 246,
+        "impact_score": 28,
+        "class": "B",
+        "title": "Noteworthy Wednesday Option Activity: INTC, TKO, EBAY",
+        "snippet": "Among the underlying components of the S&P 500 index, we saw noteworthy options trading volume today in Intel Corp (Symbol: INTC), where a total of 1.0 million contracts have traded so far, representing approximately 102.5 million underlying shares. That amounts to about 15",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/noteworthy-wednesday-option-activity-intc-tko-ebay",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 49,
+        "id": 75,
+        "impact_score": 28,
+        "class": "B",
+        "title": "Oil Extends Losses As Risk Premium Fades",
+        "snippet": "(RTTNews) - Oil prices traded lower on Wednesday, extending losses from the previous session after the United States and Venezuela reached an agreement allowing the export of up to $2 billion worth of Venezuelan crude oil to U.S. ports.",
+        "source_name": "Commodities",
+        "source_url": "https://www.nasdaq.com/articles/oil-extends-losses-risk-premium-fades",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Commodities",
+        "class_reasons": [
+          "B:commodities"
+        ]
+      },
+      {
+        "rank": 50,
+        "id": 150,
+        "impact_score": 28,
+        "class": "B",
+        "title": "S&P 500 Movers: FSLR, INTC",
+        "snippet": "In early trading on Wednesday, shares of Intel topped the list of the day's best performing components of the S&P 500 index, trading up 5.1%. Year to date, Intel registers a 14.1% gain. And the worst performing S&P 500 component thus far on the day is First Solar, trad",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/sp-500-movers-fslr-intc",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      }
+    ]
+  },
+  "movers": [
+    {
+      "id": 323,
+      "delta": 492,
+      "old_rank": 539,
+      "new_rank": 47,
+      "old": 15,
+      "new": 29,
+      "title": "David Morgan: Silver's Price Breakout — What's Next, Key Drivers"
+    },
+    {
+      "id": 73,
+      "delta": 476,
+      "old_rank": 522,
+      "new_rank": 46,
+      "old": 17,
+      "new": 29,
+      "title": "3 Mining Companies to Fill Stockings With More Than Just Coal"
+    },
+    {
+      "id": 87,
+      "delta": 473,
+      "old_rank": 525,
+      "new_rank": 52,
+      "old": 16,
+      "new": 28,
+      "title": "Crude Oil Edges Lower Following Steep Drop In 2025"
+    },
+    {
+      "id": 64,
+      "delta": 469,
+      "old_rank": 542,
+      "new_rank": 73,
+      "old": 14,
+      "new": 27,
+      "title": "Bullseye Bounce: Toms Capital Takes a Stake in Target"
+    },
+    {
+      "id": 513,
+      "delta": -468,
+      "old_rank": 3,
+      "new_rank": 471,
+      "old": 49,
+      "new": 0,
+      "title": "Stock Market Today, Jan. 8: Defense Stocks Rally and Tech Retreats"
+    },
+    {
+      "id": 79,
+      "delta": 467,
+      "old_rank": 518,
+      "new_rank": 51,
+      "old": 17,
+      "new": 28,
+      "title": "Oil Extends Gains In Choppy Trade"
+    },
+    {
+      "id": 367,
+      "delta": -464,
+      "old_rank": 8,
+      "new_rank": 472,
+      "old": 45,
+      "new": 0,
+      "title": "Jim Cramer says investors should avoid buying stocks near their highs after the market's recent rally"
+    },
+    {
+      "id": 354,
+      "delta": -462,
+      "old_rank": 11,
+      "new_rank": 473,
+      "old": 45,
+      "new": 0,
+      "title": "Stock Market Today, Jan. 7: Banks Slide as Stock Rally Slows"
+    },
+    {
+      "id": 503,
+      "delta": -460,
+      "old_rank": 14,
+      "new_rank": 474,
+      "old": 44,
+      "new": 0,
+      "title": "Stock Market Today, Jan. 8: Nvidia Slides as AI Demand Forecasts Top $500 Billion"
+    },
+    {
+      "id": 37,
+      "delta": 456,
+      "old_rank": 528,
+      "new_rank": 72,
+      "old": 16,
+      "new": 27,
+      "title": "Who controls Venezuela's oil now? What Maduro's arrest means for energy markets"
+    },
+    {
+      "id": 82,
+      "delta": 455,
+      "old_rank": 526,
+      "new_rank": 71,
+      "old": 16,
+      "new": 27,
+      "title": "Gold Skyrockets As U.S. Operation In Venezuela Triggers Safe-Haven Demand"
+    },
+    {
+      "id": 322,
+      "delta": -454,
+      "old_rank": 21,
+      "new_rank": 475,
+      "old": 42,
+      "new": 0,
+      "title": "Could This Millionaire-Maker Artificial Intelligence (AI) Stock Double Again In 2026?"
+    },
+    {
+      "id": 88,
+      "delta": 454,
+      "old_rank": 524,
+      "new_rank": 70,
+      "old": 16,
+      "new": 27,
+      "title": "Gold Moves Modestly Lower After Initial Move To The Upside"
+    },
+    {
+      "id": 420,
+      "delta": -451,
+      "old_rank": 25,
+      "new_rank": 476,
+      "old": 42,
+      "new": 0,
+      "title": "If You'd Invested $2,000 in Nvidia 5 Years Ago, Here's How Much You'd Have Today"
+    },
+    {
+      "id": 320,
+      "delta": -449,
+      "old_rank": 28,
+      "new_rank": 477,
+      "old": 42,
+      "new": 0,
+      "title": "Why Globalstar Stock Crashed Today"
+    },
+    {
+      "id": 312,
+      "delta": -449,
+      "old_rank": 29,
+      "new_rank": 478,
+      "old": 41,
+      "new": 0,
+      "title": "Pre-Market Earnings Report for January 8, 2026 :  RPM, SNX, AYI, CMC, SMPL, NEOG, LNN, HELE, NTIC"
+    },
+    {
+      "id": 506,
+      "delta": -449,
+      "old_rank": 30,
+      "new_rank": 479,
+      "old": 41,
+      "new": 0,
+      "title": "Stock Market Today, Jan. 8: Apple Slips After Alphabet Overtakes it on Market Cap"
+    },
+    {
+      "id": 83,
+      "delta": 444,
+      "old_rank": 446,
+      "new_rank": 2,
+      "old": 22,
+      "new": 41,
+      "title": "Gold Prices Rally On Safe Haven Demand"
+    },
+    {
+      "id": 76,
+      "delta": 440,
+      "old_rank": 444,
+      "new_rank": 4,
+      "old": 22,
+      "new": 39,
+      "title": "Crude Oil Plunges As Traders Assess Impact Of U.S. Offensive In Venezuela"
+    },
+    {
+      "id": 512,
+      "delta": -436,
+      "old_rank": 27,
+      "new_rank": 463,
+      "old": 42,
+      "new": 4,
+      "title": "Why Broadcom Stock Fell 14.1% in December"
+    },
+    {
+      "id": 415,
+      "delta": -433,
+      "old_rank": 34,
+      "new_rank": 467,
+      "old": 40,
+      "new": 1,
+      "title": "Indian Shares Set To Follow Global Peers Lower"
+    },
+    {
+      "id": 283,
+      "delta": -428,
+      "old_rank": 52,
+      "new_rank": 480,
+      "old": 39,
+      "new": 0,
+      "title": "Why AST SpaceMobile Stock Crashed Today"
+    },
+    {
+      "id": 81,
+      "delta": 426,
+      "old_rank": 454,
+      "new_rank": 28,
+      "old": 21,
+      "new": 31,
+      "title": "Crude Oil Soars Amid OPEC Plans, Russia-Ukraine Conflict"
+    },
+    {
+      "id": 271,
+      "delta": 424,
+      "old_rank": 443,
+      "new_rank": 19,
+      "old": 22,
+      "new": 36,
+      "title": "US Oil Stocks Gain as Venezuela Intervention Stirs Uncertainty"
+    },
+    {
+      "id": 464,
+      "delta": -422,
+      "old_rank": 59,
+      "new_rank": 481,
+      "old": 38,
+      "new": 0,
+      "title": "Why These 3 Oil Stocks Surged After Venezuelan President Maduro's Capture"
+    }
+  ]
+}

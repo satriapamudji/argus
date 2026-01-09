@@ -1,0 +1,248 @@
+{
+  "meta": {
+    "created_at": "20260109_171313",
+    "days": 1.0,
+    "limit": 50,
+    "movers_requested": 1
+  },
+  "old": {
+    "summary": {
+      "name": "OLD (DB: news_scores.impact_score)",
+      "contract": {
+        "pass": false,
+        "violations": [
+          "Top12 composition fail: {'A': 6, 'B': 3, 'C': 2, 'D': 1}",
+          "Top50 D-rate fail: D=4/50 (8.0%)",
+          "Hard inversion fail (Top50): D above A/B count=4",
+          "Spam fail (Top12): market_wrap_templates=3 > 1"
+        ]
+      },
+      "top12": {
+        "counts": {
+          "A": 6,
+          "B": 3,
+          "C": 2,
+          "D": 1
+        },
+        "spam_market_today": 3
+      },
+      "top20": {
+        "counts": {
+          "A": 12,
+          "B": 4,
+          "C": 3,
+          "D": 1
+        }
+      },
+      "top50": {
+        "counts": {
+          "A": 15,
+          "B": 11,
+          "C": 20,
+          "D": 4
+        },
+        "inversions_hard_D_over_A_or_B": 4,
+        "D_rate": 0.08
+      }
+    },
+    "top_items": [
+      {
+        "rank": 1,
+        "id": 450,
+        "impact_score": 53,
+        "class": "A",
+        "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger econom",
+        "snippet": "Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 2,
+        "id": 513,
+        "impact_score": 49,
+        "class": "B",
+        "title": "Stock Market Today, Jan. 8: Defense Stocks Rally and Tech Retreats",
+        "snippet": "S&P 500 (SNPINDEX:^GSPC) finished almost flat at 6,921.46, the Nasdaq Composite (NASDAQINDEX:^IXIC) declined 0.44% to 23,480.02 on tech weakness, while the Dow Jones Industrial Average (DJINDEX: ^DJI) gained 0.55% to 49,266.11 as defense and staples outperformed.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/stock-market-today-jan-8-defense-stocks-rally-and-tech-retreats",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 3,
+        "id": 533,
+        "impact_score": 48,
+        "class": "A",
+        "title": "European Shares Seen Higher At Open; US Tariff Ruling Awaited",
+        "snippet": "(RTTNews) - European stocks look set to open on a positive note Friday, even as overall gains may remain modest as investors await U.S. nonfarm payrolls data later in the day for direction ahead of the Federal Reserve's policy meeting later this month.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:central_bank",
+          "A:macro_data",
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 4,
+        "id": 483,
+        "impact_score": 45,
+        "class": "A",
+        "title": "Asia-Pacific markets set for higher open; China inflation data in focus",
+        "snippet": "Asia-Pacific markets were set to trade higher Friday as investors keep an eye on China's inflation data coming out later in the day.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/asia-pacific-markets-china-cpi-hang-seng-index-kospi-nikkei-225.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 5,
+        "id": 531,
+        "impact_score": 45,
+        "class": "A",
+        "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+        "snippet": "China's consumer inflation accelerated in December to the fastest pace in more than two years, while factory-gate deflation extended for over three years.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      }
+    ]
+  },
+  "new": {
+    "summary": {
+      "name": "NEW (in-memory: heuristic_v2)",
+      "contract": {
+        "pass": false,
+        "violations": [
+          "Top12 composition fail: {'A': 9, 'B': 2, 'C': 1, 'D': 0}",
+          "Top50 D-rate fail: D=4/50 (8.0%)",
+          "Hard inversion fail (Top50): D above A/B count=1"
+        ]
+      },
+      "top12": {
+        "counts": {
+          "A": 9,
+          "B": 2,
+          "C": 1,
+          "D": 0
+        },
+        "spam_market_today": 0
+      },
+      "top20": {
+        "counts": {
+          "A": 14,
+          "B": 2,
+          "C": 4,
+          "D": 0
+        }
+      },
+      "top50": {
+        "counts": {
+          "A": 15,
+          "B": 11,
+          "C": 20,
+          "D": 4
+        },
+        "inversions_hard_D_over_A_or_B": 1,
+        "D_rate": 0.08
+      }
+    },
+    "top_items": [
+      {
+        "rank": 1,
+        "id": 533,
+        "impact_score": 65,
+        "class": "A",
+        "title": "European Shares Seen Higher At Open; US Tariff Ruling Awaited",
+        "snippet": "(RTTNews) - European stocks look set to open on a positive note Friday, even as overall gains may remain modest as investors await U.S. nonfarm payrolls data later in the day for direction ahead of the Federal Reserve's policy meeting later this month.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/european-shares-seen-higher-open-us-tariff-ruling-awaited",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "A:central_bank",
+          "A:macro_data",
+          "A:geopolitics_policy"
+        ]
+      },
+      {
+        "rank": 2,
+        "id": 531,
+        "impact_score": 44,
+        "class": "A",
+        "title": "China inflation hits near three-year high in December as full-year CPI misses target",
+        "snippet": "China's consumer inflation accelerated in December to the fastest pace in more than two years, while factory-gate deflation extended for over three years.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/china-december-inflation-cpi-ppi-prices-demand-weakness.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      },
+      {
+        "rank": 3,
+        "id": 450,
+        "impact_score": 42,
+        "class": "A",
+        "title": "Treasury Secretary Bessent says more Fed rate cuts are 'only ingredient missing' for stronger econom",
+        "snippet": "Bessent on Thursday pressed the administration's desire for lower interest rates, saying they are the key to future economic growth.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/08/treasury-secretary-bessent-says-more-fed-rate-cuts-are-only-ingredient-missing-for-stronger-economy.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:central_bank"
+        ]
+      },
+      {
+        "rank": 4,
+        "id": 534,
+        "impact_score": 41,
+        "class": "B",
+        "title": "11 S&P 500 Stocks Doubled in 2025. This Is the Best Bet To Do It Again This Year",
+        "snippet": "Key PointsTech stocks led the S&P 500 last year and made up most of its biggest winners.",
+        "source_name": "Markets",
+        "source_url": "https://www.nasdaq.com/articles/11-sp-500-stocks-doubled-2025-best-bet-do-it-again-year",
+        "feed_url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+        "class_reasons": [
+          "B:market_wrap"
+        ]
+      },
+      {
+        "rank": 5,
+        "id": 483,
+        "impact_score": 38,
+        "class": "A",
+        "title": "Asia-Pacific markets set for higher open; China inflation data in focus",
+        "snippet": "Asia-Pacific markets were set to trade higher Friday as investors keep an eye on China's inflation data coming out later in the day.",
+        "source_name": "US Top News and Analysis",
+        "source_url": "https://www.cnbc.com/2026/01/09/asia-pacific-markets-china-cpi-hang-seng-index-kospi-nikkei-225.html",
+        "feed_url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "class_reasons": [
+          "A:macro_data"
+        ]
+      }
+    ]
+  },
+  "movers": [
+    {
+      "id": 513,
+      "delta": -42,
+      "old_rank": 2,
+      "new_rank": 44,
+      "old": 49,
+      "new": 5,
+      "title": "Stock Market Today, Jan. 8: Defense Stocks Rally and Tech Retreats"
+    }
+  ]
+}
