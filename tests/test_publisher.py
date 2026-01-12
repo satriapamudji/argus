@@ -6,8 +6,8 @@ Tests cover:
 - PublishResult and PublishError types
 """
 
-import json
 from datetime import datetime, timezone
+from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -28,7 +28,7 @@ from argus.publisher.telegram import (
 
 
 @pytest.fixture
-def telegram_config() -> TelegramConfig:
+def telegram_config() -> Generator[TelegramConfig, None, None]:
     """Telegram config with mock environment."""
     with patch.dict(
         "os.environ",
@@ -38,8 +38,7 @@ def telegram_config() -> TelegramConfig:
             "TELEGRAM_PARSE_MODE": "MarkdownV2",
         },
     ):
-        config = TelegramConfig()
-        yield config
+        yield TelegramConfig()
 
 
 @pytest.fixture
@@ -243,8 +242,6 @@ class TestMessageTruncation:
             result = publisher.publish_dry_run(with_newlines)
 
         assert result.was_truncated is True
-        # Should end at a newline before the suffix
-        text_before_suffix = result.payload["text"].replace(TRUNCATION_SUFFIX, "")
         # Either ends at newline or was adjusted
         assert len(result.payload["text"]) <= MAX_MESSAGE_LENGTH
 
@@ -311,7 +308,8 @@ class TestPublishWithMockedClient:
 
         assert result.success is False
         assert result.telegram_message_id is None
-        assert "can't parse entities" in result.error or result.error is not None
+        assert result.error is not None
+        assert "can't parse entities" in result.error
 
     def test_publish_retries_on_429(
         self,
@@ -449,7 +447,8 @@ class TestPublishValidation:
             result = publisher.publish("Test message")
 
         assert result.success is False
-        assert "bot token" in result.error.lower() or result.error is not None
+        assert result.error is not None
+        assert "bot token" in result.error.lower()
 
     def test_publish_without_chat_id_fails(self) -> None:
         """Publishing without chat ID raises error."""

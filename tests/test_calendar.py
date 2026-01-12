@@ -1,7 +1,6 @@
 """Tests for market calendar adapter."""
 
 from datetime import date, datetime, timezone, timedelta
-from unittest.mock import MagicMock, patch, PropertyMock
 
 import pytest
 

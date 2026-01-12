@@ -16,11 +16,14 @@ from argus.generator.prompts import (
 )
 from argus.generator.renderer import (
     count_words,
+    escape_message_v2,
     extract_referenced_ids,
+    format_cross_assets_section,
     format_header_windows,
     format_index_snapshot,
     format_key_dates_raw,
-    format_sources,
+    format_weekly_stats_plain,
+    format_weekly_stats_section,
     render_message,
 )
 from argus.generator.types import (
@@ -115,6 +118,9 @@ class MessageGenerator:
             narrative = str(data.get("narrative", ""))
             takeaways = list(data.get("takeaways", []))
             watch_next = list(data.get("watch_next", []))
+            # Extract optional mode-specific fields
+            opening_line = data.get("opening_line")
+            sign_off = data.get("sign_off")
             # Extract refs from all text sections (narrative + takeaways + watch_next)
             all_text = narrative + " " + " ".join(takeaways) + " " + " ".join(watch_next)
             referenced_ids = extract_referenced_ids(all_text, news_contexts)
@@ -124,6 +130,8 @@ class MessageGenerator:
                 watch_next=watch_next[: self.constraints.max_watch_bullets],
                 referenced_item_ids=referenced_ids,
                 raw_response=response,
+                opening_line=opening_line if isinstance(opening_line, str) else None,
+                sign_off=sign_off if isinstance(sign_off, str) else None,
             )
         except Exception as e:
             raise GenerationError(str(e))
@@ -135,57 +143,108 @@ class MessageGenerator:
 
         This is used when LLM generation fails validation after retry.
         The fallback contains only verified data from the facts bundle.
+        Mode-aware: builds appropriate structure for us_close, weekend_wrap, or monday_preview.
         """
         sections = []
+        run_mode = bundle.run_mode
 
-        # 1. Header (title + date)
-        sections.append(format_header_windows(bundle.trading_date))
+        # 1. Header (title + date) - mode-aware
+        sections.append(format_header_windows(bundle.trading_date, run_mode))
 
-        # 2. Index snapshot
-        sections.append("")
-        sections.append(format_index_snapshot(bundle.market_snapshot))
+        if run_mode == "weekend_wrap":
+            # Weekend wrap format: scorecard, cross-assets, narrative, takeaways, sources
+            if bundle.weekly_stats is not None:
+                sections.append("")
+                sections.append(format_weekly_stats_plain(bundle.weekly_stats, run_mode))
 
-        # 3. Minimal narrative (no LLM-generated content)
-        sections.append("")
-        sections.append("Market data as of close. See sources for details.")
+            cross_assets = format_cross_assets_section(bundle.market_snapshot)
+            if cross_assets:
+                sections.append("")
+                sections.append(cross_assets)
 
-        # 4. Separator (em dashes with blank lines)
-        sections.append("")
-        sections.append("—————")
-        sections.append("")
+            sections.append("")
+            sections.append("Market data as of close. See sources for details.")
 
-        # 5. Takeaways - minimal safe version
-        sections.append("__Investor Key Takeaways__")
-        sections.append("• Market closed; review sources for key developments")
-        sections.append("• Monitor scheduled events in Key Dates section")
-        sections.append("• Check sources for detailed analysis")
+            sections.append("")
+            sections.append("—————")
+            sections.append("")
 
-        # 6. Key Dates
-        sections.append("")
-        sections.append(format_key_dates_raw(bundle.calendar_events))
+            sections.append("__*Key Takeaways for the Week*__")
+            sections.append("**>• Review the weekly scorecard for index performance")
+            sections.append(">• Monitor cross-asset signals for portfolio positioning")
+            sections.append(">• Check sources for detailed analysis||")
 
-        # 7. Watch Next - minimal safe version
-        sections.append("")
-        sections.append("__What to Watch Next__")
-        sections.append("• Upcoming scheduled events (see Key Dates)")
+            sections.append("")
+            sections.append("__*Sources*__")
+            sections.append("**>• No cited sources.||")
 
-        # 8. Sources - strict only-cited behavior (fallback has none)
-        sections.append("")
-        sections.append("__Sources__")
-        sections.append("• No cited sources.")
+            sections.append("")
+            sections.append("—————")
+            sections.append("")
+            sections.append("Have a good weekend.")
+
+        elif run_mode == "monday_preview":
+            # Monday preview format: prior week, opening, narrative, key things, key dates
+            if bundle.weekly_stats is not None:
+                sections.append("")
+                sections.append(format_weekly_stats_plain(bundle.weekly_stats, run_mode))
+
+            sections.append("")
+            sections.append("Hope you had a restful weekend. Here's what to watch this week.")
+
+            sections.append("")
+            sections.append(
+                "Key events are scheduled for the week ahead. See Key Dates for details."
+            )
+
+            sections.append("")
+            sections.append("—————")
+            sections.append("")
+
+            sections.append("__*Key Things to Look Out For*__")
+            sections.append("**>• Monitor scheduled events in Key Dates section")
+            sections.append(">• Review prior week performance for context")
+            sections.append(">• Check economic calendar for data releases||")
+
+            sections.append("")
+            sections.append(format_key_dates_raw(bundle.calendar_events))
+
+        else:
+            # us_close format (default): index snapshot, narrative, takeaways, key dates, watch next, sources
+            sections.append("")
+            sections.append(format_index_snapshot(bundle.market_snapshot))
+
+            if bundle.weekly_stats is not None:
+                sections.append("")
+                sections.append(format_weekly_stats_section(bundle.weekly_stats, run_mode))
+
+            sections.append("")
+            sections.append("Market data as of close. See sources for details.")
+
+            sections.append("")
+            sections.append("—————")
+            sections.append("")
+
+            sections.append("__*Investor Key Takeaways*__")
+            sections.append("**>• Market closed; review sources for key developments")
+            sections.append(">• Monitor scheduled events in Key Dates section")
+            sections.append(">• Check sources for detailed analysis||")
+
+            sections.append("")
+            sections.append(format_key_dates_raw(bundle.calendar_events))
+
+            sections.append("")
+            sections.append("__*What to Watch Next*__")
+            sections.append("**>• Upcoming scheduled events (see Key Dates)||")
+
+            sections.append("")
+            sections.append("__*Sources*__")
+            sections.append("**>• No cited sources.||")
 
         raw_message = "\n".join(sections)
 
-        # Apply escaping
-        escaped_message = raw_message
-        # Escape parentheses
-        import re
-
-        def escape_parens(match):
-            content = match.group(1)
-            return f"\\({content}\\)"
-
-        escaped_message = re.sub(r"\(([^)]+)\)", escape_parens, escaped_message)
+        # Apply full MarkdownV2 escaping (preserves formatting markers)
+        escaped_message = escape_message_v2(raw_message)
 
         return GeneratorResult(
             message=escaped_message,
@@ -224,7 +283,7 @@ class MessageGenerator:
         system_prompt = get_system_prompt(mode)
         user_prompt = build_user_prompt(bundle, news_contexts, mode, self._get_max_words(mode))
 
-        llm_content = None
+        llm_content: Optional[LLMGeneratedContent] = None
         retry_count = 0
         total_duration = 0.0
         final_result = None
@@ -260,6 +319,9 @@ class MessageGenerator:
                             formatting_valid=True,
                         )
                         return fallback, fallback_validation
+
+            if llm_content is None:
+                raise GenerationError("LLM content missing after generation")
 
             escaped, raw = render_message(bundle, news_contexts, llm_content, True)
             candidate = GeneratorResult(

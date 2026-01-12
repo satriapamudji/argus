@@ -1,6 +1,5 @@
 """Tests for source-specific content extractors."""
 
-from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import pytest
@@ -339,14 +338,6 @@ class TestNasdaqDateParsing:
 
     def test_parse_am_time(self, extractor: NasdaqExtractor) -> None:
         """Should correctly parse AM times."""
-        html = """
-        <section class="jupiter22-c-article-body">
-            <div class="body__content">
-                <p class="jupiter22-c-author-byline__timestamp">January 06, 2026 — 09:30 am EST</p>
-                <p>Content</p>
-            </div>
-        </section>
-        """
         # Date is parsed, but may not be extracted since timestamp is in wrong location
         # The real test is the date parsing logic itself
 

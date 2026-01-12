@@ -16,7 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from argus import __version__
-from argus.config import ArgusConfig, DaemonConfig
+from argus.config import ArgusConfig
 from argus.daemon.health import HealthServer
 from argus.daemon.persistence import (
     cleanup_stale_running_jobs,
@@ -25,7 +25,6 @@ from argus.daemon.persistence import (
     get_job_run_count,
     get_job_run_history,
     get_last_job_run,
-    get_running_jobs,
 )
 from argus.daemon.signals import SignalHandler
 from argus.daemon.types import DaemonStatus, JobRunRecord, JobStatus
@@ -196,7 +195,7 @@ class ArgusDaemon:
                 )
                 logger.info(f"Scheduled {jid}: every {rss_config.poll_interval_minutes} minutes")
 
-            # US Close job - Mon-Fri at configured time (SGT)
+            # US Close job - Tue-Fri at configured time (SGT)
             if self.daemon_config.is_job_enabled(JOB_US_CLOSE):
                 hour, minute = self._parse_time(schedule.daily_us_close_sgt)
                 jid = self._job_key(JOB_US_CLOSE, stream_name)
@@ -205,7 +204,7 @@ class ArgusDaemon:
                     CronTrigger(
                         hour=hour,
                         minute=minute,
-                        day_of_week="mon-fri",
+                        day_of_week="tue-fri",
                         timezone="Asia/Singapore",
                     ),
                     args=[stream_name],
@@ -213,7 +212,7 @@ class ArgusDaemon:
                     name=f"US Close Update ({stream_name})",
                     replace_existing=True,
                 )
-                logger.info(f"Scheduled {jid}: Mon-Fri {schedule.daily_us_close_sgt} SGT")
+                logger.info(f"Scheduled {jid}: Tue-Fri {schedule.daily_us_close_sgt} SGT")
 
             # Weekend Wrap job - Saturday at configured time (SGT)
             if self.daemon_config.is_job_enabled(JOB_WEEKEND_WRAP):

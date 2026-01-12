@@ -38,17 +38,46 @@ def check_near_duplicate(
     """
     cutoff = datetime.now(timezone.utc) - timedelta(days=window_days)
 
+    try:
+        with conn.cursor() as cur:
+            query = """
+                SELECT id
+                FROM news_fingerprints
+                WHERE simhash IS NOT NULL
+                  AND first_seen_at >= %s
+            """
+            params: list[object] = [cutoff]
+
+            if stream_name is not None:
+                query += " AND stream_name = %s"
+                params.append(stream_name)
+
+            if exclude_fingerprint_id is not None:
+                query += " AND id != %s"
+                params.append(exclude_fingerprint_id)
+
+            query += " AND bit_count(simhash::bit(64) # %s::bit(64)) <= %s"
+            params.extend([simhash, threshold])
+            query += " LIMIT 1"
+
+            cur.execute(query, params)
+            row = cur.fetchone()
+            if row:
+                return int(row[0])
+            return None
+    except Exception:
+        # Fallback to Python if bit_count isn't available.
+        pass
+
     with conn.cursor() as cur:
         # Query fingerprints with simhash in the window
-        # Note: PostgreSQL doesn't have built-in bit_count before v14,
-        # so we fetch candidates and check in Python
         query = """
-            SELECT id, simhash 
-            FROM news_fingerprints 
-            WHERE simhash IS NOT NULL 
+            SELECT id, simhash
+            FROM news_fingerprints
+            WHERE simhash IS NOT NULL
               AND first_seen_at >= %s
         """
-        params: list[object] = [cutoff]
+        params = [cutoff]
 
         if stream_name is not None:
             query += " AND stream_name = %s"

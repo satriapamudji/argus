@@ -5,7 +5,7 @@ Nasdaq, and optional cross-asset metrics (VIX, rates, commodities).
 """
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 import logging
@@ -305,6 +305,97 @@ class MarketDataProvider:
             silver_change_pct=metrics.get("silver_change_pct"),
             as_of=as_of,
         )
+
+    def _fetch_cross_assets_for_date(self, trading_date: date) -> Optional[CrossAssetMetrics]:
+        """Fetch cross-asset metrics for a specific trading date.
+
+        Uses a small historical window to derive the close and 1-day change.
+        """
+        yf = self._get_yfinance()
+        metrics: dict[str, Optional[Decimal]] = {}
+
+        start = trading_date - timedelta(days=7)
+        end = trading_date + timedelta(days=1)
+
+        for asset_key, symbol in CROSS_ASSET_SYMBOLS.items():
+            try:
+                ticker = yf.Ticker(symbol)  # type: ignore[attr-defined]
+                hist = ticker.history(start=start, end=end)
+
+                if hist.empty:
+                    logger.debug(f"No data for {asset_key} ({symbol}) on {trading_date}")
+                    continue
+
+                hist = hist[~hist["Close"].isna()].sort_index()
+                hist = hist[hist.index.date <= trading_date]
+                if hist.empty:
+                    logger.debug(f"No close for {asset_key} ({symbol}) on {trading_date}")
+                    continue
+
+                current = float(hist["Close"].iloc[-1])
+                prev_close = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else None
+                change_pct = (
+                    ((current - prev_close) / prev_close) * 100.0 if prev_close else None
+                )
+
+                if asset_key == "us10y":
+                    change_bps = (current - prev_close) * 100.0 if prev_close else None
+                    metrics["us10y_yield"] = Decimal(str(round(current, 3)))
+                    metrics["us10y_change_bps"] = (
+                        Decimal(str(round(change_bps, 1))) if change_bps is not None else None
+                    )
+                elif asset_key == "vix":
+                    metrics["vix_level"] = Decimal(str(round(current, 2)))
+                    metrics["vix_change_pct"] = (
+                        Decimal(str(round(change_pct, 2))) if change_pct is not None else None
+                    )
+                elif asset_key == "dxy":
+                    metrics["dxy_level"] = Decimal(str(round(current, 2)))
+                    metrics["dxy_change_pct"] = (
+                        Decimal(str(round(change_pct, 2))) if change_pct is not None else None
+                    )
+                elif asset_key == "wti":
+                    metrics["wti_level"] = Decimal(str(round(current, 2)))
+                    metrics["wti_change_pct"] = (
+                        Decimal(str(round(change_pct, 2))) if change_pct is not None else None
+                    )
+                elif asset_key == "gold":
+                    metrics["gold_level"] = Decimal(str(round(current, 2)))
+                    metrics["gold_change_pct"] = (
+                        Decimal(str(round(change_pct, 2))) if change_pct is not None else None
+                    )
+                elif asset_key == "silver":
+                    metrics["silver_level"] = Decimal(str(round(current, 2)))
+                    metrics["silver_change_pct"] = (
+                        Decimal(str(round(change_pct, 2))) if change_pct is not None else None
+                    )
+
+            except Exception as e:
+                logger.debug(f"Failed to fetch {asset_key} ({symbol}) on {trading_date}: {e}")
+                continue
+
+        if not metrics:
+            return None
+
+        return CrossAssetMetrics(
+            vix_level=metrics.get("vix_level"),
+            vix_change_pct=metrics.get("vix_change_pct"),
+            us10y_yield=metrics.get("us10y_yield"),
+            us10y_change_bps=metrics.get("us10y_change_bps"),
+            dxy_level=metrics.get("dxy_level"),
+            dxy_change_pct=metrics.get("dxy_change_pct"),
+            wti_level=metrics.get("wti_level"),
+            wti_change_pct=metrics.get("wti_change_pct"),
+            gold_level=metrics.get("gold_level"),
+            gold_change_pct=metrics.get("gold_change_pct"),
+            silver_level=metrics.get("silver_level"),
+            silver_change_pct=metrics.get("silver_change_pct"),
+            as_of=datetime.now(timezone.utc),
+        )
+
+    def fetch_cross_assets_for_date(self, trading_date: date) -> Optional[CrossAssetMetrics]:
+        """Public wrapper for fetching cross-asset metrics for a trading date."""
+        return self._fetch_cross_assets_for_date(trading_date)
 
     def fetch_snapshot(self, trading_date: Optional[date] = None) -> MarketSnapshot:
         """Fetch a complete market snapshot.

@@ -2,6 +2,9 @@ stream:
   name: us_markets
   enabled: true
 
+# Fetch and persist optional cross-asset data for snapshots.
+include_cross_assets: true
+
 # Provider selection for each pipeline stage
 # Options:
 #   ingestion: "rss" (default) | "api_newsapi"
@@ -40,8 +43,8 @@ dedupe:
   text_hash: true
   simhash:
     enabled: true
-    hamming_threshold: 4
-    window_days: 14
+    hamming_threshold: 3
+    window_days: 3
   title_trigram:
     enabled: true
     similarity_threshold: 0.85
@@ -57,7 +60,7 @@ rss:
   # Each line: URL (optionally "#" comments). Blank lines ignored.
   allowlist_files:
     - "rss/us_markets.txt"
-  poll_interval_minutes: 10
+  poll_interval_minutes: 20
 
 # TheNewsAPI configuration (when providers.ingestion = "api_newsapi")
 # API keys: Set NEWS_API_KEYS env var (comma-separated for rotation)
@@ -84,7 +87,7 @@ daemon:
   health_port: 8080
   health_bind: "127.0.0.1"  # Localhost only - access via SSH tunnel
   retention_hour: 3  # Daily retention cleanup at 03:00 UTC
-  health_ping_minutes: 10  # Journald heartbeat interval (0 to disable)
+  health_ping_minutes: 30  # Journald heartbeat interval (0 to disable)
 
   # Enable/disable individual jobs
   jobs_enabled:

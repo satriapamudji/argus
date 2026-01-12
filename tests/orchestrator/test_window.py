@@ -1,14 +1,9 @@
 """Tests for window selection logic."""
 
 from datetime import datetime, date, timedelta
-from unittest.mock import MagicMock, patch
 
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo  # type: ignore[import-not-found,no-redef]
 
-from argus.orchestrator.types import RunMode, WindowConfig
+from argus.orchestrator.types import RunMode
 from argus.orchestrator.window import (
     TZ_NEW_YORK,
     TZ_SINGAPORE,
@@ -137,7 +132,7 @@ class TestGetWindowForMondayPreview:
         now = datetime(2025, 1, 5, 18, 10, 0, tzinfo=TZ_NEW_YORK)
         window = get_window_for_monday_preview(now)
 
-        assert window.window_hours == 72
+        assert window.window_hours == 120
         assert window.mode == RunMode.MONDAY_PREVIEW
 
     def test_window_end_is_now(self):
@@ -147,12 +142,12 @@ class TestGetWindowForMondayPreview:
 
         assert window.end == now
 
-    def test_window_start_is_72h_before(self):
-        """Test window starts 72h before now."""
+    def test_window_start_is_120h_before(self):
+        """Test window starts 120h before now."""
         now = datetime(2025, 1, 5, 18, 10, 0, tzinfo=TZ_NEW_YORK)
         window = get_window_for_monday_preview(now)
 
-        expected_start = now - timedelta(hours=72)
+        expected_start = now - timedelta(hours=120)
         assert window.start == expected_start
 
 
@@ -181,7 +176,7 @@ class TestGetWindowForMode:
         window = get_window_for_mode(RunMode.MONDAY_PREVIEW, now)
 
         assert window.mode == RunMode.MONDAY_PREVIEW
-        assert window.window_hours == 72
+        assert window.window_hours == 120
 
     def test_defaults_to_utc_now(self):
         """Test defaults to current UTC time if not provided."""
@@ -203,6 +198,24 @@ class TestGetTradingDateForRun:
         # Should be previous day
         assert trading_date == date(2025, 1, 6)
 
+    def test_us_close_monday_morning_rolls_to_previous_friday(self):
+        """Test us_close trading date on Monday morning rolls back to Friday."""
+        # Monday 10:00 AM NY (session not closed yet)
+        now = datetime(2025, 1, 6, 10, 0, 0, tzinfo=TZ_NEW_YORK)
+        trading_date = get_trading_date_for_run(RunMode.US_CLOSE, now)
+
+        # Should be prior Friday
+        assert trading_date == date(2025, 1, 3)
+
+    def test_us_close_on_weekend_rolls_to_previous_trading_day(self):
+        """Test us_close trading date on weekend rolls back to Friday."""
+        # Sunday 5:00 PM NY
+        now = datetime(2025, 1, 5, 17, 0, 0, tzinfo=TZ_NEW_YORK)
+        trading_date = get_trading_date_for_run(RunMode.US_CLOSE, now)
+
+        # Should be prior Friday
+        assert trading_date == date(2025, 1, 3)
+
     def test_us_close_after_market_close(self):
         """Test trading date for us_close after market close."""
         # 5:00 PM NY (after 4PM close)
@@ -211,6 +224,15 @@ class TestGetTradingDateForRun:
 
         # Should be today
         assert trading_date == date(2025, 1, 7)
+
+    def test_us_close_on_holiday_rolls_to_previous_trading_day(self):
+        """Test us_close trading date on an NYSE holiday rolls back to the last session."""
+        # MLK Day 2026 (market closed)
+        now = datetime(2026, 1, 19, 17, 0, 0, tzinfo=TZ_NEW_YORK)
+        trading_date = get_trading_date_for_run(RunMode.US_CLOSE, now)
+
+        # Previous trading day should be Friday Jan 16, 2026
+        assert trading_date == date(2026, 1, 16)
 
     def test_weekend_wrap_returns_friday(self):
         """Test weekend_wrap returns Friday's date."""

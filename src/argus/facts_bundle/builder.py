@@ -11,7 +11,7 @@ The builder is responsible for:
 import logging
 import time
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from psycopg2.extensions import connection as Connection
@@ -20,9 +20,16 @@ from argus.adapters.market_data import (
     CrossAssetMetrics,
     IndexSnapshot,
     MarketDataProvider,
+    MarketSnapshot,
 )
 from argus.config import ArgusConfig, EconomicCalendarConfig, SpotlightConfig
 from argus.db.connection import get_connection
+from argus.db.daily_market_snapshots import (
+    get_daily_market_snapshots_in_range,
+    get_last_daily_market_snapshot_before_date,
+    upsert_daily_market_snapshot,
+)
+from argus.orchestrator.weekly_stats import compute_weekly_stats
 from argus.facts_bundle.schema import BUNDLE_SCHEMA_VERSION, validate_bundle
 from argus.facts_bundle.selector import BundleSelector
 from argus.facts_bundle.types import (
@@ -34,7 +41,20 @@ from argus.facts_bundle.types import (
     IndexData,
     MarketSnapshotBundle,
     SpotlightBundle,
+    WeeklyStatsBundle,
 )
+
+
+def _previous_week_friday(reference_date: date) -> date:
+    """Get the most recent Friday on or before reference_date."""
+    days_since_friday = (reference_date.weekday() - 4) % 7
+    return reference_date - timedelta(days=days_since_friday)
+
+
+def _monday_of_week(reference_date: date) -> date:
+    """Get Monday for the week containing reference_date."""
+    return reference_date - timedelta(days=reference_date.weekday())
+
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +65,7 @@ class BundleBuilderConfig:
 
     stream_name: str = "us_markets"
     run_mode: str = "us_close"
+    persist_daily_snapshots: bool = False
     window_hours: int = 24
     min_items: int = 2
     max_items: int = 6
@@ -82,6 +103,8 @@ class BundleBuilderConfig:
             window_hours=config.stream.scoring.window_hours,
             spotlight=spotlight,
             economic_calendar=economic_calendar,
+            persist_daily_snapshots=False,
+            include_cross_assets=config.stream.include_cross_assets,
         )
 
 
@@ -191,17 +214,16 @@ class FactsBundleBuilder:
             gold_change_pct=metrics.gold_change_pct,
         )
 
-    def _fetch_market_snapshot(self, trading_date: date) -> MarketSnapshotBundle:
-        """Fetch market data and convert to bundle format.
+    def _fetch_market_snapshot(self, trading_date: date) -> MarketSnapshot:
+        """Fetch market data snapshot.
 
-        Args:
-            trading_date: The trading date for the snapshot.
-
-        Returns:
-            MarketSnapshotBundle with index data.
+        Returns the raw adapter MarketSnapshot so the caller can optionally persist it,
+        while still being able to convert it into a MarketSnapshotBundle for the LLM.
         """
-        snapshot = self._market_provider.fetch_snapshot(trading_date)
+        return self._market_provider.fetch_snapshot(trading_date)
 
+    def _to_market_snapshot_bundle(self, snapshot: MarketSnapshot) -> MarketSnapshotBundle:
+        """Convert adapter MarketSnapshot to bundle MarketSnapshotBundle."""
         return MarketSnapshotBundle(
             trading_date=snapshot.trading_date,
             sp500=self._convert_index_snapshot(snapshot.sp500),
@@ -307,9 +329,58 @@ class FactsBundleBuilder:
             news_items = tuple(c.to_news_item_bundle() for c in selected)
             logger.info(f"Selected {len(news_items)} news items for bundle")
 
-            # 2. Fetch market snapshot
-            market_snapshot = self._fetch_market_snapshot(trading_date)
+            # 2. Fetch market snapshot (and keep raw snapshot for persistence)
+            raw_market_snapshot = self._fetch_market_snapshot(trading_date)
             logger.info(f"Fetched market snapshot for {trading_date}")
+
+            market_snapshot = self._to_market_snapshot_bundle(raw_market_snapshot)
+
+            # Persist daily snapshot (explicitly opt-in).
+            if self.config.persist_daily_snapshots and self.config.run_mode == "us_close":
+                cross = raw_market_snapshot.cross_assets
+                upsert_daily_market_snapshot(
+                    conn,
+                    stream_name=self.config.stream_name,
+                    trading_date=raw_market_snapshot.trading_date,
+                    sp500_close=float(raw_market_snapshot.sp500.level),
+                    sp500_change_pct=float(raw_market_snapshot.sp500.change_1d_pct),
+                    dow_close=float(raw_market_snapshot.dow.level),
+                    dow_change_pct=float(raw_market_snapshot.dow.change_1d_pct),
+                    nasdaq_close=float(raw_market_snapshot.nasdaq.level),
+                    nasdaq_change_pct=float(raw_market_snapshot.nasdaq.change_1d_pct),
+                    vix_close=float(cross.vix_level)
+                    if cross and cross.vix_level is not None
+                    else None,
+                    vix_change_pct=float(cross.vix_change_pct)
+                    if cross and cross.vix_change_pct is not None
+                    else None,
+                    usd_dxy_close=float(cross.dxy_level)
+                    if cross and cross.dxy_level is not None
+                    else None,
+                    usd_dxy_change_pct=float(cross.dxy_change_pct)
+                    if cross and cross.dxy_change_pct is not None
+                    else None,
+                    us10y_yield=float(cross.us10y_yield)
+                    if cross and cross.us10y_yield is not None
+                    else None,
+                    us10y_change_bp=float(cross.us10y_change_bps)
+                    if cross and cross.us10y_change_bps is not None
+                    else None,
+                    wti_crude_close=float(cross.wti_level)
+                    if cross and cross.wti_level is not None
+                    else None,
+                    wti_crude_change_pct=float(cross.wti_change_pct)
+                    if cross and cross.wti_change_pct is not None
+                    else None,
+                    gold_close=float(cross.gold_level)
+                    if cross and cross.gold_level is not None
+                    else None,
+                    gold_change_pct=float(cross.gold_change_pct)
+                    if cross and cross.gold_change_pct is not None
+                    else None,
+                )
+
+                # Note: legacy older persistence mapping removed.
 
             # 3. Get calendar events
             calendar_events = self._get_calendar_events(conn)
@@ -319,7 +390,41 @@ class FactsBundleBuilder:
             spotlight = self._build_spotlight()
             stats.has_spotlight = spotlight is not None
 
-            # 5. Assemble the bundle
+            # 5. Compute weekly stats for recap/preview modes (DB-backed)
+            weekly_stats_bundle: Optional[WeeklyStatsBundle] = None
+            if self.config.run_mode in {"weekend_wrap", "monday_preview"}:
+                # Target the most recently closed week (Mon..Fri).
+                # Orchestrator trading_date for weekend_wrap is Friday; for monday_preview it's Monday.
+                # This logic is resilient if trading_date is not aligned.
+                if self.config.run_mode == "weekend_wrap":
+                    week_end = _previous_week_friday(trading_date)
+                else:
+                    # monday_preview runs with trading_date = upcoming Monday; prior week ends previous Friday.
+                    week_end = _previous_week_friday(trading_date - timedelta(days=1))
+
+                week_start = _monday_of_week(week_end)
+
+                week_rows = get_daily_market_snapshots_in_range(
+                    conn=conn,
+                    stream_name=self.config.stream_name,
+                    start_date=week_start,
+                    end_date=week_end,
+                )
+                prior_anchor = get_last_daily_market_snapshot_before_date(
+                    conn=conn,
+                    stream_name=self.config.stream_name,
+                    before_date=week_start,
+                )
+
+                stats_obj = compute_weekly_stats(
+                    week_start=week_start,
+                    week_end=week_end,
+                    week_snapshots=week_rows,
+                    prior_anchor_snapshot=prior_anchor,
+                )
+                weekly_stats_bundle = WeeklyStatsBundle.from_weekly_stats(stats_obj)
+
+            # 6. Assemble the bundle
             now = datetime.now(timezone.utc)
             bundle = FactsBundle(
                 version=BUNDLE_SCHEMA_VERSION,
@@ -331,6 +436,7 @@ class FactsBundleBuilder:
                 news_items=news_items,
                 calendar_events=calendar_events,
                 spotlight=spotlight,
+                weekly_stats=weekly_stats_bundle,
             )
 
             # 6. Validate against schema

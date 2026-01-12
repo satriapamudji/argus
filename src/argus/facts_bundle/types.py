@@ -7,7 +7,10 @@ All dataclasses are frozen to ensure immutability and determinism.
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from argus.orchestrator.weekly_stats import WeeklyReturn, WeeklyStats
 
 
 # =============================================================================
@@ -254,6 +257,99 @@ class SpotlightBundle:
 
 
 # =============================================================================
+# Weekly Stats Types
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class WeeklyReturnBundle:
+    """Serialized weekly return for an index."""
+
+    label: str
+    start_date: date
+    end_date: date
+    return_pct: Decimal
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "label": self.label,
+            "start_date": self.start_date.isoformat(),
+            "end_date": self.end_date.isoformat(),
+            "return_pct": str(self.return_pct),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "WeeklyReturnBundle":
+        return cls(
+            label=data["label"],
+            start_date=date.fromisoformat(data["start_date"]),
+            end_date=date.fromisoformat(data["end_date"]),
+            return_pct=Decimal(data["return_pct"]),
+        )
+
+    @classmethod
+    def from_weekly_return(cls, weekly_return: "WeeklyReturn") -> "WeeklyReturnBundle":
+        return cls(
+            label=weekly_return.label,
+            start_date=weekly_return.start_date,
+            end_date=weekly_return.end_date,
+            return_pct=Decimal(str(weekly_return.return_pct)),
+        )
+
+
+@dataclass(frozen=True)
+class WeeklyStatsBundle:
+    """Serialized weekly stats for inclusion in the facts bundle."""
+
+    week_start: date
+    week_end: date
+    sp500_return: Optional[WeeklyReturnBundle]
+    dow_return: Optional[WeeklyReturnBundle]
+    nasdaq_return: Optional[WeeklyReturnBundle]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "week_start": self.week_start.isoformat(),
+            "week_end": self.week_end.isoformat(),
+            "sp500_return": self.sp500_return.to_dict() if self.sp500_return else None,
+            "dow_return": self.dow_return.to_dict() if self.dow_return else None,
+            "nasdaq_return": self.nasdaq_return.to_dict() if self.nasdaq_return else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "WeeklyStatsBundle":
+        return cls(
+            week_start=date.fromisoformat(data["week_start"]),
+            week_end=date.fromisoformat(data["week_end"]),
+            sp500_return=WeeklyReturnBundle.from_dict(data["sp500_return"])
+            if data.get("sp500_return")
+            else None,
+            dow_return=WeeklyReturnBundle.from_dict(data["dow_return"])
+            if data.get("dow_return")
+            else None,
+            nasdaq_return=WeeklyReturnBundle.from_dict(data["nasdaq_return"])
+            if data.get("nasdaq_return")
+            else None,
+        )
+
+    @classmethod
+    def from_weekly_stats(cls, weekly_stats: "WeeklyStats") -> "WeeklyStatsBundle":
+        return cls(
+            week_start=weekly_stats.week_start,
+            week_end=weekly_stats.week_end,
+            sp500_return=WeeklyReturnBundle.from_weekly_return(weekly_stats.sp500_return)
+            if weekly_stats.sp500_return
+            else None,
+            dow_return=WeeklyReturnBundle.from_weekly_return(weekly_stats.dow_return)
+            if weekly_stats.dow_return
+            else None,
+            nasdaq_return=WeeklyReturnBundle.from_weekly_return(weekly_stats.nasdaq_return)
+            if weekly_stats.nasdaq_return
+            else None,
+        )
+
+
+# =============================================================================
 # Main Facts Bundle
 # =============================================================================
 
@@ -274,6 +370,7 @@ class FactsBundle:
     news_items: tuple[NewsItemBundle, ...]
     calendar_events: tuple[CalendarEventBundle, ...]
     spotlight: Optional[SpotlightBundle] = None
+    weekly_stats: Optional[WeeklyStatsBundle] = None
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
@@ -288,6 +385,8 @@ class FactsBundle:
         }
         if self.spotlight is not None:
             result["spotlight"] = self.spotlight.to_dict()
+        if self.weekly_stats is not None:
+            result["weekly_stats"] = self.weekly_stats.to_dict()
         return result
 
     @classmethod
@@ -295,6 +394,9 @@ class FactsBundle:
         spotlight = None
         if data.get("spotlight"):
             spotlight = SpotlightBundle.from_dict(data["spotlight"])
+        weekly_stats = None
+        if data.get("weekly_stats"):
+            weekly_stats = WeeklyStatsBundle.from_dict(data["weekly_stats"])
         return cls(
             version=data["version"],
             stream_name=data["stream_name"],
@@ -307,6 +409,7 @@ class FactsBundle:
                 CalendarEventBundle.from_dict(event) for event in data["calendar_events"]
             ),
             spotlight=spotlight,
+            weekly_stats=weekly_stats,
         )
 
 

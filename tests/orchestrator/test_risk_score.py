@@ -4,13 +4,9 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from argus.adapters.market_data import HistoricalMetrics
 from argus.orchestrator.risk_score import (
-    CALENDAR_SCORE_RULES,
-    HIGH_IMPACT_TOPICS,
-    POLITICAL_KEYWORDS,
     CalendarScoreDetails,
     HeadlineScoreDetails,
     MarketScoreDetails,

@@ -31,6 +31,8 @@ from argus.facts_bundle.types import (
     MarketSnapshotBundle,
     NewsItemBundle,
     SpotlightBundle,
+    WeeklyReturnBundle,
+    WeeklyStatsBundle,
 )
 
 
@@ -163,8 +165,10 @@ class TestIndexData:
 
     def test_frozen(self, sample_index_data: IndexData):
         """Test IndexData is immutable."""
-        with pytest.raises(AttributeError):
-            sample_index_data.level = Decimal("6000.00")
+        import dataclasses
+
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            setattr(sample_index_data, "level", Decimal("6000.00"))
 
     def test_to_dict(self, sample_index_data: IndexData):
         """Test IndexData serialization."""
@@ -332,8 +336,10 @@ class TestFactsBundle:
 
     def test_frozen(self, sample_facts_bundle: FactsBundle):
         """Test FactsBundle is immutable."""
-        with pytest.raises(AttributeError):
-            sample_facts_bundle.version = "2.0.0"
+        import dataclasses
+
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            setattr(sample_facts_bundle, "version", "2.0.0")
 
     def test_to_dict(self, sample_facts_bundle: FactsBundle):
         """Test FactsBundle serialization."""
@@ -372,6 +378,41 @@ class TestFactsBundle:
         data = bundle.to_dict()
         assert "spotlight" in data
         assert data["spotlight"]["title"] == "Market Alert"
+
+    def test_roundtrip_with_weekly_stats(self, sample_facts_bundle: FactsBundle) -> None:
+        weekly = WeeklyStatsBundle(
+            week_start=date(2025, 1, 6),
+            week_end=date(2025, 1, 10),
+            sp500_return=WeeklyReturnBundle(
+                label="Fri/Fri",
+                start_date=date(2025, 1, 3),
+                end_date=date(2025, 1, 10),
+                return_pct=Decimal("1.23"),
+            ),
+            dow_return=None,
+            nasdaq_return=None,
+        )
+        bundle = FactsBundle(
+            version=sample_facts_bundle.version,
+            stream_name=sample_facts_bundle.stream_name,
+            run_mode=sample_facts_bundle.run_mode,
+            generated_at=sample_facts_bundle.generated_at,
+            trading_date=sample_facts_bundle.trading_date,
+            market_snapshot=sample_facts_bundle.market_snapshot,
+            news_items=sample_facts_bundle.news_items,
+            calendar_events=sample_facts_bundle.calendar_events,
+            spotlight=sample_facts_bundle.spotlight,
+            weekly_stats=weekly,
+        )
+        data = bundle.to_dict()
+        assert data.get("weekly_stats") is not None
+
+        restored = FactsBundle.from_dict(data)
+        assert restored.weekly_stats is not None
+        assert restored.weekly_stats.week_start == weekly.week_start
+        assert restored.weekly_stats.sp500_return is not None
+        assert weekly.sp500_return is not None
+        assert restored.weekly_stats.sp500_return.return_pct == weekly.sp500_return.return_pct
 
 
 # =============================================================================
@@ -533,9 +574,10 @@ class TestBundleSelector:
             make_candidate(news_item_id=3, impact_score=80, topic="macro"),
         ]
         selector = BundleSelector(max_per_topic=1, max_per_source=5)
-        selected = selector.select(candidates, min_items=1, max_items=3)
+        selector.select(candidates, min_items=1, max_items=3)
 
         stats = selector.get_stats()
+
         assert stats["selected"] == 1  # Only one macro allowed
         assert stats["skipped_by_topic"] == 2
 

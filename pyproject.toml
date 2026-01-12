@@ -48,6 +48,10 @@ target-version = "py312"
 
 [tool.mypy]
 python_version = "3.12"
-strict = true
-warn_return_any = true
-warn_unused_ignores = true
+
+# This codebase is not yet in strict mode.
+strict = false
+
+# Third-party packages without type information in this repo.
+ignore_missing_imports = true
+

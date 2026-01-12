@@ -14,6 +14,7 @@ except ImportError:
     from backports.zoneinfo import ZoneInfo  # type: ignore[import-not-found,no-redef,unused-ignore]
 
 from argus.orchestrator.types import RunMode, WindowConfig
+from argus.adapters.calendar import MarketCalendarAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ TZ_UTC = ZoneInfo("UTC")
 WINDOW_HOURS = {
     RunMode.US_CLOSE: 24,  # Last 24h of news
     RunMode.WEEKEND_WRAP: 120,  # Mon-Fri (~5 days)
-    RunMode.MONDAY_PREVIEW: 72,  # Last 72h for headline_score
+    RunMode.MONDAY_PREVIEW: 120,  # Full prior week's news for context
 }
 
 
@@ -105,7 +106,7 @@ def get_window_for_us_close(now: datetime) -> WindowConfig:
     The us_close run covers the prior US cash session close plus
     the last ~18-24h of relevant news.
 
-    Schedule: Mon-Fri 06:00 SGT
+    Schedule: Tue-Fri 06:00 SGT
 
     Args:
         now: Current datetime (timezone-aware).
@@ -254,11 +255,24 @@ def get_trading_date_for_run(
     today_ny = now_ny.date()
 
     if mode == RunMode.US_CLOSE:
-        # The trading date is the previous business day
-        # For a 06:00 SGT run, it's the day before in NY
-        if now_ny.hour < 16:  # Before market close
-            return today_ny - timedelta(days=1)
-        return today_ny
+        # The trading date is always the most recent NYSE trading day.
+        #
+        # - If today is not a trading day (weekend/holiday), roll back to the last session.
+        # - If today is a trading day but the cash session hasn't closed yet, use the
+        #   previous trading day (e.g., Monday morning -> prior Friday).
+        calendar = MarketCalendarAdapter()
+
+        if not calendar.is_trading_day(today_ny):
+            return calendar.get_previous_trading_day(today_ny)
+
+        day_info = calendar.get_trading_day_info(today_ny)
+        close_time_local = time(13, 0, 0) if day_info.is_half_day else time(16, 0, 0)
+        close_dt_ny = datetime.combine(today_ny, close_time_local, tzinfo=TZ_NEW_YORK)
+
+        if now_ny >= close_dt_ny:
+            return today_ny
+
+        return calendar.get_previous_trading_day(today_ny)
 
     elif mode == RunMode.WEEKEND_WRAP:
         # The trading date is Friday

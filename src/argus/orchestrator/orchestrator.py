@@ -58,6 +58,7 @@ class OrchestratorOptions:
         conditional: For monday_preview, check risk_score threshold.
         force_publish: Override conditional check (always publish).
         force_skip: Override conditional check (never publish).
+        ignore_holiday: Ignore holiday/half-day skips (manual runs only).
         dry_run: Load config, show what would happen, don't execute.
         risk_threshold: Minimum risk_score for monday_preview (default 60).
     """
@@ -69,6 +70,7 @@ class OrchestratorOptions:
     conditional: bool = False
     force_publish: bool = False
     force_skip: bool = False
+    ignore_holiday: bool = False
     dry_run: bool = False
     risk_threshold: int = 60
 
@@ -191,6 +193,13 @@ class RunOrchestrator:
                 half_day_behavior=self._get_half_day_behavior(),
             )
             result.holiday_info = holiday_info
+
+            if holiday_info.should_skip and self.options.ignore_holiday:
+                logger.warning(
+                    "Holiday/half-day skip ignored due to --ignore-holiday (manual run override)"
+                )
+                holiday_info.should_skip = False
+                holiday_info.behavior_applied = "skip_ignored"
 
             if holiday_info.should_skip:
                 result.status = RunStatus.SKIPPED
@@ -502,6 +511,9 @@ class RunOrchestrator:
         from argus.facts_bundle.builder import BundleBuilderConfig, FactsBundleBuilder
 
         builder_config = BundleBuilderConfig.from_argus_config(self.config, self.mode.value)
+        builder_config.persist_daily_snapshots = (
+            self.mode == RunMode.US_CLOSE and not self.options.dry_run
+        )
         builder = FactsBundleBuilder(config=builder_config, conn=conn)
         return builder.build(trading_date=trading_date)
 

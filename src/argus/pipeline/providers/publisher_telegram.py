@@ -5,15 +5,12 @@ import logging
 from psycopg2.extensions import connection as Connection
 
 from argus.config import ArgusConfig
-from argus.publisher.types import PublishResult
-
-logger = logging.getLogger(__name__)
-
-
-# Import these at module scope so tests can monkeypatch them reliably.
 from argus.db.repository import get_message_by_id, update_message
 from argus.db.telegram_repository import list_broadcast_chat_ids  # type: ignore[attr-defined]
 from argus.publisher.telegram import TelegramPublisher, run_publish
+from argus.publisher.types import PublishResult
+
+logger = logging.getLogger(__name__)
 
 
 class TelegramPublisherProvider:

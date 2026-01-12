@@ -11,7 +11,7 @@ from argus.pipeline.providers.ingestion_api_common import (
     parse_iso_datetime,
 )
 from argus.pipeline.providers.ingestion_api_newsapi import NewsApiIngestionProvider
-from argus.pipeline.providers.news_api_client import NewsApiResponse, NewsArticle
+from argus.pipeline.providers.news_api_client import NewsArticle
 
 
 class TestParseIsoDatetime:

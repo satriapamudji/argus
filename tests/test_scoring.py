@@ -13,9 +13,7 @@ import pytest
 
 from argus.config import ScoringConfig, SourceTiersConfig
 from argus.scoring.heuristics import (
-    HIGH_VALUE_KEYWORDS,
     HeuristicScorer,
-    TOPIC_KEYWORDS,
     score_candidates,
 )
 from argus.scoring.types import (

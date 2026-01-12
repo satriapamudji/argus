@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 def format_event_display(event: EconomicEventRow) -> str:
     """Format an economic event for display in the message.
 
-    Output format: "Jan 8 14:30 UTC - Non-Farm Payrolls"
+    Output format: "Jan 8, 14:30 - Non-Farm Payrolls"
 
     Args:
         event: Database row for the event.
@@ -36,14 +36,14 @@ def format_event_display(event: EconomicEventRow) -> str:
     Returns:
         Formatted display string.
     """
-    # Format: "Jan 8 14:30 UTC - Event Name"
+    # Format: "Jan 8, 14:30 - Event Name" (UTC is indicated in section header)
     ts = event.event_timestamp
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
     else:
         ts = ts.astimezone(timezone.utc)
 
-    date_str = ts.strftime("%b %d, %H:%M UTC").replace(" 0", " ")
+    date_str = ts.strftime("%b %d, %H:%M").replace(" 0", " ")
     return f"{date_str} - {event.title}"
 
 

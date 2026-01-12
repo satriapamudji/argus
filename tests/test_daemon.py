@@ -3,18 +3,18 @@
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
 
-# Pyright: pytest marks are dynamically created.
-# This alias avoids reportUndefinedVariable for `@pytest.mark.db`.
-db = pytest.mark.db
-
 from argus.config import ArgusConfig, DaemonConfig
 from argus.daemon.scheduler import ArgusDaemon
 from argus.daemon.types import DaemonStatus, JobRunRecord, JobStatus
+
+# Pyright: pytest marks are dynamically created.
+# This alias avoids reportUndefinedVariable for `@pytest.mark.db`.
+db = pytest.mark.db
 
 
 class TestDaemonConfig:

@@ -1,9 +1,8 @@
 """Tests for holiday/half-day behavior handler."""
 
 from datetime import date
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 
 from argus.orchestrator.holiday import (
     DEFAULT_HALF_DAY_BEHAVIORS,
@@ -15,7 +14,6 @@ from argus.orchestrator.holiday import (
 from argus.orchestrator.types import (
     HalfDayBehavior,
     HolidayBehavior,
-    HolidayInfo,
     RunMode,
 )
 

@@ -13,7 +13,7 @@ import jsonschema
 logger = logging.getLogger(__name__)
 
 # Current schema version
-BUNDLE_SCHEMA_VERSION = "1.0.0"
+BUNDLE_SCHEMA_VERSION = "1.1.0"
 
 # JSON Schema for FactsBundle
 FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
@@ -74,6 +74,10 @@ FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
         "spotlight": {
             "oneOf": [{"$ref": "#/$defs/SpotlightBundle"}, {"type": "null"}],
             "description": "Optional spotlight content",
+        },
+        "weekly_stats": {
+            "oneOf": [{"$ref": "#/$defs/WeeklyStatsBundle"}, {"type": "null"}],
+            "description": "Optional weekly performance stats",
         },
     },
     "$defs": {
@@ -156,6 +160,33 @@ FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
                 "title": {"type": "string", "minLength": 1},
                 "body": {"type": "string", "minLength": 1},
                 "disclaimer": {"type": "string"},
+            },
+            "additionalProperties": False,
+        },
+        "WeeklyReturnBundle": {
+            "type": "object",
+            "required": ["label", "start_date", "end_date", "return_pct"],
+            "properties": {
+                "label": {"type": "string", "minLength": 1},
+                "start_date": {"type": "string", "format": "date"},
+                "end_date": {"type": "string", "format": "date"},
+                "return_pct": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+            },
+            "additionalProperties": False,
+        },
+        "WeeklyStatsBundle": {
+            "type": "object",
+            "required": ["week_start", "week_end", "sp500_return", "dow_return", "nasdaq_return"],
+            "properties": {
+                "week_start": {"type": "string", "format": "date"},
+                "week_end": {"type": "string", "format": "date"},
+                "sp500_return": {
+                    "oneOf": [{"$ref": "#/$defs/WeeklyReturnBundle"}, {"type": "null"}]
+                },
+                "dow_return": {"oneOf": [{"$ref": "#/$defs/WeeklyReturnBundle"}, {"type": "null"}]},
+                "nasdaq_return": {
+                    "oneOf": [{"$ref": "#/$defs/WeeklyReturnBundle"}, {"type": "null"}]
+                },
             },
             "additionalProperties": False,
         },

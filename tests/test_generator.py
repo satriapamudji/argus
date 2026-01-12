@@ -21,6 +21,8 @@ from argus.facts_bundle.types import (
     MarketSnapshotBundle,
     NewsItemBundle,
     SpotlightBundle,
+    WeeklyReturnBundle,
+    WeeklyStatsBundle,
 )
 from argus.generator import (
     GenerationError,
@@ -158,6 +160,23 @@ def sample_facts_bundle(
         news_items=sample_news_items,
         calendar_events=sample_calendar_events,
         spotlight=None,
+    )
+
+
+@pytest.fixture
+def sample_weekly_stats_bundle() -> WeeklyStatsBundle:
+    """Sample weekly stats bundle for prompt tests."""
+    return WeeklyStatsBundle(
+        week_start=date(2025, 1, 6),
+        week_end=date(2025, 1, 10),
+        sp500_return=WeeklyReturnBundle(
+            label="Fri/Fri",
+            start_date=date(2025, 1, 3),
+            end_date=date(2025, 1, 10),
+            return_pct=Decimal("1.23"),
+        ),
+        dow_return=None,
+        nasdaq_return=None,
     )
 
 
@@ -396,6 +415,80 @@ class TestBuildNewsContexts:
 class TestBuildUserPrompt:
     """Tests for build_user_prompt function."""
 
+    def test_includes_weekly_stats_when_present_weekend_wrap(
+        self,
+        sample_facts_bundle: FactsBundle,
+        sample_news_contexts: list[NewsContext],
+        sample_weekly_stats_bundle: WeeklyStatsBundle,
+    ) -> None:
+        bundle = FactsBundle(
+            version=sample_facts_bundle.version,
+            stream_name=sample_facts_bundle.stream_name,
+            run_mode="weekend_wrap",
+            generated_at=sample_facts_bundle.generated_at,
+            trading_date=sample_facts_bundle.trading_date,
+            market_snapshot=sample_facts_bundle.market_snapshot,
+            news_items=sample_facts_bundle.news_items,
+            calendar_events=sample_facts_bundle.calendar_events,
+            spotlight=sample_facts_bundle.spotlight,
+            weekly_stats=sample_weekly_stats_bundle,
+        )
+
+        prompt = build_user_prompt(
+            bundle,
+            sample_news_contexts,
+            GenerationMode.WEEKEND_WRAP,
+            max_words=520,
+        )
+
+        assert "WEEKLY RECAP SCORECARD:" in prompt
+        assert "Week: 06 Jan 2025 to 10 Jan 2025" in prompt
+        assert "- S&P 500: +1.23%" in prompt
+
+    def test_includes_weekly_stats_when_present_monday_preview(
+        self,
+        sample_facts_bundle: FactsBundle,
+        sample_news_contexts: list[NewsContext],
+        sample_weekly_stats_bundle: WeeklyStatsBundle,
+    ) -> None:
+        bundle = FactsBundle(
+            version=sample_facts_bundle.version,
+            stream_name=sample_facts_bundle.stream_name,
+            run_mode="monday_preview",
+            generated_at=sample_facts_bundle.generated_at,
+            trading_date=sample_facts_bundle.trading_date,
+            market_snapshot=sample_facts_bundle.market_snapshot,
+            news_items=sample_facts_bundle.news_items,
+            calendar_events=sample_facts_bundle.calendar_events,
+            spotlight=sample_facts_bundle.spotlight,
+            weekly_stats=sample_weekly_stats_bundle,
+        )
+
+        prompt = build_user_prompt(
+            bundle,
+            sample_news_contexts,
+            GenerationMode.MONDAY_PREVIEW,
+            max_words=320,
+        )
+
+        assert "PRIOR WEEK PERFORMANCE:" in prompt
+        assert "Week: 06 Jan 2025 to 10 Jan 2025" in prompt
+        assert "- S&P 500: +1.23%" in prompt
+
+    def test_omits_weekly_stats_when_missing(
+        self,
+        sample_facts_bundle: FactsBundle,
+        sample_news_contexts: list[NewsContext],
+    ) -> None:
+        prompt = build_user_prompt(
+            sample_facts_bundle,
+            sample_news_contexts,
+            GenerationMode.US_CLOSE,
+            max_words=420,
+        )
+        assert "WEEKLY RECAP SCORECARD:" not in prompt
+        assert "PRIOR WEEK PERFORMANCE:" not in prompt
+
     def test_includes_market_data(
         self,
         sample_facts_bundle: FactsBundle,
@@ -633,8 +726,8 @@ class TestMessageRenderer:
         renderer = MessageRenderer(sample_facts_bundle, sample_news_contexts)
         _, raw = renderer.render(sample_llm_content)
 
-        # Now uses underline format
-        assert "__Investor Key Takeaways__" in raw
+        # Now uses bold+underline format (header outside expandable blockquote)
+        assert "__*Investor Key Takeaways*__" in raw
         assert "Monitor Fed communications" in raw
 
     def test_render_includes_key_dates(
@@ -647,8 +740,8 @@ class TestMessageRenderer:
         renderer = MessageRenderer(sample_facts_bundle, sample_news_contexts)
         _, raw = renderer.render(sample_llm_content)
 
-        # Now uses underline format
-        assert "__Key Dates (UTC)__" in raw
+        # Now uses bold+underline format (header outside expandable blockquote)
+        assert "__*Key Dates (UTC)*__" in raw
         assert "FOMC Minutes" in raw
 
     def test_render_includes_watch_next(
@@ -661,8 +754,8 @@ class TestMessageRenderer:
         renderer = MessageRenderer(sample_facts_bundle, sample_news_contexts)
         _, raw = renderer.render(sample_llm_content)
 
-        # Now uses underline format
-        assert "__What to Watch Next__" in raw
+        # Now uses bold+underline format (header outside expandable blockquote)
+        assert "__*What to Watch Next*__" in raw
 
     def test_render_includes_sources(
         self,
@@ -674,11 +767,150 @@ class TestMessageRenderer:
         renderer = MessageRenderer(sample_facts_bundle, sample_news_contexts)
         _, raw = renderer.render(sample_llm_content)
 
-        # Now uses underline format and simplified source format
-        assert "__Sources__" in raw
+        # Now uses bold+underline format (header outside expandable blockquote)
+        assert "__*Sources*__" in raw
         assert "[1]" in raw
         # Source name is no longer included in the simplified format
         assert "Fed signals potential rate cut" in raw
+
+    def test_render_includes_weekly_stats_section(
+        self,
+        sample_facts_bundle: FactsBundle,
+        sample_news_contexts: list[NewsContext],
+        sample_llm_content: LLMGeneratedContent,
+        sample_weekly_stats_bundle: WeeklyStatsBundle,
+    ) -> None:
+        bundle = FactsBundle(
+            version=sample_facts_bundle.version,
+            stream_name=sample_facts_bundle.stream_name,
+            run_mode="weekend_wrap",
+            generated_at=sample_facts_bundle.generated_at,
+            trading_date=sample_facts_bundle.trading_date,
+            market_snapshot=sample_facts_bundle.market_snapshot,
+            news_items=sample_facts_bundle.news_items,
+            calendar_events=sample_facts_bundle.calendar_events,
+            spotlight=sample_facts_bundle.spotlight,
+            weekly_stats=sample_weekly_stats_bundle,
+        )
+        renderer = MessageRenderer(bundle, sample_news_contexts)
+        _, raw = renderer.render(sample_llm_content)
+
+        # weekend_wrap now uses plain (non-collapsed) scorecard format
+        assert "Scorecard: 06 Jan to 10 Jan" in raw
+        assert "S&P 500: +1.23%" in raw
+
+    def test_render_weekend_wrap_format(
+        self,
+        sample_facts_bundle: FactsBundle,
+        sample_news_contexts: list[NewsContext],
+        sample_weekly_stats_bundle: WeeklyStatsBundle,
+    ) -> None:
+        """Test weekend_wrap renders with correct structure."""
+        bundle = FactsBundle(
+            version=sample_facts_bundle.version,
+            stream_name=sample_facts_bundle.stream_name,
+            run_mode="weekend_wrap",
+            generated_at=sample_facts_bundle.generated_at,
+            trading_date=sample_facts_bundle.trading_date,
+            market_snapshot=sample_facts_bundle.market_snapshot,
+            news_items=sample_facts_bundle.news_items,
+            calendar_events=sample_facts_bundle.calendar_events,
+            spotlight=None,
+            weekly_stats=sample_weekly_stats_bundle,
+        )
+        # LLM content with sign_off for weekend_wrap
+        llm_content = LLMGeneratedContent(
+            narrative="Markets had a strong week [#A1B2C3D4].",
+            takeaways=["Takeaway 1", "Takeaway 2"],
+            watch_next=[],
+            sign_off="Have a restful weekend. We'll be back with your Monday preview.",
+        )
+        renderer = MessageRenderer(bundle, sample_news_contexts)
+        _, raw = renderer.render(llm_content)
+
+        # Header should be "Weekly Wrap Up"
+        assert "*Weekly Wrap Up*" in raw
+        # Should have plain scorecard (not collapsed)
+        assert "Scorecard: 06 Jan to 10 Jan" in raw
+        # Should have "Key Takeaways for the Week" header
+        assert "__*Key Takeaways for the Week*__" in raw
+        # Should have sign-off at the end
+        assert "Have a restful weekend" in raw
+        # Should NOT have index snapshot
+        assert "S&P 500 – " not in raw
+        # Should NOT have Key Dates section
+        assert "__*Key Dates (UTC)*__" not in raw
+        # Should NOT have What to Watch Next section
+        assert "__*What to Watch Next*__" not in raw
+
+    def test_render_monday_preview_format(
+        self,
+        sample_facts_bundle: FactsBundle,
+        sample_news_contexts: list[NewsContext],
+        sample_weekly_stats_bundle: WeeklyStatsBundle,
+    ) -> None:
+        """Test monday_preview renders with correct structure."""
+        bundle = FactsBundle(
+            version=sample_facts_bundle.version,
+            stream_name=sample_facts_bundle.stream_name,
+            run_mode="monday_preview",
+            generated_at=sample_facts_bundle.generated_at,
+            trading_date=sample_facts_bundle.trading_date,
+            market_snapshot=sample_facts_bundle.market_snapshot,
+            news_items=sample_facts_bundle.news_items,
+            calendar_events=sample_facts_bundle.calendar_events,
+            spotlight=None,
+            weekly_stats=sample_weekly_stats_bundle,
+        )
+        # LLM content with opening_line for monday_preview
+        llm_content = LLMGeneratedContent(
+            narrative="This week brings important events [#A1B2C3D4].",
+            takeaways=["Thing to watch 1", "Thing to watch 2"],
+            watch_next=[],
+            opening_line="Hope you had a restful weekend. Here's what to watch this week.",
+        )
+        renderer = MessageRenderer(bundle, sample_news_contexts)
+        _, raw = renderer.render(llm_content)
+
+        # Header should be "Monday Preview"
+        assert "*Monday Preview*" in raw
+        # Should have plain prior week stats (not collapsed)
+        assert "Prior Week: 06 Jan to 10 Jan" in raw
+        # Should have opening line after prior week
+        assert "Hope you had a restful weekend" in raw
+        # Should have "Key Things to Look Out For" header
+        assert "__*Key Things to Look Out For*__" in raw
+        # Should have Key Dates section
+        assert "__*Key Dates (UTC)*__" in raw
+        # Should NOT have index snapshot
+        assert "S&P 500 – " not in raw
+        # Should NOT have Sources section
+        assert "__*Sources*__" not in raw
+        # Should NOT have Cross-Asset section
+        assert "__*Cross-Asset Snapshot*__" not in raw
+
+    def test_render_us_close_format_unchanged(
+        self,
+        sample_facts_bundle: FactsBundle,
+        sample_news_contexts: list[NewsContext],
+        sample_llm_content: LLMGeneratedContent,
+    ) -> None:
+        """Test us_close still renders with original structure."""
+        renderer = MessageRenderer(sample_facts_bundle, sample_news_contexts)
+        _, raw = renderer.render(sample_llm_content)
+
+        # Header should be "Market Update"
+        assert "*Market Update*" in raw
+        # Should have index snapshot
+        assert "S&P 500 – " in raw
+        # Should have "Investor Key Takeaways" header (default)
+        assert "__*Investor Key Takeaways*__" in raw
+        # Should have Key Dates section
+        assert "__*Key Dates (UTC)*__" in raw
+        # Should have What to Watch Next section
+        assert "__*What to Watch Next*__" in raw
+        # Should have Sources section
+        assert "__*Sources*__" in raw
 
 
 class TestRenderMessage:

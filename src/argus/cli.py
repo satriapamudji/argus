@@ -97,6 +97,12 @@ def cli(ctx: click.Context, config: Optional[Path]) -> None:
     default=False,
     help="Override conditional check (never publish)",
 )
+@click.option(
+    "--ignore-holiday",
+    is_flag=True,
+    default=False,
+    help="Ignore holiday/half-day skips for manual runs",
+)
 @click.pass_context
 def run(
     ctx: click.Context,
@@ -112,6 +118,7 @@ def run(
     conditional: bool,
     force_publish: bool,
     force_skip: bool,
+    ignore_holiday: bool,
 ) -> None:
     """Execute a run for the specified stream and mode.
 
@@ -165,6 +172,7 @@ def run(
         conditional=conditional or config.stream.monday_preview.conditional,
         force_publish=force_publish or config.stream.monday_preview.force_publish,
         force_skip=force_skip or config.stream.monday_preview.force_skip,
+        ignore_holiday=ignore_holiday,
         risk_threshold=config.stream.monday_preview.risk_threshold,
     )
 
@@ -295,6 +303,167 @@ def run(
                 save_message.write_text(result.message_content)
                 click.echo()
                 click.echo(f"Message written to: {save_message}")
+
+
+@cli.command(name="backfill-cross-assets")
+@click.option("--stream", default=None, help="Stream name (default: current stream)")
+@click.option(
+    "--start-date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    help="Start date (YYYY-MM-DD)",
+)
+@click.option(
+    "--end-date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    help="End date (YYYY-MM-DD)",
+)
+@click.option("--limit", type=int, default=50, show_default=True, help="Max rows to backfill")
+@click.option("--dry-run", is_flag=True, default=False, help="Show actions without writing")
+@click.pass_context
+def backfill_cross_assets(
+    ctx: click.Context,
+    stream: Optional[str],
+    start_date: Optional[datetime],
+    end_date: Optional[datetime],
+    limit: int,
+    dry_run: bool,
+) -> None:
+    """Backfill missing cross-asset fields in daily_market_snapshots."""
+    from datetime import date, timedelta
+    from dotenv import load_dotenv
+    from psycopg2.extras import RealDictCursor
+
+    from argus.adapters.market_data import MarketDataProvider
+    from argus.db.connection import get_connection
+    from argus.db.daily_market_snapshots import update_cross_assets_for_snapshot
+
+    load_dotenv()
+
+    config_path = ctx.obj.get("config_path")
+    config = ArgusConfig.load(config_path)
+
+    if stream is None:
+        if len(config.streams) > 1:
+            click.echo(
+                "Error: --stream is required when config.yaml defines multiple streams. "
+                f"Available: {', '.join(config.list_streams())}",
+                err=True,
+            )
+            raise SystemExit(2)
+        stream = config.stream.name
+
+    try:
+        config.select_stream(stream)
+    except UnknownStreamError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(2)
+
+    start = start_date.date() if start_date else None
+    end = end_date.date() if end_date else None
+    if start is None and end is None:
+        end = date.today()
+        start = end - timedelta(days=30)
+    elif start is None:
+        start = end - timedelta(days=30) if end else date.today() - timedelta(days=30)
+    elif end is None:
+        end = date.today()
+
+    assert start is not None and end is not None
+
+    click.echo(
+        f"Backfilling cross-assets for stream='{stream}' "
+        f"from {start.isoformat()} to {end.isoformat()} (limit={limit})"
+    )
+
+    provider = MarketDataProvider(include_cross_assets=True)
+
+    conn = get_connection()
+    updated = 0
+    skipped = 0
+
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT trading_date
+                FROM daily_market_snapshots
+                WHERE stream_name = %(stream_name)s
+                  AND trading_date >= %(start_date)s
+                  AND trading_date <= %(end_date)s
+                  AND (
+                    vix_close IS NULL
+                    OR us10y_yield IS NULL
+                    OR usd_dxy_close IS NULL
+                    OR wti_crude_close IS NULL
+                    OR gold_close IS NULL
+                  )
+                ORDER BY trading_date ASC
+                LIMIT %(limit)s
+                """,
+                {
+                    "stream_name": stream,
+                    "start_date": start,
+                    "end_date": end,
+                    "limit": limit,
+                },
+            )
+            rows = cur.fetchall()
+
+        if not rows:
+            click.echo("No rows require cross-asset backfill.")
+            return
+
+        for row in rows:
+            trading_date = row["trading_date"]
+            metrics = provider.fetch_cross_assets_for_date(trading_date)
+            if metrics is None:
+                skipped += 1
+                click.echo(f"[skip] {trading_date}: no cross-asset data")
+                continue
+
+            if dry_run:
+                click.echo(f"[dry-run] {trading_date}: would update cross-assets")
+                updated += 1
+                continue
+
+            update_cross_assets_for_snapshot(
+                conn,
+                stream_name=stream,
+                trading_date=trading_date,
+                vix_close=float(metrics.vix_level) if metrics.vix_level is not None else None,
+                vix_change_pct=float(metrics.vix_change_pct)
+                if metrics.vix_change_pct is not None
+                else None,
+                usd_dxy_close=float(metrics.dxy_level) if metrics.dxy_level is not None else None,
+                usd_dxy_change_pct=float(metrics.dxy_change_pct)
+                if metrics.dxy_change_pct is not None
+                else None,
+                us10y_yield=float(metrics.us10y_yield)
+                if metrics.us10y_yield is not None
+                else None,
+                us10y_change_bp=float(metrics.us10y_change_bps)
+                if metrics.us10y_change_bps is not None
+                else None,
+                wti_crude_close=float(metrics.wti_level) if metrics.wti_level is not None else None,
+                wti_crude_change_pct=float(metrics.wti_change_pct)
+                if metrics.wti_change_pct is not None
+                else None,
+                gold_close=float(metrics.gold_level) if metrics.gold_level is not None else None,
+                gold_change_pct=float(metrics.gold_change_pct)
+                if metrics.gold_change_pct is not None
+                else None,
+                source_name="yfinance_backfill",
+            )
+            conn.commit()
+            updated += 1
+            click.echo(f"[ok] {trading_date}: cross-assets updated")
+
+    finally:
+        conn.close()
+
+    click.echo(f"Done. Updated={updated}, skipped={skipped}")
 
 
 @cli.group()
@@ -2047,7 +2216,6 @@ def smoke(fixtures_dir: Optional[Path], verbose: bool, test_invalid: bool) -> No
         argus smoke --fixtures-dir path/to/fixtures
     """
     import json
-    import re
 
     from argus.config import ConstraintsConfig
     from argus.facts_bundle.types import FactsBundle
@@ -2478,7 +2646,7 @@ def daemon_history(job_id: str, limit: int, config_path: Optional[Path], as_json
         with urllib.request.urlopen(url, timeout=5) as response:
             data = json.loads(response.read().decode())
     except urllib.error.URLError as e:
-        click.echo(click.style(f"Error: Cannot connect to daemon", fg="red"))
+        click.echo(click.style("Error: Cannot connect to daemon", fg="red"))
         click.echo(f"  {e.reason}")
         raise SystemExit(1)
     except Exception as e:

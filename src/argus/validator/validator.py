@@ -50,13 +50,13 @@ class MessageValidator:
         Returns:
             ValidationResult containing status and any errors.
         """
-        errors = []
+        errors: list[str] = []
 
-        # 1. Section Presence
-        sections_valid = self._check_sections(result.message_raw, errors)
+        # 1. Section Presence (mode-aware)
+        sections_valid = self._check_sections(result.message_raw, bundle.run_mode, errors)
 
-        # 2. Bullet Counts
-        bullet_counts_valid = self._check_bullet_counts(result.message_raw, errors)
+        # 2. Bullet Counts (mode-aware)
+        bullet_counts_valid = self._check_bullet_counts(result.message_raw, bundle.run_mode, errors)
 
         # 3. Hallucination Guard
         no_hallucinations = self._check_hallucinations(result.message_raw, bundle, errors)
@@ -75,19 +75,103 @@ class MessageValidator:
             formatting_valid=formatting_valid,
         )
 
-    def _check_sections(self, text: str, errors: list[str]) -> bool:
+    def _check_sections(self, text: str, run_mode: str, errors: list[str]) -> bool:
         """Verify all required sections are present.
 
-        Supports both bold (*text*) and underline (__text__) formatting.
+        Supports multiple header formats:
+        - Bold: *text*
+        - Underline: __text__
+        - Bold+Underline: __*text*__ (new format for expandable blockquote headers)
+        - Old expandable blockquote: **>__text__
+
+        Different modes have different required sections:
+        - us_close: Market Update, Investor Key Takeaways, Key Dates, What to Watch Next, Sources
+        - weekend_wrap: Weekly Wrap Up, Key Takeaways for the Week, Sources
+        - monday_preview: Monday Preview, Key Things to Look Out For, Key Dates
         """
-        # Section headers - check for either bold or underline format
-        required_sections = [
-            ("Market Update", ["*Market Update*"]),  # Header stays bold
-            ("Investor Key Takeaways", ["*Investor Key Takeaways*", "__Investor Key Takeaways__"]),
-            ("Key Dates (UTC)", ["*Key Dates (UTC)*", "__Key Dates (UTC)__"]),
-            ("What to Watch Next", ["*What to Watch Next*", "__What to Watch Next__"]),
-            ("Sources", ["*Sources*", "__Sources__"]),
-        ]
+        # Define required sections per mode
+        if run_mode == "weekend_wrap":
+            required_sections = [
+                ("Weekly Wrap Up", ["*Weekly Wrap Up*"]),
+                (
+                    "Key Takeaways for the Week",
+                    [
+                        "*Key Takeaways for the Week*",
+                        "__Key Takeaways for the Week__",
+                        "__*Key Takeaways for the Week*__",
+                    ],
+                ),
+                (
+                    "Sources",
+                    [
+                        "*Sources*",
+                        "__Sources__",
+                        "__*Sources*__",
+                        "**>__Sources__",
+                    ],
+                ),
+            ]
+        elif run_mode == "monday_preview":
+            required_sections = [
+                ("Monday Preview", ["*Monday Preview*"]),
+                (
+                    "Key Things to Look Out For",
+                    [
+                        "*Key Things to Look Out For*",
+                        "__Key Things to Look Out For__",
+                        "__*Key Things to Look Out For*__",
+                    ],
+                ),
+                (
+                    "Key Dates (UTC)",
+                    [
+                        "*Key Dates (UTC)*",
+                        "__Key Dates (UTC)__",
+                        "__*Key Dates (UTC)*__",
+                        "**>__Key Dates (UTC)__",
+                    ],
+                ),
+            ]
+        else:  # us_close (default)
+            required_sections = [
+                ("Market Update", ["*Market Update*"]),
+                (
+                    "Investor Key Takeaways",
+                    [
+                        "*Investor Key Takeaways*",
+                        "__Investor Key Takeaways__",
+                        "__*Investor Key Takeaways*__",
+                        "**>__Investor Key Takeaways__",
+                    ],
+                ),
+                (
+                    "Key Dates (UTC)",
+                    [
+                        "*Key Dates (UTC)*",
+                        "__Key Dates (UTC)__",
+                        "__*Key Dates (UTC)*__",
+                        "**>__Key Dates (UTC)__",
+                    ],
+                ),
+                (
+                    "What to Watch Next",
+                    [
+                        "*What to Watch Next*",
+                        "__What to Watch Next__",
+                        "__*What to Watch Next*__",
+                    ],
+                ),
+                (
+                    "Sources",
+                    [
+                        "*Sources*",
+                        "__Sources__",
+                        "__*Sources*__",
+                        "**>__Sources__",
+                    ],
+                ),
+            ]
+
         valid = True
         for name, patterns in required_sections:
             found = any(pattern in text for pattern in patterns)
@@ -96,34 +180,61 @@ class MessageValidator:
                 valid = False
         return valid
 
-    def _check_bullet_counts(self, text: str, errors: list[str]) -> bool:
+    def _check_bullet_counts(self, text: str, run_mode: str, errors: list[str]) -> bool:
         """Verify bullet counts for takeaways and watch next.
 
-        Supports both bold (*text*) and underline (__text__) section headers.
+        Supports multiple header formats:
+        - Bold: *text*
+        - Underline: __text__
+        - Bold+Underline: __*text*__
+
+        Different modes have different takeaway headers:
+        - us_close: Investor Key Takeaways
+        - weekend_wrap: Key Takeaways for the Week
+        - monday_preview: Key Things to Look Out For
         """
         valid = True
 
-        # Takeaways: 3-5 bullets (support both formats)
+        # Define takeaway header pattern based on mode
+        if run_mode == "weekend_wrap":
+            takeaway_header = r"(?:__\*|\*|__)Key Takeaways for the Week(?:\*__|__|\*)"
+            next_section = r"(?:(?:__\*|\*|__)Sources|\Z)"
+        elif run_mode == "monday_preview":
+            takeaway_header = r"(?:__\*|\*|__)Key Things to Look Out For(?:\*__|__|\*)"
+            next_section = r"(?:(?:__\*|\*|__)Key Dates|\Z)"
+        else:  # us_close
+            takeaway_header = r"(?:__\*|\*|__)Investor Key Takeaways(?:\*__|__|\*)"
+            next_section = r"(?:(?:__\*|\*|__)Key Dates|\Z)"
+
+        # Takeaways: 3-5 bullets
         takeaways_match = re.search(
-            r"(?:\*|__)Investor Key Takeaways(?:\*|__)(.*?)(?:(?:\*|__)Key Dates|\Z)",
+            takeaway_header + r"(.*?)" + next_section,
             text,
             re.DOTALL,
         )
         if takeaways_match:
-            bullets = re.findall(r"^•", takeaways_match.group(1), re.MULTILINE)
+            # Match bullets with optional **> or > prefix (expandable blockquote format)
+            bullets = re.findall(r"^(?:\*\*>|>\s*)?•", takeaways_match.group(1), re.MULTILINE)
             if not (3 <= len(bullets) <= 5):
                 errors.append(f"Invalid takeaway bullet count: {len(bullets)} (expected 3-5)")
                 valid = False
 
-        # Watch Next: max 3 bullets (support both formats)
-        watch_match = re.search(
-            r"(?:\*|__)What to Watch Next(?:\*|__)(.*?)(?:(?:\*|__)Sources|\Z)", text, re.DOTALL
-        )
-        if watch_match:
-            bullets = re.findall(r"^•", watch_match.group(1), re.MULTILINE)
-            if len(bullets) > 3:
-                errors.append(f"Invalid watch next bullet count: {len(bullets)} (expected max 3)")
-                valid = False
+        # Watch Next: max 3 bullets (only for us_close mode)
+        if run_mode == "us_close":
+            watch_match = re.search(
+                r"(?:__\*|\*|__)What to Watch Next(?:\*__|__|\*)"
+                r"(.*?)"
+                r"(?:(?:__\*|\*|__)Sources|\Z)",
+                text,
+                re.DOTALL,
+            )
+            if watch_match:
+                bullets = re.findall(r"^(?:\*\*>|>\s*)?•", watch_match.group(1), re.MULTILINE)
+                if len(bullets) > 3:
+                    errors.append(
+                        f"Invalid watch next bullet count: {len(bullets)} (expected max 3)"
+                    )
+                    valid = False
 
         return valid
 
@@ -230,6 +341,16 @@ class MessageValidator:
                 if val is not None:
                     allowed.add(self._normalize_number(str(val)))
 
+        # Weekly stats returns if present
+        if bundle.weekly_stats is not None:
+            for weekly_return in [
+                bundle.weekly_stats.sp500_return,
+                bundle.weekly_stats.dow_return,
+                bundle.weekly_stats.nasdaq_return,
+            ]:
+                if weekly_return is not None:
+                    allowed.add(self._normalize_number(str(weekly_return.return_pct)))
+
         # Extract numbers from news item titles and snippets
         for item in bundle.news_items:
             for field in [item.title, item.snippet, item.content_excerpt]:
@@ -254,8 +375,20 @@ class MessageValidator:
                 extras.add(num[:-3])
             # Also add with + prefix for positive percentages
             try:
-                if float(num) > 0:
+                val = float(num)
+                if val > 0:
                     extras.add(f"+{num}")
+                # Add rounded versions (1 decimal place) to allow LLM rounding
+                # e.g. 4.07 -> also allow 4.1, 4.10
+                # Note: must normalize to 2dp to match the check logic
+                rounded_1dp = round(val, 1)
+                extras.add(f"{rounded_1dp:.2f}")
+                if val > 0:
+                    extras.add(f"+{rounded_1dp:.2f}")
+                # Handle -0.2 -> allow "0" or "-0" for near-zero values
+                if abs(val) < 0.5:
+                    extras.add("0.00")
+                    extras.add("-0.00")
             except ValueError:
                 pass
         allowed.update(extras)
@@ -279,6 +412,14 @@ class MessageValidator:
         except Exception:
             pass
         return normalized
+
+    def _is_numeric(self, s: str) -> bool:
+        """Check if a string can be converted to a float."""
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
 
     def _check_formatting(self, escaped_text: str, errors: list[str]) -> bool:
         """Verify MarkdownV2 formatting is valid."""

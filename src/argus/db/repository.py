@@ -2,9 +2,11 @@
 
 import hashlib
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from psycopg2.extensions import connection as Connection
+
+from datetime import date
 
 from argus.db.models import (
     MessageRow,
@@ -96,28 +98,23 @@ def get_or_create_fingerprint(
     text_hash = hash_text(title, snippet) if title else None
 
     with conn.cursor() as cur:
-        # Try to find existing fingerprint (per-stream deduplication)
-        cur.execute(
-            "SELECT * FROM news_fingerprints WHERE stream_name = %s AND hash_url = %s",
-            (stream_name, url_hash),
-        )
-        row = cur.fetchone()
-
-        if row:
-            # Update last_seen_at
-            cur.execute(
-                "UPDATE news_fingerprints SET last_seen_at = NOW() WHERE id = %s", (row[0],)
-            )
-            conn.commit()
-            return NewsFingerprintRow.from_row(row), False
-
-        # Create new fingerprint
         cur.execute(
             """
-            INSERT INTO news_fingerprints 
+            INSERT INTO news_fingerprints
                 (stream_name, hash_url, hash_text, simhash, source_name)
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING *
+            ON CONFLICT (stream_name, hash_url)
+            DO UPDATE SET last_seen_at = NOW()
+            RETURNING
+                id,
+                stream_name,
+                hash_url,
+                hash_text,
+                simhash,
+                source_name,
+                first_seen_at,
+                last_seen_at,
+                (xmax = 0) AS inserted
             """,
             (stream_name, url_hash, text_hash, simhash, source_name),
         )
@@ -125,7 +122,7 @@ def get_or_create_fingerprint(
         conn.commit()
 
         if row:
-            return NewsFingerprintRow.from_row(row), True
+            return NewsFingerprintRow.from_row(row[:8]), bool(row[8])
         raise RuntimeError("Failed to create fingerprint")
 
 
@@ -196,6 +193,65 @@ def insert_news_item(
         if row:
             return NewsItemRow.from_row(row)
         raise RuntimeError("Failed to insert news item")
+
+
+def insert_news_items_batch(
+    conn: Connection,
+    rows: Sequence[
+        tuple[
+            str,
+            int,
+            str,
+            str,
+            str,
+            Optional[str],
+            Optional[str],
+            Optional[datetime],
+            datetime,
+            Optional[dict[str, Any]],
+        ]
+    ],
+) -> list[NewsItemRow]:
+    """Insert multiple news items in a single query.
+
+    Args:
+        conn: Database connection.
+        rows: Sequence of tuples matching news_items columns.
+
+    Returns:
+        List of created NewsItemRow objects.
+    """
+    from psycopg2.extras import Json, execute_values
+
+    if not rows:
+        return []
+
+    dates = {row[8].date() for row in rows}
+    stream_name = rows[0][0]
+    for partition_date in dates:
+        ensure_partition_exists(conn, partition_date, stream_name=stream_name)
+
+    values = []
+    for row in rows:
+        raw_metadata = Json(row[9]) if row[9] else None
+        values.append((*row[:9], raw_metadata))
+
+    with conn.cursor() as cur:
+        inserted = execute_values(
+            cur,
+            """
+            INSERT INTO news_items
+                (stream_name, fingerprint_id, source_name, source_url, title, snippet,
+                 author, published_at, ingested_at, raw_metadata)
+            VALUES %s
+            RETURNING *
+            """,
+            values,
+            fetch=True,
+        )
+    conn.commit()
+
+    return [NewsItemRow.from_row(row) for row in inserted]
 
 
 def create_run(
@@ -405,7 +461,76 @@ def check_duplicate_by_url(
             "SELECT 1 FROM news_fingerprints WHERE stream_name = %s AND hash_url = %s LIMIT 1",
             (stream_name, url_hash),
         )
-        return cur.fetchone() is not None
+    return cur.fetchone() is not None
+
+
+def get_existing_url_hashes(
+    conn: Connection,
+    stream_name: str,
+    url_hashes: Sequence[str],
+) -> set[str]:
+    """Return existing URL hashes for a stream.
+
+    Args:
+        conn: Database connection.
+        stream_name: Stream name for per-stream deduplication.
+        url_hashes: Sequence of URL hashes to check.
+
+    Returns:
+        Set of hashes that already exist.
+    """
+    if not url_hashes:
+        return set()
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT hash_url
+            FROM news_fingerprints
+            WHERE stream_name = %s
+              AND hash_url = ANY(%s)
+            """,
+            (stream_name, list(url_hashes)),
+        )
+        return {row[0] for row in cur.fetchall()}
+
+
+def upsert_fingerprints_batch(
+    conn: Connection,
+    rows: Sequence[tuple[str, str, Optional[str], Optional[int], str]],
+) -> list[NewsFingerprintRow]:
+    """Upsert multiple fingerprints in a single query.
+
+    Args:
+        conn: Database connection.
+        rows: Sequence of tuples for news_fingerprints values.
+
+    Returns:
+        List of NewsFingerprintRow objects for inserted/updated rows.
+    """
+    from psycopg2.extras import execute_values
+
+    if not rows:
+        return []
+
+    with conn.cursor() as cur:
+        inserted = execute_values(
+            cur,
+            """
+            INSERT INTO news_fingerprints
+                (stream_name, hash_url, hash_text, simhash, source_name)
+            VALUES %s
+            ON CONFLICT (stream_name, hash_url)
+            DO UPDATE SET last_seen_at = NOW()
+            RETURNING id, stream_name, hash_url, hash_text, simhash, source_name,
+                      first_seen_at, last_seen_at
+            """,
+            rows,
+            fetch=True,
+        )
+    conn.commit()
+
+    return [NewsFingerprintRow.from_row(row) for row in inserted]
 
 
 def check_duplicate_by_text(
@@ -862,6 +987,104 @@ def get_top_scored_items(
     with conn.cursor() as cur:
         cur.execute(query, (window_hours, limit))
         return cur.fetchall()
+
+
+def get_daily_market_snapshots_in_range(
+    conn: Connection,
+    stream_name: str,
+    start_date: date,
+    end_date: date,
+) -> list[dict[str, Any]]:
+    """Fetch daily market snapshots for a date range, inclusive.
+
+    Returns raw rows as dicts (rather than typed dataclasses) since the consumer
+    for weekly stats only needs numeric fields.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                trading_date,
+                sp500_close,
+                dow_close,
+                nasdaq_close,
+                vix_close,
+                usd_dxy_close,
+                us10y_yield,
+                wti_crude_close,
+                gold_close
+            FROM daily_market_snapshots
+            WHERE stream_name = %s
+              AND trading_date >= %s
+              AND trading_date <= %s
+            ORDER BY trading_date ASC
+            """,
+            (stream_name, start_date, end_date),
+        )
+        rows = cur.fetchall()
+
+    results: list[dict[str, Any]] = []
+    for row in rows:
+        results.append(
+            {
+                "trading_date": row[0],
+                "sp500_close": row[1],
+                "dow_close": row[2],
+                "nasdaq_close": row[3],
+                "vix_close": row[4],
+                "usd_dxy_close": row[5],
+                "us10y_yield": row[6],
+                "wti_crude_close": row[7],
+                "gold_close": row[8],
+            }
+        )
+
+    return results
+
+
+def get_last_daily_market_snapshot_before_date(
+    conn: Connection,
+    stream_name: str,
+    before_date: date,
+) -> Optional[dict[str, Any]]:
+    """Fetch the last snapshot strictly before a given date."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+                trading_date,
+                sp500_close,
+                dow_close,
+                nasdaq_close,
+                vix_close,
+                usd_dxy_close,
+                us10y_yield,
+                wti_crude_close,
+                gold_close
+            FROM daily_market_snapshots
+            WHERE stream_name = %s
+              AND trading_date < %s
+            ORDER BY trading_date DESC
+            LIMIT 1
+            """,
+            (stream_name, before_date),
+        )
+        row = cur.fetchone()
+
+    if row is None:
+        return None
+
+    return {
+        "trading_date": row[0],
+        "sp500_close": row[1],
+        "dow_close": row[2],
+        "nasdaq_close": row[3],
+        "vix_close": row[4],
+        "usd_dxy_close": row[5],
+        "us10y_yield": row[6],
+        "wti_crude_close": row[7],
+        "gold_close": row[8],
+    }
 
 
 # =============================================================================

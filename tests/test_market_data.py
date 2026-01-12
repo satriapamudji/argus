@@ -285,7 +285,6 @@ class TestMarketDataProvider:
     @patch("argus.adapters.market_data.MarketDataProvider._fetch_index_snapshot")
     def test_fetch_snapshot_success(self, mock_fetch_index):
         """Test full snapshot fetch success."""
-        now = datetime.now(timezone.utc)
 
         def make_snapshot(symbol: str, name: str, as_of: datetime):
             return IndexSnapshot(

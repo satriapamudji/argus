@@ -16,6 +16,8 @@ from argus.facts_bundle.types import (
     FactsBundle,
     MarketSnapshotBundle,
     SpotlightBundle,
+    WeeklyReturnBundle,
+    WeeklyStatsBundle,
 )
 from argus.generator.types import LLMGeneratedContent, NewsContext
 
@@ -88,6 +90,179 @@ def format_bold(text: str) -> str:
 
 
 # =============================================================================
+# Full MarkdownV2 Escaping (for formatted messages)
+# =============================================================================
+
+
+def _escape_text_chars(text: str, chars: str) -> str:
+    """Escape specific characters in text.
+
+    Args:
+        text: Text to escape.
+        chars: String of characters to escape.
+
+    Returns:
+        Text with specified characters escaped.
+    """
+    result = text
+    for char in chars:
+        result = result.replace(char, f"\\{char}")
+    return result
+
+
+def _escape_line_v2(line: str) -> str:
+    """Escape a single line for MarkdownV2.
+
+    Handles:
+    - Bold markers *text*
+    - Underline markers __text__
+    - Underlined bold __*text*__
+    - Links [title](url)
+    - Expandable blockquotes **> and ||
+    - Regular text escaping
+
+    Args:
+        line: A single line of text.
+
+    Returns:
+        Escaped line safe for MarkdownV2.
+    """
+    # Characters that need escaping in ALL contexts (including bold, links)
+    # Full list: _ * [ ] ( ) ~ ` > # + - = | { } . !
+    # Note: We exclude _ from escaping when handling __underline__ format
+    all_escape_chars = r"_[]()~`#+-=|{}.!"
+    # For content inside underline, we escape everything EXCEPT _
+    underline_escape_chars = r"[]()~`#+-=|{}.!"
+
+    result = []
+    i = 0
+
+    while i < len(line):
+        # Expandable blockquote handling:
+        # - Lines starting with '**>' are expandable blockquote headers (preserve **>)
+        # - Lines starting with '>' are blockquote content (preserve >)
+        # - Lines ending with '||' use the expandability marker (preserve ||)
+        if i == 0 and line.startswith("**>"):
+            # Expandable blockquote header: **> prefix must be preserved
+            result.append("**>")
+            i += 3
+            continue
+        if i == 0 and line.startswith(">"):
+            # Regular blockquote line
+            result.append(">")
+            i += 1
+            continue
+        if line[i : i + 2] == "||":
+            # Expandability marker at end of line - preserve it
+            result.append("||")
+            i += 2
+            continue
+
+        # Check for underlined bold: __*text*__
+        if line[i : i + 3] == "__*":
+            # Find closing *__
+            end = line.find("*__", i + 3)
+            if end != -1:
+                # Keep __* and *__ for underlined bold, escape reserved chars inside
+                content = line[i + 3 : end]
+                escaped_content = _escape_text_chars(content, underline_escape_chars)
+                result.append(f"__*{escaped_content}*__")
+                i = end + 3
+                continue
+
+        # Check for underline: __text__
+        if line[i : i + 2] == "__":
+            # Find closing __
+            end = line.find("__", i + 2)
+            if end != -1:
+                # Keep __ for underline, escape reserved chars inside (except _)
+                content = line[i + 2 : end]
+                escaped_content = _escape_text_chars(content, underline_escape_chars)
+                result.append(f"__{escaped_content}__")
+                i = end + 2
+                continue
+
+        # Check for bold: *text*
+        if line[i] == "*":
+            # Find closing *
+            end = line.find("*", i + 1)
+            if end != -1:
+                # Keep * for bold, escape ALL reserved chars inside (including parens)
+                content = line[i + 1 : end]
+                escaped_content = _escape_text_chars(content, all_escape_chars)
+                result.append(f"*{escaped_content}*")
+                i = end + 1
+                continue
+
+        # Check for link: [title](url)
+        if line[i] == "[":
+            # Find ] and then (url)
+            bracket_end = line.find("]", i + 1)
+            if bracket_end != -1 and bracket_end + 1 < len(line) and line[bracket_end + 1] == "(":
+                paren_end = line.find(")", bracket_end + 2)
+                if paren_end != -1:
+                    title = line[i + 1 : bracket_end]
+                    url = line[bracket_end + 2 : paren_end]
+                    # Escape title for link context - need to escape all reserved chars
+                    # In link text, escape: ) \ and all reserved MarkdownV2 chars
+                    escaped_title = _escape_text_chars(title, r"_*[]()~`#+-=|{}.!")
+                    # URL: escape ) only (use URL encoding)
+                    escaped_url = url.replace(")", "%29")
+                    result.append(f"[{escaped_title}]({escaped_url})")
+                    i = paren_end + 1
+                    continue
+
+        # Check for bullet reference like [1], [2] etc (not links)
+        if line[i] == "[" and i + 2 < len(line):
+            # Check if it's a simple reference like [1] or [2][3]
+            bracket_end = line.find("]", i + 1)
+            if bracket_end != -1:
+                ref_content = line[i + 1 : bracket_end]
+                # If it's just a number and not followed by (, it's a reference
+                if ref_content.isdigit():
+                    next_char_idx = bracket_end + 1
+                    if next_char_idx >= len(line) or line[next_char_idx] != "(":
+                        # It's a reference, escape the brackets
+                        result.append(f"\\[{ref_content}\\]")
+                        i = bracket_end + 1
+                        continue
+
+        # Regular character - escape if needed
+        char = line[i]
+        if char in all_escape_chars:
+            result.append(f"\\{char}")
+        else:
+            result.append(char)
+        i += 1
+
+    return "".join(result)
+
+
+def escape_message_v2(raw: str) -> str:
+    """Apply MarkdownV2 escaping to a complete message.
+
+    Preserves intentional formatting (* for bold, [] for links, etc.)
+    while escaping other special characters.
+
+    This is suitable for messages that contain MarkdownV2 formatting
+    that should be preserved (bold, underline, links, blockquotes).
+
+    Args:
+        raw: Raw message string with formatting markers.
+
+    Returns:
+        MarkdownV2-escaped message ready for Telegram.
+    """
+    lines = raw.split("\n")
+    escaped_lines = []
+
+    for line in lines:
+        escaped_lines.append(_escape_line_v2(line))
+
+    return "\n".join(escaped_lines)
+
+
+# =============================================================================
 # Section Formatters
 # =============================================================================
 
@@ -105,11 +280,12 @@ def format_header(trading_date: date) -> str:
     return f"*Market Update*\n*{date_str}*"
 
 
-def format_header_windows(trading_date: date) -> str:
+def format_header_windows(trading_date: date, run_mode: str = "us_close") -> str:
     """Format the header section (Windows-compatible).
 
     Args:
         trading_date: The trading date.
+        run_mode: The run mode (us_close, weekend_wrap, monday_preview).
 
     Returns:
         Formatted header lines.
@@ -119,7 +295,16 @@ def format_header_windows(trading_date: date) -> str:
     month = trading_date.strftime("%b")
     year = trading_date.year
     date_str = f"{day} {month} {year}"
-    return f"*Market Update*\n*{date_str}*"
+
+    # Mode-specific titles
+    if run_mode == "weekend_wrap":
+        title = "Weekly Wrap Up"
+    elif run_mode == "monday_preview":
+        title = "Monday Preview"
+    else:
+        title = "Market Update"
+
+    return f"*{title}*\n*{date_str}*"
 
 
 def _format_decimal(value: Decimal, precision: int = 2) -> str:
@@ -179,19 +364,192 @@ def format_index_snapshot(snapshot: MarketSnapshotBundle) -> str:
     return "\n".join(lines)
 
 
-def format_takeaways(takeaways: list[str]) -> str:
-    """Format the Investor Key Takeaways section.
+def format_cross_assets_section(snapshot: MarketSnapshotBundle) -> str | None:
+    """Format the cross-asset snapshot section.
+
+    Rendered as an expandable blockquote: header visible (bold+underlined),
+    body collapsed by default.
 
     Args:
-        takeaways: List of takeaway bullet points.
+        snapshot: Market snapshot from the bundle.
 
     Returns:
-        Formatted section with header and bullets.
+        Formatted cross-asset section, or None if no cross-asset data.
     """
-    lines = ["__Investor Key Takeaways__"]
-    for takeaway in takeaways:
-        lines.append(f"• {takeaway}")
+    cross = snapshot.cross_assets
+    if not cross:
+        return None
+
+    body_lines: list[str] = []
+
+    # VIX
+    if cross.vix_level is not None:
+        vix_str = f"VIX: {_format_decimal(cross.vix_level, 2)}"
+        if cross.vix_change_pct is not None:
+            vix_str += f" ({cross.vix_change_pct:+.1f}%)"
+        body_lines.append(f"• {vix_str}")
+
+    # 10Y Treasury Yield
+    if cross.us10y_yield is not None:
+        us10y_str = f"10Y UST: {_format_decimal(cross.us10y_yield, 3)}%"
+        if cross.us10y_change_bps is not None:
+            us10y_str += f" ({cross.us10y_change_bps:+.0f} bps)"
+        body_lines.append(f"• {us10y_str}")
+
+    # DXY (Dollar Index)
+    if cross.dxy_level is not None:
+        dxy_str = f"DXY: {_format_decimal(cross.dxy_level, 2)}"
+        if cross.dxy_change_pct is not None:
+            dxy_str += f" ({cross.dxy_change_pct:+.1f}%)"
+        body_lines.append(f"• {dxy_str}")
+
+    # Gold
+    if cross.gold_level is not None:
+        gold_str = f"Gold: ${_format_decimal(cross.gold_level, 2)}"
+        if cross.gold_change_pct is not None:
+            gold_str += f" ({cross.gold_change_pct:+.1f}%)"
+        body_lines.append(f"• {gold_str}")
+
+    # WTI Oil
+    if cross.wti_level is not None:
+        wti_str = f"WTI: ${_format_decimal(cross.wti_level, 2)}"
+        if cross.wti_change_pct is not None:
+            wti_str += f" ({cross.wti_change_pct:+.1f}%)"
+        body_lines.append(f"• {wti_str}")
+
+    if not body_lines:
+        return None
+
+    return _format_expandable_blockquote(header="Cross-Asset Snapshot", body_lines=body_lines)
+
+
+def _format_weekly_return_line(label: str, weekly_return: WeeklyReturnBundle | None) -> str:
+    """Format a single weekly return line."""
+    if weekly_return is None:
+        return f"• {label}: (n/a)"
+    pct = f"{weekly_return.return_pct:+.2f}%"
+    return f"• {label}: {pct}"
+
+
+def format_weekly_stats_section(weekly_stats: WeeklyStatsBundle, run_mode: str) -> str:
+    """Format weekly stats section (weekly recap or prior week performance).
+
+    Rendered as an expandable blockquote: header visible (bold+underlined),
+    body collapsed by default.
+    """
+    header = "Weekly Scorecard" if run_mode == "weekend_wrap" else "Prior Week Performance"
+    body_lines = [
+        f"Week: {weekly_stats.week_start.strftime('%d %b %Y')} to "
+        f"{weekly_stats.week_end.strftime('%d %b %Y')}",
+        _format_weekly_return_line("S&P 500", weekly_stats.sp500_return),
+        _format_weekly_return_line("Dow Jones", weekly_stats.dow_return),
+        _format_weekly_return_line("Nasdaq", weekly_stats.nasdaq_return),
+    ]
+    return _format_expandable_blockquote(header=header, body_lines=body_lines)
+
+
+def format_weekly_stats_plain(weekly_stats: WeeklyStatsBundle, run_mode: str) -> str:
+    """Format weekly stats section as plain text (not collapsed).
+
+    Used for weekend_wrap (Scorecard) and monday_preview (Prior Week) where
+    the performance should be visible without expanding.
+
+    Args:
+        weekly_stats: Weekly stats bundle.
+        run_mode: The run mode.
+
+    Returns:
+        Formatted plain-text section.
+    """
+    # Format date range
+    start_day = weekly_stats.week_start.day
+    start_month = weekly_stats.week_start.strftime("%b")
+    end_day = weekly_stats.week_end.day
+    end_month = weekly_stats.week_end.strftime("%b")
+
+    if run_mode == "weekend_wrap":
+        header = "Scorecard"
+    else:
+        header = "Prior Week"
+
+    # Format: "Scorecard: 05 Jan to 09 Jan" or "Prior Week: 05 Jan to 09 Jan"
+    date_range = f"{start_day:02d} {start_month} to {end_day:02d} {end_month}"
+
+    lines = [f"{header}: {date_range}"]
+
+    # Add performance lines (without the bullet prefix for cleaner look)
+    if weekly_stats.sp500_return is not None:
+        lines.append(f"• S&P 500: {weekly_stats.sp500_return.return_pct:+.2f}%")
+    if weekly_stats.dow_return is not None:
+        lines.append(f"• Dow Jones: {weekly_stats.dow_return.return_pct:+.2f}%")
+    if weekly_stats.nasdaq_return is not None:
+        lines.append(f"• Nasdaq: {weekly_stats.nasdaq_return.return_pct:+.2f}%")
+
     return "\n".join(lines)
+
+
+def _format_expandable_blockquote(*, header: str, body_lines: list[str]) -> str:
+    """Format an expandable blockquote section with header outside.
+
+    Header is displayed outside the blockquote (bold + underlined, always visible).
+    Body lines are inside an expandable blockquote (collapsed by default).
+
+    Telegram expandable blockquote syntax (MarkdownV2):
+    - First line: **> (empty bold entity + blockquote) makes it an expandable quote
+    - Following lines: > prefix
+    - Last line: must end with || to mark the quote as expandable
+
+    Example output:
+        __*Header*__
+        **>• bullet 1
+        >• bullet 2
+        >• last bullet||
+
+    Notes:
+    - We intentionally emit raw MarkdownV2 control characters here (not escaped).
+    - MessageRenderer._escape_line must preserve the '**>' prefix and trailing '||'.
+    """
+    out: list[str] = []
+
+    # Header outside blockquote: bold + underlined
+    out.append(f"__*{header}*__")
+
+    if not body_lines:
+        # No body - just header, no blockquote
+        return out[0]
+
+    # Body lines in expandable blockquote
+    for i, line in enumerate(body_lines):
+        if i == 0:
+            # First body line: **> prefix makes this an expandable blockquote
+            if len(body_lines) == 1:
+                # Single line: needs both **> prefix and || suffix
+                out.append("**>" + line + "||")
+            else:
+                out.append("**>" + line)
+        elif i == len(body_lines) - 1:
+            # Last line: append || to mark as expandable
+            out.append(">" + line + "||")
+        else:
+            out.append(">" + line)
+
+    return "\n".join(out)
+
+
+def format_takeaways(takeaways: list[str], header: str = "Investor Key Takeaways") -> str:
+    """Format the takeaways section.
+
+    Rendered as a minimal expandable blockquote: header visible, body collapsed.
+
+    Args:
+        takeaways: List of takeaway strings.
+        header: Custom header text. Defaults to "Investor Key Takeaways".
+
+    Returns:
+        Formatted expandable blockquote section.
+    """
+    body_lines = [f"• {t}" for t in takeaways]
+    return _format_expandable_blockquote(header=header, body_lines=body_lines)
 
 
 def format_key_dates(calendar_events: tuple[CalendarEventBundle, ...]) -> str:
@@ -217,36 +575,39 @@ def format_key_dates(calendar_events: tuple[CalendarEventBundle, ...]) -> str:
 def format_key_dates_raw(calendar_events: tuple[CalendarEventBundle, ...]) -> str:
     """Format the Key Dates (UTC) section without escaping.
 
+    Rendered as a minimal expandable blockquote: header visible, body collapsed.
+
     Args:
         calendar_events: Calendar events from the bundle.
 
     Returns:
-        Formatted section with header and events (unescaped).
+        Formatted section (unescaped).
     """
-    lines = ["__Key Dates (UTC)__"]
+    header = "Key Dates (UTC)"
 
     if not calendar_events:
-        lines.append("• No major events scheduled")
+        body_lines = ["• No major events scheduled"]
     else:
-        for event in calendar_events:
-            lines.append(f"• {event.formatted_display}")
+        body_lines = [f"• {event.formatted_display}" for event in calendar_events]
 
-    return "\n".join(lines)
+    return _format_expandable_blockquote(header=header, body_lines=body_lines)
 
 
 def format_watch_next(watch_items: list[str]) -> str:
     """Format the What to Watch Next section.
 
+    Rendered as an expandable blockquote: header visible (bold+underlined),
+    body collapsed by default.
+
     Args:
         watch_items: List of watch items.
 
     Returns:
-        Formatted section with header and bullets.
+        Formatted section with header and bullets in expandable blockquote.
     """
-    lines = ["__What to Watch Next__"]
-    for item in watch_items:
-        lines.append(f"• {item}")
-    return "\n".join(lines)
+    header = "What to Watch Next"
+    body_lines = [f"• {item}" for item in watch_items]
+    return _format_expandable_blockquote(header=header, body_lines=body_lines)
 
 
 def format_spotlight(spotlight: SpotlightBundle) -> str:
@@ -298,22 +659,17 @@ def format_sources(
 
     Strict behavior: only includes sources actually cited in the message.
 
-    Args:
-        news_contexts: All news contexts.
-        referenced_ids: List of *news_item_id*s in order of first reference.
-        ref_mapping: Mapping from news_item_id -> new sequential number.
-
-    Returns:
-        Formatted sources section.
+    Rendered as a minimal expandable blockquote: header visible, body collapsed.
     """
-    lines = ["__Sources__"]
+    header = "Sources"
 
     if not referenced_ids:
-        lines.append("• No cited sources.")
-        return "\n".join(lines)
+        empty_body_lines = ["• No cited sources."]
+        return _format_expandable_blockquote(header=header, body_lines=empty_body_lines)
 
     context_by_id = {ctx.news_item_id: ctx for ctx in news_contexts}
 
+    body_lines: list[str] = []
     for item_id in referenced_ids:
         ctx = context_by_id.get(item_id)
         if ctx is None:
@@ -321,10 +677,10 @@ def format_sources(
         display_number = ref_mapping.get(item_id) if ref_mapping else None
         if display_number is None:
             # Fallback: sequential numbering by referenced_ids order
-            display_number = len(lines)  # __Sources__ is already in lines
-        lines.append(ctx.format_for_sources(display_number=display_number))
+            display_number = len(body_lines) + 1
+        body_lines.append(ctx.format_for_sources(display_number=display_number))
 
-    return "\n".join(lines)
+    return _format_expandable_blockquote(header=header, body_lines=body_lines)
 
 
 def renumber_references(
@@ -452,14 +808,34 @@ class MessageRenderer:
     def _render_raw(self, llm_content: LLMGeneratedContent) -> str:
         """Render the message without MarkdownV2 escaping.
 
+        Dispatches to mode-specific rendering methods.
+
         Args:
             llm_content: Generated content from the LLM.
 
         Returns:
             Raw message string.
         """
-        sections = []
+        run_mode = self.bundle.run_mode
 
+        if run_mode == "weekend_wrap":
+            return self._render_weekend_wrap(llm_content)
+        elif run_mode == "monday_preview":
+            return self._render_monday_preview(llm_content)
+        else:
+            return self._render_us_close(llm_content)
+
+    def _prepare_references(
+        self, llm_content: LLMGeneratedContent
+    ) -> tuple[str, list[str], list[str], list[int], dict[int, int]]:
+        """Prepare renumbered references for all text sections.
+
+        Args:
+            llm_content: Generated content from the LLM.
+
+        Returns:
+            Tuple of (narrative, takeaways, watch_next, referenced_ids, ref_mapping).
+        """
         # Get referenced IDs first (needed for renumbering)
         referenced_ids = llm_content.referenced_item_ids
         if not referenced_ids:
@@ -489,8 +865,28 @@ class MessageRenderer:
             renumbered, _ = renumber_references(item, self.news_contexts, referenced_ids)
             watch_next.append(renumbered)
 
+        return narrative, takeaways, watch_next, referenced_ids, ref_mapping
+
+    def _render_us_close(self, llm_content: LLMGeneratedContent) -> str:
+        """Render us_close mode message.
+
+        Format:
+        - Header (Market Update)
+        - Index snapshot
+        - Narrative
+        - Separator
+        - Takeaways
+        - Key Dates
+        - Watch Next
+        - Sources
+        """
+        sections = []
+        narrative, takeaways, watch_next, referenced_ids, ref_mapping = self._prepare_references(
+            llm_content
+        )
+
         # 1. Header (title + date)
-        sections.append(format_header_windows(self.bundle.trading_date))
+        sections.append(format_header_windows(self.bundle.trading_date, "us_close"))
 
         # 2. Index snapshot
         sections.append("")
@@ -527,6 +923,112 @@ class MessageRenderer:
 
         return "\n".join(sections)
 
+    def _render_weekend_wrap(self, llm_content: LLMGeneratedContent) -> str:
+        """Render weekend_wrap mode message.
+
+        Format:
+        - Header (Weekly Wrap Up)
+        - Scorecard (plain, not collapsed)
+        - Cross-Asset Snapshot (collapsed)
+        - Narrative
+        - Separator
+        - Key Takeaways for the Week (collapsed)
+        - Sources (collapsed)
+        - Separator
+        - Sign-off paragraph
+        """
+        sections = []
+        narrative, takeaways, _, referenced_ids, ref_mapping = self._prepare_references(llm_content)
+
+        # 1. Header (Weekly Wrap Up + date)
+        sections.append(format_header_windows(self.bundle.trading_date, "weekend_wrap"))
+
+        # 2. Scorecard (plain, not collapsed)
+        if self.bundle.weekly_stats is not None:
+            sections.append("")
+            sections.append(format_weekly_stats_plain(self.bundle.weekly_stats, "weekend_wrap"))
+
+        # 3. Cross-Asset Snapshot (collapsed)
+        cross_assets_section = format_cross_assets_section(self.bundle.market_snapshot)
+        if cross_assets_section:
+            sections.append("")
+            sections.append(cross_assets_section)
+
+        # 4. Narrative
+        sections.append("")
+        sections.append(narrative)
+
+        # 5. Separator
+        sections.append("")
+        sections.append("—————")
+        sections.append("")
+
+        # 6. Key Takeaways for the Week (collapsed)
+        sections.append(format_takeaways(takeaways, header="Key Takeaways for the Week"))
+
+        # 7. Sources (collapsed)
+        sections.append("")
+        sections.append(format_sources(self.news_contexts, referenced_ids, ref_mapping))
+
+        # 8. Separator before sign-off
+        sections.append("")
+        sections.append("—————")
+
+        # 9. Sign-off paragraph
+        sign_off = getattr(llm_content, "sign_off", None)
+        if sign_off:
+            sections.append("")
+            sections.append(sign_off)
+
+        return "\n".join(sections)
+
+    def _render_monday_preview(self, llm_content: LLMGeneratedContent) -> str:
+        """Render monday_preview mode message.
+
+        Format:
+        - Header (Monday Preview)
+        - Prior Week (plain, not collapsed)
+        - Opening line
+        - Narrative
+        - Separator
+        - Key Things to Look Out For (collapsed)
+        - Key Dates (collapsed)
+        """
+        sections = []
+        narrative, takeaways, _, referenced_ids, ref_mapping = self._prepare_references(llm_content)
+
+        # 1. Header (Monday Preview + date)
+        sections.append(format_header_windows(self.bundle.trading_date, "monday_preview"))
+
+        # 2. Prior Week (plain, not collapsed)
+        if self.bundle.weekly_stats is not None:
+            sections.append("")
+            sections.append(format_weekly_stats_plain(self.bundle.weekly_stats, "monday_preview"))
+
+        # 3. Opening line
+        opening_line = getattr(llm_content, "opening_line", None)
+        if opening_line:
+            sections.append("")
+            sections.append(opening_line)
+
+        # 4. Narrative
+        sections.append("")
+        sections.append(narrative)
+
+        # 5. Separator
+        sections.append("")
+        sections.append("—————")
+        sections.append("")
+
+        # 6. Key Things to Look Out For (collapsed)
+        sections.append(format_takeaways(takeaways, header="Key Things to Look Out For"))
+
+        # 7. Key Dates (collapsed)
+        sections.append("")
+        sections.append(format_key_dates_raw(self.bundle.calendar_events))
+
+        return "\n".join(sections)
+
     def _escape_message(self, raw: str) -> str:
         """Apply MarkdownV2 escaping to the message.
 
@@ -539,117 +1041,7 @@ class MessageRenderer:
         Returns:
             MarkdownV2-escaped message.
         """
-        # MarkdownV2 requires escaping: _ * [ ] ( ) ~ ` > # + - = | { } . !
-        # BUT we need to preserve intentional formatting:
-        # - *text* for bold
-        # - [title](url) for links
-        # - Bullets starting with bullet char
-
-        lines = raw.split("\n")
-        escaped_lines = []
-
-        for line in lines:
-            escaped_lines.append(self._escape_line(line))
-
-        return "\n".join(escaped_lines)
-
-    def _escape_line(self, line: str) -> str:
-        """Escape a single line for MarkdownV2.
-
-        Handles:
-        - Bold markers *text*
-        - Underline markers __text__
-        - Links [title](url)
-        - Regular text escaping
-        """
-        # Characters that need escaping in ALL contexts (including bold, links)
-        # Full list: _ * [ ] ( ) ~ ` > # + - = | { } . !
-        # Note: We exclude _ from escaping when handling __underline__ format
-        all_escape_chars = r"_[]()~`>#+-=|{}.!"
-        # For content inside underline, we escape everything EXCEPT _
-        underline_escape_chars = r"[]()~`>#+-=|{}.!"
-
-        result = []
-        i = 0
-
-        while i < len(line):
-            # Check for underline: __text__
-            if line[i : i + 2] == "__":
-                # Find closing __
-                end = line.find("__", i + 2)
-                if end != -1:
-                    # Keep __ for underline, escape reserved chars inside (except _)
-                    content = line[i + 2 : end]
-                    escaped_content = self._escape_text(content, underline_escape_chars)
-                    result.append(f"__{escaped_content}__")
-                    i = end + 2
-                    continue
-
-            # Check for bold: *text*
-            if line[i] == "*":
-                # Find closing *
-                end = line.find("*", i + 1)
-                if end != -1:
-                    # Keep * for bold, escape ALL reserved chars inside (including parens)
-                    content = line[i + 1 : end]
-                    escaped_content = self._escape_text(content, all_escape_chars)
-                    result.append(f"*{escaped_content}*")
-                    i = end + 1
-                    continue
-
-            # Check for link: [title](url)
-            if line[i] == "[":
-                # Find ] and then (url)
-                bracket_end = line.find("]", i + 1)
-                if (
-                    bracket_end != -1
-                    and bracket_end + 1 < len(line)
-                    and line[bracket_end + 1] == "("
-                ):
-                    paren_end = line.find(")", bracket_end + 2)
-                    if paren_end != -1:
-                        title = line[i + 1 : bracket_end]
-                        url = line[bracket_end + 2 : paren_end]
-                        # Escape title for link context - need to escape all reserved chars
-                        # In link text, escape: ) \ and all reserved MarkdownV2 chars
-                        escaped_title = self._escape_text(title, r"_*[]()~`>#+-=|{}.!")
-                        # URL: escape ) only (use URL encoding)
-                        escaped_url = url.replace(")", "%29")
-                        result.append(f"[{escaped_title}]({escaped_url})")
-                        i = paren_end + 1
-                        continue
-
-            # Check for bullet reference like [1], [2] etc (not links)
-            if line[i] == "[" and i + 2 < len(line):
-                # Check if it's a simple reference like [1] or [2][3]
-                bracket_end = line.find("]", i + 1)
-                if bracket_end != -1:
-                    ref_content = line[i + 1 : bracket_end]
-                    # If it's just a number and not followed by (, it's a reference
-                    if ref_content.isdigit():
-                        next_char_idx = bracket_end + 1
-                        if next_char_idx >= len(line) or line[next_char_idx] != "(":
-                            # It's a reference, escape the brackets
-                            result.append(f"\\[{ref_content}\\]")
-                            i = bracket_end + 1
-                            continue
-
-            # Regular character - escape if needed
-            char = line[i]
-            if char in all_escape_chars:
-                result.append(f"\\{char}")
-            else:
-                result.append(char)
-            i += 1
-
-        return "".join(result)
-
-    def _escape_text(self, text: str, chars: str) -> str:
-        """Escape specific characters in text."""
-        result = text
-        for char in chars:
-            result = result.replace(char, f"\\{char}")
-        return result
+        return escape_message_v2(raw)
 
 
 def render_message(

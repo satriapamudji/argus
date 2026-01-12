@@ -1,6 +1,7 @@
 """RSS ingestion worker for Argus."""
 
 import logging
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -11,7 +12,12 @@ from argus.db.connection import get_connection
 from argus.db.repository import (
     check_duplicate_by_url,
     get_or_create_fingerprint,
+    get_existing_url_hashes,
+    hash_text,
+    hash_url,
     insert_news_item,
+    insert_news_items_batch,
+    upsert_fingerprints_batch,
 )
 from argus.ingestion.rss_parser import parse_feed
 from argus.ingestion.types import RSSEntry
@@ -110,6 +116,84 @@ class RSSWorker:
         logger.info(f"Ingested: {entry.title[:50]}...")
         return True
 
+    def ingest_entries_batch(self, entries: list[RSSEntry]) -> tuple[int, int]:
+        """Ingest multiple RSS entries in a single batch.
+
+        Args:
+            entries: RSS entries to ingest.
+
+        Returns:
+            Tuple of (new_count, duplicate_count).
+        """
+        if not entries:
+            return 0, 0
+
+        stream_name = self.config.stream.name
+        seen_hashes: set[str] = set()
+        unique_entries: list[tuple[RSSEntry, str]] = []
+        duplicate_in_batch = 0
+
+        for entry in entries:
+            url_hash = hash_url(entry.source_url)
+            if url_hash in seen_hashes:
+                duplicate_in_batch += 1
+                continue
+            seen_hashes.add(url_hash)
+            unique_entries.append((entry, url_hash))
+
+        existing_hashes = get_existing_url_hashes(
+            self.conn,
+            stream_name,
+            [url_hash for _, url_hash in unique_entries],
+        )
+
+        new_entries = [
+            (entry, url_hash)
+            for entry, url_hash in unique_entries
+            if url_hash not in existing_hashes
+        ]
+        duplicate_count = duplicate_in_batch + len(existing_hashes)
+
+        if not new_entries:
+            return 0, duplicate_count
+
+        fingerprint_rows = [
+            (
+                stream_name,
+                url_hash,
+                hash_text(entry.title, entry.snippet) if entry.title else None,
+                None,
+                entry.source_name,
+            )
+            for entry, url_hash in new_entries
+        ]
+        fingerprints = upsert_fingerprints_batch(self.conn, fingerprint_rows)
+        fingerprint_by_hash = {fp.hash_url: fp for fp in fingerprints}
+
+        ingested_at = datetime.now(timezone.utc)
+        news_rows = []
+        for entry, url_hash in new_entries:
+            fingerprint = fingerprint_by_hash.get(url_hash)
+            if fingerprint is None:
+                continue
+            news_rows.append(
+                (
+                    stream_name,
+                    fingerprint.id,
+                    entry.source_name,
+                    entry.source_url,
+                    entry.title,
+                    entry.snippet,
+                    entry.author,
+                    entry.published_at,
+                    ingested_at,
+                    entry.raw_metadata,
+                )
+            )
+
+        insert_news_items_batch(self.conn, news_rows)
+        return len(new_entries), duplicate_count
+
     def ingest_feed(self, feed_url: str) -> tuple[int, int, Optional[str]]:
         """Ingest all entries from a single feed.
 
@@ -124,6 +208,14 @@ class RSSWorker:
 
         if error:
             return 0, 0, error
+
+        try:
+            new_count, duplicate_count = self.ingest_entries_batch(entries)
+            return new_count, duplicate_count, None
+        except Exception:
+            logger.exception(
+                "Batch ingestion failed for feed, falling back to per-entry ingestion."
+            )
 
         new_count = 0
         duplicate_count = 0

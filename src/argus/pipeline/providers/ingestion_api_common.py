@@ -10,15 +10,20 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from psycopg2.extensions import connection as Connection
 
 from argus.db.repository import (
     check_duplicate_by_url,
+    get_existing_url_hashes,
     get_or_create_fingerprint,
+    hash_text,
+    hash_url,
     insert_news_item,
+    insert_news_items_batch,
+    upsert_fingerprints_batch,
 )
 
 logger = logging.getLogger(__name__)
@@ -139,3 +144,88 @@ def ingest_article(
 
     logger.info(f"Ingested: {article.title[:50]}...")
     return True
+
+
+def ingest_articles_batch(
+    conn: Connection,
+    articles: list[NormalizedArticle],
+    stream_name: str,
+) -> tuple[int, int]:
+    """Insert multiple articles into the database with deduplication.
+
+    Args:
+        conn: Database connection.
+        articles: Normalized articles to insert.
+        stream_name: Stream name for per-stream deduplication.
+
+    Returns:
+        Tuple of (new_count, duplicate_count).
+    """
+    if not articles:
+        return 0, 0
+
+    seen_hashes: set[str] = set()
+    unique_articles: list[tuple[NormalizedArticle, str]] = []
+    duplicate_in_batch = 0
+
+    for article in articles:
+        url_hash = hash_url(article.url)
+        if url_hash in seen_hashes:
+            duplicate_in_batch += 1
+            continue
+        seen_hashes.add(url_hash)
+        unique_articles.append((article, url_hash))
+
+    existing_hashes = get_existing_url_hashes(
+        conn,
+        stream_name,
+        [url_hash for _, url_hash in unique_articles],
+    )
+
+    new_articles = [
+        (article, url_hash)
+        for article, url_hash in unique_articles
+        if url_hash not in existing_hashes
+    ]
+    duplicate_count = duplicate_in_batch + len(existing_hashes)
+
+    if not new_articles:
+        return 0, duplicate_count
+
+    fingerprint_rows = [
+        (
+            stream_name,
+            url_hash,
+            hash_text(article.title, article.snippet) if article.title else None,
+            None,
+            article.source_name,
+        )
+        for article, url_hash in new_articles
+    ]
+    fingerprints = upsert_fingerprints_batch(conn, fingerprint_rows)
+    fingerprint_by_hash = {fp.hash_url: fp for fp in fingerprints}
+
+    ingested_at = datetime.now(timezone.utc)
+    news_rows = []
+    for article, url_hash in new_articles:
+        fingerprint = fingerprint_by_hash.get(url_hash)
+        if fingerprint is None:
+            continue
+        news_rows.append(
+            (
+                stream_name,
+                fingerprint.id,
+                article.source_name,
+                article.url,
+                article.title,
+                article.snippet,
+                article.author,
+                article.published_at,
+                ingested_at,
+                article.raw_metadata or None,
+            )
+        )
+
+    insert_news_items_batch(conn, news_rows)
+    logger.info(f"Ingested batch: {len(new_articles)} new, {duplicate_count} duplicates")
+    return len(new_articles), duplicate_count

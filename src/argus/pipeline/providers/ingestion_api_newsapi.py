@@ -20,6 +20,7 @@ from argus.ingestion.rss_worker import IngestionStats
 from argus.pipeline.providers.ingestion_api_common import (
     NormalizedArticle,
     ingest_article,
+    ingest_articles_batch,
     parse_iso_datetime,
 )
 from argus.pipeline.providers.news_api_client import (
@@ -200,18 +201,29 @@ class NewsApiIngestionProvider:
                         logger.debug(f"No articles returned on page {page}, stopping pagination")
                         break
 
-                    new_on_page = 0
-                    dup_on_page = 0
-                    for article in response.data:
-                        stats.entries_found += 1
-                        normalized = self._normalize_article(article)
+                    normalized_articles = [self._normalize_article(a) for a in response.data]
+                    stats.entries_found += len(normalized_articles)
 
-                        if ingest_article(conn, normalized, stream_name):
-                            stats.entries_new += 1
-                            new_on_page += 1
-                        else:
-                            stats.entries_duplicate += 1
-                            dup_on_page += 1
+                    try:
+                        new_on_page, dup_on_page = ingest_articles_batch(
+                            conn, normalized_articles, stream_name
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Batch ingestion failed for NewsAPI page, falling back to per-article."
+                        )
+                        new_on_page = 0
+                        dup_on_page = 0
+                        for normalized in normalized_articles:
+                            if ingest_article(conn, normalized, stream_name):
+                                stats.entries_new += 1
+                                new_on_page += 1
+                            else:
+                                stats.entries_duplicate += 1
+                                dup_on_page += 1
+                    else:
+                        stats.entries_new += new_on_page
+                        stats.entries_duplicate += dup_on_page
 
                     # Log usage info if available
                     if response.usage_remaining is not None:

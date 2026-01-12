@@ -8,13 +8,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import yaml
+from dotenv import load_dotenv
+
 
 class UnknownStreamError(ValueError):
     """Raised when a requested stream name does not exist in config."""
-
-
-import yaml
-from dotenv import load_dotenv
 
 
 @dataclass
@@ -563,6 +562,7 @@ class StreamConfig:
 
     name: str = ""
     enabled: bool = True
+    include_cross_assets: bool = False
     providers: StreamProvidersConfig = field(default_factory=StreamProvidersConfig)
     telegram: TelegramConfig = field(default_factory=TelegramConfig)
     schedule: ScheduleConfig = field(default_factory=ScheduleConfig)
@@ -771,6 +771,10 @@ class ArgusConfig:
                 half_day_behavior=holiday_behavior_raw.get("half_day_behavior", "label_half_day"),
             )
 
+            include_cross_assets = stream_raw.get(
+                "include_cross_assets", root_raw.get("include_cross_assets", False)
+            )
+
             # Build NewsAPI config file path from stream name
             stream_name = stream_raw.get("name", "us_markets")
             newsapi_config_file = f"apis/newsapi_{stream_name}.txt"
@@ -780,6 +784,7 @@ class ArgusConfig:
             return StreamConfig(
                 name=stream_raw.get("name", "us_markets"),
                 enabled=stream_raw.get("enabled", True),
+                include_cross_assets=bool(include_cross_assets),
                 providers=providers,
                 telegram=telegram,
                 schedule=schedule,

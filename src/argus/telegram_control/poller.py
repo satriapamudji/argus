@@ -482,7 +482,7 @@ def _handle_user_command(
             trigger = CronTrigger(
                 hour=hour,
                 minute=minute,
-                day_of_week="mon-fri",
+                day_of_week="tue-fri",
                 timezone="Asia/Singapore",
             )
             next_run = trigger.get_next_fire_time(previous_fire_time=None, now=now)
