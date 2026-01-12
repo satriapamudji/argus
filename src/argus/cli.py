@@ -440,9 +440,7 @@ def backfill_cross_assets(
                 usd_dxy_change_pct=float(metrics.dxy_change_pct)
                 if metrics.dxy_change_pct is not None
                 else None,
-                us10y_yield=float(metrics.us10y_yield)
-                if metrics.us10y_yield is not None
-                else None,
+                us10y_yield=float(metrics.us10y_yield) if metrics.us10y_yield is not None else None,
                 us10y_change_bp=float(metrics.us10y_change_bps)
                 if metrics.us10y_change_bps is not None
                 else None,
@@ -464,6 +462,243 @@ def backfill_cross_assets(
         conn.close()
 
     click.echo(f"Done. Updated={updated}, skipped={skipped}")
+
+
+@cli.command(name="backfill-snapshots")
+@click.option("--stream", default=None, help="Stream name (default: current stream)")
+@click.option(
+    "--start-date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    required=True,
+    help="Start date (YYYY-MM-DD)",
+)
+@click.option(
+    "--end-date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    help="End date (YYYY-MM-DD, default: today)",
+)
+@click.option("--dry-run", is_flag=True, default=False, help="Show actions without writing")
+@click.pass_context
+def backfill_snapshots(
+    ctx: click.Context,
+    stream: Optional[str],
+    start_date: datetime,
+    end_date: Optional[datetime],
+    dry_run: bool,
+) -> None:
+    """Backfill daily_market_snapshots with historical data from yfinance.
+
+    Creates or overwrites snapshots for all trading days in the date range.
+    Fetches index closes (S&P 500, Dow, Nasdaq) and cross-assets (VIX, 10Y, DXY, WTI, Gold).
+
+    Example:
+        argus backfill-snapshots --start-date 2025-12-01 --end-date 2026-01-10
+    """
+    from datetime import date, timedelta
+    from decimal import Decimal
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
+    config_path = ctx.obj.get("config_path")
+    config = ArgusConfig.load(config_path)
+
+    if stream is None:
+        if len(config.streams) > 1:
+            click.echo(
+                "Error: --stream is required when config.yaml defines multiple streams. "
+                f"Available: {', '.join(config.list_streams())}",
+                err=True,
+            )
+            raise SystemExit(2)
+        stream = config.stream.name
+
+    try:
+        config.select_stream(stream)
+    except UnknownStreamError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(2)
+
+    start = start_date.date()
+    end = end_date.date() if end_date else date.today()
+
+    click.echo(f"Backfilling snapshots for stream='{stream}' from {start} to {end}")
+
+    if dry_run:
+        click.echo("[DRY RUN] No data will be written.")
+
+    # Import yfinance
+    try:
+        import yfinance as yf
+    except ImportError:
+        click.echo("Error: yfinance is required. Install with: pip install yfinance", err=True)
+        raise SystemExit(1)
+
+    # Symbols
+    INDEX_SYMBOLS = {
+        "sp500": "^GSPC",
+        "dow": "^DJI",
+        "nasdaq": "^IXIC",
+    }
+    CROSS_SYMBOLS = {
+        "vix": "^VIX",
+        "us10y": "^TNX",
+        "dxy": "DX-Y.NYB",
+        "wti": "CL=F",
+        "gold": "GC=F",
+    }
+
+    # Fetch historical data for all symbols
+    all_symbols = list(INDEX_SYMBOLS.values()) + list(CROSS_SYMBOLS.values())
+    click.echo(f"Fetching data for {len(all_symbols)} symbols...")
+
+    # yfinance download for date range (add buffer days)
+    buffer_start = start - timedelta(days=5)
+    data = yf.download(
+        all_symbols,
+        start=buffer_start.isoformat(),
+        end=(end + timedelta(days=1)).isoformat(),
+        progress=False,
+        group_by="ticker",
+    )
+
+    if data.empty:
+        click.echo("Error: No data returned from yfinance", err=True)
+        raise SystemExit(1)
+
+    click.echo(f"Received data from {data.index[0].date()} to {data.index[-1].date()}")
+
+    # Helper to get close price and calculate change
+    def get_close_and_change(
+        symbol: str, current_date: date, prev_date: Optional[date]
+    ) -> tuple[Optional[float], Optional[float]]:
+        try:
+            # Handle multi-level columns from group_by='ticker'
+            if isinstance(data.columns, pd.MultiIndex):
+                close_series = data[(symbol, "Close")]
+            else:
+                close_series = data["Close"][symbol]
+
+            current_ts = pd.Timestamp(current_date)
+            if current_ts not in close_series.index:
+                return None, None
+
+            close = float(close_series.loc[current_ts])
+            if pd.isna(close):
+                return None, None
+
+            change_pct = None
+            if prev_date:
+                prev_ts = pd.Timestamp(prev_date)
+                if prev_ts in close_series.index:
+                    prev_close = float(close_series.loc[prev_ts])
+                    if not pd.isna(prev_close) and prev_close != 0:
+                        change_pct = ((close - prev_close) / prev_close) * 100.0
+
+            return close, change_pct
+        except Exception:
+            return None, None
+
+    # Import pandas for Timestamp
+    import pandas as pd
+
+    # Get trading days from the data index
+    trading_days = [d.date() for d in data.index if start <= d.date() <= end]
+    click.echo(f"Found {len(trading_days)} trading days in range")
+
+    if not trading_days:
+        click.echo("No trading days found in the specified range.")
+        return
+
+    # Connect to DB
+    if not dry_run:
+        from argus.db.connection import get_connection
+        from argus.db.daily_market_snapshots import upsert_daily_market_snapshot
+
+        conn = get_connection()
+
+    created = 0
+    skipped = 0
+
+    # Get all dates for prev-day lookup
+    all_dates = sorted([d.date() for d in data.index])
+
+    for trading_date in trading_days:
+        # Find previous trading day
+        prev_date = None
+        date_idx = all_dates.index(trading_date) if trading_date in all_dates else -1
+        if date_idx > 0:
+            prev_date = all_dates[date_idx - 1]
+
+        # Fetch index data
+        sp500_close, sp500_change = get_close_and_change(
+            INDEX_SYMBOLS["sp500"], trading_date, prev_date
+        )
+        dow_close, dow_change = get_close_and_change(INDEX_SYMBOLS["dow"], trading_date, prev_date)
+        nasdaq_close, nasdaq_change = get_close_and_change(
+            INDEX_SYMBOLS["nasdaq"], trading_date, prev_date
+        )
+
+        if sp500_close is None or dow_close is None or nasdaq_close is None:
+            click.echo(f"[skip] {trading_date}: missing index data")
+            skipped += 1
+            continue
+
+        # Fetch cross-asset data
+        vix_close, vix_change = get_close_and_change(CROSS_SYMBOLS["vix"], trading_date, prev_date)
+        us10y_close, _ = get_close_and_change(CROSS_SYMBOLS["us10y"], trading_date, prev_date)
+        dxy_close, dxy_change = get_close_and_change(CROSS_SYMBOLS["dxy"], trading_date, prev_date)
+        wti_close, wti_change = get_close_and_change(CROSS_SYMBOLS["wti"], trading_date, prev_date)
+        gold_close, gold_change = get_close_and_change(
+            CROSS_SYMBOLS["gold"], trading_date, prev_date
+        )
+
+        # Calculate 10Y yield change in basis points
+        us10y_change_bp = None
+        if us10y_close is not None and prev_date:
+            prev_us10y, _ = get_close_and_change(CROSS_SYMBOLS["us10y"], prev_date, None)
+            if prev_us10y is not None:
+                us10y_change_bp = (us10y_close - prev_us10y) * 100.0  # Convert to bps
+
+        if dry_run:
+            click.echo(
+                f"[dry-run] {trading_date}: "
+                f"SPX={sp500_close:.2f} ({sp500_change:+.2f}%), "
+                f"VIX={vix_close:.2f if vix_close else 'N/A'}"
+            )
+        else:
+            upsert_daily_market_snapshot(
+                conn,
+                stream_name=stream,
+                trading_date=trading_date,
+                sp500_close=sp500_close,
+                sp500_change_pct=sp500_change,
+                dow_close=dow_close,
+                dow_change_pct=dow_change,
+                nasdaq_close=nasdaq_close,
+                nasdaq_change_pct=nasdaq_change,
+                vix_close=vix_close,
+                vix_change_pct=vix_change,
+                usd_dxy_close=dxy_close,
+                usd_dxy_change_pct=dxy_change,
+                us10y_yield=us10y_close,
+                us10y_change_bp=us10y_change_bp,
+                wti_crude_close=wti_close,
+                wti_crude_change_pct=wti_change,
+                gold_close=gold_close,
+                gold_change_pct=gold_change,
+                source_name="yfinance_backfill",
+            )
+            conn.commit()
+            click.echo(f"[ok] {trading_date}: snapshot upserted")
+
+        created += 1
+
+    if not dry_run:
+        conn.close()
+
+    click.echo(f"Done. Created/updated={created}, skipped={skipped}")
 
 
 @cli.group()
