@@ -38,11 +38,56 @@ This is an **experimental stream** to validate data source reliability, API cost
 | CEX Open Interest | Leverage in the system | P1 (Important) |
 | CEX Exchange Reserves | BTC/ETH held on exchanges | P1 (Important) |
 | News | Crypto-specific headlines | P0 (Essential) |
-| DeFi TVL | Ecosystem health indicator | P2 (De-prioritized) |
+| DeFi TVL | Ecosystem health indicator | P1 (Include in v1) |
 
 **Note:** Whale tracking on DEXes is de-prioritized as most meaningful institutional flow occurs on CEXes. Focus is on CEX-derived metrics (Binance, OKX, Bybit, Coinbase data).
 
 ## Data Source Analysis
+
+### 0. Unified API Option - ChartInspect
+
+ChartInspect provides a single REST API that covers **crypto OHLCV**, **Bitcoin on-chain metrics**, and **derivatives** (funding + open interest) under one auth model.
+
+- Base URL: `https://chartinspect.com/api/v1`
+- Auth (recommended): `X-API-Key: <key>`
+- Auth (alternative): `Authorization: Bearer <key>`
+- Env var: `CHARTINSPECT_API` (API key)
+
+Key endpoints (from docs):
+
+```
+# Prices
+GET /crypto/prices/{symbol}?days=N      # e.g. BTC, ETH, SOL
+GET /crypto/prices/list                # Symbols available (does NOT include market cap / rank)
+
+# On-chain
+GET /onchain/status
+GET /onchain/{metric}?days=N           # e.g. mvrv-data, sopr
+
+# Derivatives
+# NOTE: Pro subscription required (free tier returns 403).
+GET /derivatives/futures_funding_rates
+GET /derivatives/futures_open_interest
+
+# Market indicators
+# NOTE: Pro subscription required (free tier returns 403).
+GET /market-indicators/{indicator}     # e.g. altcoin-season-index-90d-top-50
+
+# Exchange / ETF
+# NOTE: Pro subscription required (free tier returns 403).
+GET /exchange-etf/exchange-balances
+GET /exchange-etf/etf-balances
+```
+
+Example response shapes (docs examples):
+- `/crypto/prices/BTC?days=30` returns `{ date, open, high, low, close, volume }[]` + `metadata`.
+- `/onchain/mvrv-data?days=90` returns `{ date, mvrv, marketCap, realizedCap }[]` + `metadata`.
+
+How this fits Task 28:
+- Can supply **BTC/ETH daily OHLCV** aligned to “day ended” recaps.
+- Can supply **Bitcoin on-chain metrics** (e.g., MVRV, SOPR) on the free tier.
+- Derivatives/indicators/exchange+ETF endpoints require Pro; for v1 (free tier) we still need **Binance/CoinGlass** for funding + open interest.
+- `crypto/prices/list` is symbols-only, so we still need **CoinGecko** (or equivalent) for **dynamic top N by market cap**.
 
 ### 1. Price & Market Data
 
@@ -52,6 +97,7 @@ This is an **experimental stream** to validate data source reliability, API cost
 | **CoinMarketCap** | Yes | 333 req/day (10K/mo) | 10,000+ coins | Backup |
 | **CoinPaprika** | Yes | 250K lifetime | 2,000 top coins | Alternative |
 | **Messari** | Yes (limited) | Rate limited | 500+ assets | Research data |
+| **ChartInspect** | Free plan (API key) | TBD | OHLCV for major crypto symbols | Candidate (unified stack) |
 
 **CoinGecko Recommended Endpoints:**
 
@@ -135,6 +181,7 @@ GET https://api.llama.fi/chains     # TVL by chain
 
 | Provider | Free Tier | Coverage | API |
 |----------|-----------|----------|-----|
+| **ChartInspect** | Pro required | Funding + open interest | REST API |
 | **CoinGlass** | ✅ Limited free | All major exchanges | REST API |
 | **Binance API** | ✅ Free | Binance Futures only | Direct API |
 | **CoinAPI** | Paid | Multi-exchange | REST API |
@@ -160,6 +207,7 @@ GET https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1
 
 | Provider | Free Tier | Data Type | Coverage |
 |----------|-----------|-----------|----------|
+| **ChartInspect** | Pro required | Exchange balances, ETF balances, OI, funding | Multi-source |
 | **CoinGlass** | ✅ Limited | OI, Funding, Liquidations | All major CEXes |
 | **CryptoQuant** | ✅ Limited | Exchange Reserves, Flows | BTC, ETH on CEXes |
 | **Coinalyze** | ✅ Free | OI, Funding, Long/Short | Major pairs |
@@ -619,6 +667,7 @@ def _fear_greed_emoji(value: int) -> str:
 
 | File | Purpose |
 |------|---------|
+| `src/argus/adapters/chartinspect.py` | ChartInspect unified market data client |
 | `src/argus/adapters/coingecko.py` | CoinGecko API client |
 | `src/argus/adapters/fear_greed.py` | Fear & Greed Index client |
 | `src/argus/adapters/defillama.py` | DeFiLlama TVL client |
