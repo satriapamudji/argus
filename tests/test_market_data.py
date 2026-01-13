@@ -316,3 +316,44 @@ class TestMarketDataProvider:
 
         with pytest.raises(ValueError, match="Failed to fetch required index data"):
             provider.fetch_snapshot()
+
+    @patch("argus.adapters.market_data.MarketDataProvider._get_yfinance")
+    @patch("argus.adapters.market_data.MarketDataProvider._fetch_index_snapshot")
+    def test_fetch_snapshot_cross_assets_single_row_history(self, mock_fetch_index, mock_get_yf):
+        """Ensure cross-assets are still populated when Yahoo returns only 1 close row.
+
+        This mirrors the observed difference between runtime snapshots (which may see
+        sparse/partial history) and date-based backfills (which succeed).
+        """
+        import pandas as pd
+
+        trading_date = date(2026, 1, 12)
+
+        def make_snapshot(symbol: str, name: str, as_of: datetime):
+            return IndexSnapshot(
+                name=name,
+                symbol=symbol,
+                level=Decimal("5000.00"),
+                change_1d_pct=Decimal("1.00"),
+                change_1d_pts=Decimal("50.00"),
+                as_of=as_of,
+            )
+
+        mock_fetch_index.side_effect = make_snapshot
+
+        # Simulate yfinance returning only a single daily close row (common around weekends /
+        # if the "current" bar isn't available yet for a given ticker).
+        mock_yf = MagicMock()
+        mock_ticker = MagicMock()
+        mock_ticker.history.return_value = pd.DataFrame(
+            {"Close": [18.0]},
+            index=pd.DatetimeIndex([pd.Timestamp(trading_date)]),
+        )
+        mock_yf.Ticker.return_value = mock_ticker
+        mock_get_yf.return_value = mock_yf
+
+        provider = MarketDataProvider(include_cross_assets=True)
+        snapshot = provider.fetch_snapshot(trading_date)
+
+        assert snapshot.cross_assets is not None
+        assert snapshot.cross_assets.vix_level == Decimal("18.0")

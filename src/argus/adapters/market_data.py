@@ -438,7 +438,9 @@ class MarketDataProvider:
         # Fetch optional cross-assets
         cross_assets = None
         if self._include_cross_assets:
-            cross_assets = self._fetch_cross_assets(now)
+            # Use a date-based window to improve reliability (some Yahoo tickers return
+            # sparse/partial 2d history at runtime, which can lead to missing fields).
+            cross_assets = self._fetch_cross_assets_for_date(trading_date)
 
         return MarketSnapshot(
             trading_date=trading_date,
