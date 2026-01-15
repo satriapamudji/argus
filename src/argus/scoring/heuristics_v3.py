@@ -154,7 +154,7 @@ _CRYPTO_PROTOCOL_BOOSTERS: list[tuple[str, re.Pattern[str], int]] = [
         "exchange_suspension",
         re.compile(
             r"\b(withdrawal\s+suspend|deposit\s+suspend|halt|pause|"
-            r"suspend|maintenance| outage)\b",
+            r"suspend|maintenance|outage)\b",
             re.I,
         ),
         20,
@@ -400,8 +400,8 @@ def _apply_crypto_post_adjustments(
         score = max(score, 42)  # Market structure gets medium floor
 
     # Soft cap to prevent any single category from dominating
-    if score > 75:
-        score = min(score, 72)
+    if score > 72:
+        score = 72
 
     # Clamp final score to 0..100
     base.impact_score = max(0, min(100, int(score)))

@@ -315,18 +315,17 @@ class TestEdgeCases:
         """Test item with both boost and penalty signals."""
         candidate = _create_candidate(
             1,
-            "Bitcoin Will Reach $1M After SEC Approval, Analyst Predicts",
+            "SEC Approves Bitcoin ETF, Analyst Predicts BTC Will Reach $1M",
         )
         config = ScoringConfig()
         results = score_candidates_v3([candidate], config)
 
         # Should have both boost and penalty flags
-        flags = " ".join(results[0].flags)
         has_boost = any("v3_boost" in flag for flag in results[0].flags)
         has_penalty = any("v3_penalty" in flag for flag in results[0].flags)
 
-        # Regulation boost should be present
-        assert has_boost or has_penalty
+        assert has_boost, "Expected a v3_boost flag"
+        assert has_penalty, "Expected a v3_penalty flag"
 
 
 if __name__ == "__main__":
