@@ -93,16 +93,21 @@ class ScoringWorker:
                 ni.raw_metadata->>'feed_url' AS feed_url,
                 ni.author
             FROM news_items ni
-            JOIN news_fingerprints nf ON ni.fingerprint_id = nf.id
-            LEFT JOIN news_scores ns ON ni.id = ns.news_item_id
+            JOIN news_fingerprints nf
+              ON ni.fingerprint_id = nf.id
+             AND nf.stream_name = ni.stream_name
+            LEFT JOIN news_scores ns
+              ON ni.id = ns.news_item_id
+             AND ns.stream_name = ni.stream_name
             WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+              AND ni.stream_name = %s
               AND ns.id IS NULL
             ORDER BY ni.ingested_at DESC
             LIMIT %s
         """
 
         with self.conn.cursor() as cur:
-            cur.execute(query, (self.window_hours, limit))
+            cur.execute(query, (self.window_hours, self.config.stream.name, limit))
             rows = cur.fetchall()
 
         return [
@@ -133,11 +138,12 @@ class ScoringWorker:
             FROM news_fingerprints nf
             JOIN news_items ni ON nf.id = ni.fingerprint_id
             WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+              AND ni.stream_name = %s
               AND nf.simhash IS NOT NULL
         """
 
         with self.conn.cursor() as cur:
-            cur.execute(query, (self.window_hours,))
+            cur.execute(query, (self.window_hours, self.config.stream.name))
             rows = cur.fetchall()
 
         return [row[0] for row in rows if row[0] is not None]
@@ -146,8 +152,8 @@ class ScoringWorker:
         """Check if a news item already has a score."""
         with self.conn.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM news_scores WHERE news_item_id = %s LIMIT 1",
-                (news_item_id,),
+                "SELECT 1 FROM news_scores WHERE news_item_id = %s AND stream_name = %s LIMIT 1",
+                (news_item_id, self.config.stream.name),
             )
             return cur.fetchone() is not None
 

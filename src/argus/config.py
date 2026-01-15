@@ -306,6 +306,7 @@ class DaemonConfig:
             "us_close": True,
             "weekend_wrap": True,
             "monday_preview": True,
+            "crypto_daily": True,
             "retention": True,
         }
     )
@@ -581,6 +582,18 @@ class CryptoStreamConfig:
 
 
 @dataclass
+class StreamDaemonConfig:
+    """Per-stream daemon job overrides.
+
+    Allows enabling/disabling specific jobs for this stream.
+    When jobs_enabled[job_id] is set, it overrides the global daemon.jobs_enabled value.
+    When not set (None or missing key), the global default is used.
+    """
+
+    jobs_enabled: dict[str, bool] = field(default_factory=dict)
+
+
+@dataclass
 class StreamConfig:
     """Stream configuration."""
 
@@ -603,6 +616,7 @@ class StreamConfig:
     holiday_behavior: HolidayBehaviorConfig = field(default_factory=HolidayBehaviorConfig)
     news_api: NewsApiConfig = field(default_factory=NewsApiConfig)
     crypto: CryptoStreamConfig = field(default_factory=CryptoStreamConfig)
+    daemon: StreamDaemonConfig = field(default_factory=StreamDaemonConfig)
 
 
 @dataclass
@@ -817,6 +831,12 @@ class ArgusConfig:
                 ),
             )
 
+            # Per-stream daemon configuration (job overrides)
+            stream_daemon_raw = stream_raw.get("daemon", {})
+            stream_daemon = StreamDaemonConfig(
+                jobs_enabled=stream_daemon_raw.get("jobs_enabled", {}),
+            )
+
             return StreamConfig(
                 name=stream_raw.get("name", "us_markets"),
                 enabled=stream_raw.get("enabled", True),
@@ -837,6 +857,7 @@ class ArgusConfig:
                 holiday_behavior=holiday_behavior,
                 news_api=news_api,
                 crypto=crypto,
+                daemon=stream_daemon,
             )
 
         # Build stream config(s) from YAML.
@@ -880,6 +901,7 @@ class ArgusConfig:
                 "us_close": jobs_enabled_raw.get("us_close", True),
                 "weekend_wrap": jobs_enabled_raw.get("weekend_wrap", True),
                 "monday_preview": jobs_enabled_raw.get("monday_preview", True),
+                "crypto_daily": jobs_enabled_raw.get("crypto_daily", True),
                 "retention": jobs_enabled_raw.get("retention", True),
             },
             missed_policy={
@@ -955,3 +977,31 @@ class ArgusConfig:
                         if line and not line.startswith("#"):
                             feeds.append(line)
         return feeds
+
+
+def is_job_enabled_for_stream(
+    stream_cfg: StreamConfig,
+    job_id: str,
+    global_daemon: DaemonConfig,
+) -> bool:
+    """Check if a job is enabled for a specific stream.
+
+    Resolution order:
+    1. Per-stream override (stream_cfg.daemon.jobs_enabled[job_id]) takes precedence
+    2. Falls back to global daemon config (global_daemon.jobs_enabled[job_id])
+
+    Args:
+        stream_cfg: The stream configuration to check.
+        job_id: The job identifier (e.g., "us_close", "crypto_daily").
+        global_daemon: The global daemon configuration.
+
+    Returns:
+        True if the job should run for this stream, False otherwise.
+    """
+    # Check per-stream override first
+    stream_override = stream_cfg.daemon.jobs_enabled.get(job_id)
+    if stream_override is not None:
+        return stream_override
+
+    # Fall back to global default
+    return global_daemon.jobs_enabled.get(job_id, False)

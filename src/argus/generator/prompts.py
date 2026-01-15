@@ -12,7 +12,10 @@ from argus.facts_bundle.types import (
     FactsBundle,
 )
 from argus.generator.types import GenerationMode, NewsContext
-from argus.generator.prompts_crypto import get_crypto_daily_prompt
+from argus.generator.prompts_crypto import (
+    format_crypto_user_prompt,
+    get_crypto_daily_prompt,
+)
 
 # =============================================================================
 # System Prompts
@@ -417,6 +420,82 @@ def format_calendar_for_prompt(bundle: FactsBundle | CryptoFactsBundle) -> str:
     return "\n".join(lines)
 
 
+def _classify_fear_greed(value: int) -> str:
+    """Classify Fear & Greed Index value into text description."""
+    if value >= 75:
+        return "Extreme Greed"
+    elif value >= 60:
+        return "Greed"
+    elif value >= 45:
+        return "Neutral"
+    elif value >= 25:
+        return "Fear"
+    else:
+        return "Extreme Fear"
+
+
+def _format_crypto_news_summary(news_contexts: list[NewsContext]) -> str:
+    """Format news items for crypto prompt.
+
+    Args:
+        news_contexts: Pre-processed news items with citation keys.
+
+    Returns:
+        Formatted news summary string.
+    """
+    if not news_contexts:
+        return "No news items."
+
+    lines = []
+    for ctx in news_contexts:
+        # Format: [#A1B2C3D4] Title - Source
+        line = f"[#{ctx.cite_key}] {ctx.title}"
+        if ctx.source_name:
+            line += f" - {ctx.source_name}"
+        lines.append(line)
+
+    return "\n".join(lines)
+
+
+def _format_crypto_derivatives_summary(bundle: CryptoFactsBundle) -> str:
+    """Format derivatives data for crypto prompt.
+
+    Args:
+        bundle: The crypto facts bundle.
+
+    Returns:
+        Formatted derivatives summary string.
+    """
+    snapshot = bundle.market_snapshot
+    metrics = snapshot.crypto_metrics
+
+    if not metrics:
+        return "No derivatives data available."
+
+    lines = []
+
+    # Funding rates
+    if metrics.funding_rates:
+        lines.append("Funding Rates:")
+        for symbol, rate in sorted(metrics.funding_rates.items()):
+            rate_bps = float(rate) * 10000  # Convert to bps
+            sentiment = "bullish" if rate_bps > 0 else "bearish" if rate_bps < 0 else "neutral"
+            lines.append(f"  {symbol}: {rate_bps:+.1f} bps ({sentiment})")
+
+    # Open interest
+    if metrics.open_interest:
+        if lines:  # Add separator if we already have funding rates
+            lines.append("")
+        lines.append("Open Interest:")
+        for symbol, oi in sorted(metrics.open_interest.items()):
+            oi_billion = float(oi) / 1e9
+            # Only show if significant (> $100M)
+            if oi_billion > 0.1:
+                lines.append(f"  {symbol}: ${oi_billion:.2f}B")
+
+    return "\n".join(lines) if lines else "No derivatives data available."
+
+
 def build_user_prompt(
     bundle: FactsBundle | CryptoFactsBundle,
     news_contexts: list[NewsContext],
@@ -434,6 +513,53 @@ def build_user_prompt(
     Returns:
         Complete user prompt string.
     """
+    # Crypto mode uses specialized prompt formatting
+    if mode == GenerationMode.CRYPTO_DAILY and isinstance(bundle, CryptoFactsBundle):
+        snapshot = bundle.market_snapshot
+        metrics = snapshot.crypto_metrics
+
+        # Extract required parameters for crypto prompt
+        news_summary = _format_crypto_news_summary(news_contexts)
+        derivatives_summary = _format_crypto_derivatives_summary(bundle)
+
+        # Get market data values
+        btc_price = float(snapshot.btc.price_usd)
+        btc_change = float(snapshot.btc.change_1d_pct)
+        eth_price = float(snapshot.eth.price_usd)
+        eth_change = float(snapshot.eth.change_1d_pct)
+
+        # Total market cap and BTC dominance (with None safety)
+        total_mcap = float(metrics.total_market_cap) / 1e9 if metrics and metrics.total_market_cap else 0
+        btc_dom = float(metrics.btc_dominance) if metrics and metrics.btc_dominance else 0
+
+        # Fear & Greed (with None safety)
+        fear_greed = int(metrics.fear_greed_index) if metrics and metrics.fear_greed_index else 50
+        fear_greed_classification = _classify_fear_greed(fear_greed)
+
+        # DeFi TVL
+        defi_tvl = float(snapshot.defi_tvl.total_tvl_usd) / 1e9 if snapshot.defi_tvl else 0
+
+        # Trading date
+        trading_date = bundle.trading_date.isoformat()
+
+        # Use crypto-specific formatter
+        return format_crypto_user_prompt(
+            trading_date=trading_date,
+            btc_price=btc_price,
+            btc_change=btc_change,
+            eth_price=eth_price,
+            eth_change=eth_change,
+            total_mcap=total_mcap,
+            btc_dom=btc_dom,
+            fear_greed=fear_greed,
+            fear_greed_classification=fear_greed_classification,
+            news_count=len(news_contexts),
+            news_summary=news_summary,
+            derivatives_summary=derivatives_summary,
+            defi_tvl=defi_tvl,
+        )
+
+    # Standard mode: use generic prompt building
     # Market data section
     market_data = format_market_data_for_prompt(bundle)
 

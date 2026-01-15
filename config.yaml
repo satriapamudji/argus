@@ -81,6 +81,11 @@ streams:
       body: ""
       disclaimer: ""
 
+    # Per-stream daemon job overrides (takes precedence over global daemon.jobs_enabled)
+    daemon:
+      jobs_enabled:
+        crypto_daily: false  # us_markets doesn't run crypto_daily
+
   crypto:
     name: crypto
     enabled: true
@@ -142,6 +147,13 @@ streams:
       title: ""
       body: ""
       disclaimer: ""
+
+    # Per-stream daemon job overrides (takes precedence over global daemon.jobs_enabled)
+    daemon:
+      jobs_enabled:
+        us_close: false       # crypto doesn't run us_close
+        weekend_wrap: false   # crypto doesn't run weekend_wrap
+        monday_preview: false # crypto doesn't run monday_preview
 
     # Crypto-specific configuration
     crypto:

@@ -57,29 +57,24 @@ Configuration is loaded from two sources:
 ### config.yaml Structure
 
 ```yaml
-stream:
-  name: us_markets
-  enabled: true
+streams:
+  us_markets:
+    enabled: true
+    rss:
+      allowlist_files: ["rss/us_markets.txt"]
+      poll_interval_minutes: 20
+    schedule:
+      daily_us_close_sgt: "06:00"
+      weekend_wrap_sgt: "10:00"
+      monday_preview_ny: "SUN 18:10"
 
-schedule:
-  daily_us_close_sgt: "06:00"    # Mon-Fri 06:00 SGT
-  weekend_wrap_sgt: "10:00"      # Sat 10:00 SGT
-  monday_preview_ny: "SUN 18:10" # Sun 18:10 America/New_York
-
-retention:
-  news_items_days: 60     # Keep news for 60 days
-  fingerprints_days: 3650 # Keep dedupe fingerprints for 10 years
-  runs_days: 3650         # Keep run history for 10 years
-
-constraints:
-  max_words_daily: 420
-  max_words_weekend: 520
-  max_words_preview: 320
-
-rss:
-  allowlist_files:
-    - "rss/us_markets.txt"
-  poll_interval_minutes: 10
+  crypto:
+    enabled: true
+    rss:
+      allowlist_files: ["rss/crypto.txt"]
+      poll_interval_minutes: 20
+    schedule:
+      daily_crypto_utc: "00:00"
 ```
 
 ### RSS Feed Configuration
@@ -128,9 +123,9 @@ This means being the owner/admin does **not** automatically subscribe you to bro
 |---------|-------------|
 | `argus run` | Execute a full pipeline run (ingest → score → generate → publish) |
 | `argus smoke` | Run offline smoke test using fixtures (no network required) |
-| `argus ingest` | Poll RSS feeds and ingest new items |
-| `argus score` | Score unscored news items |
-| `argus enrich` | Fetch full content for top-scored items |
+| `argus ingest --stream <stream>` | Poll RSS feeds and ingest new items for a stream |
+| `argus score --stream <stream>` | Score unscored news items for a stream |
+| `argus enrich --stream <stream>` | Fetch full content for top-scored items for a stream |
 | `argus bundle` | Build a facts bundle for generation |
 | `argus generate` | Generate a message from a facts bundle |
 | `argus publish` | Publish a message to Telegram |
@@ -158,8 +153,8 @@ This means being the owner/admin does **not** automatically subscribe you to bro
 |---------|-------------|
 | `argus daemon start` | Run daemon scheduler in foreground |
 | `argus daemon status` | Show daemon and job status |
-| `argus daemon trigger <job>` | Manually trigger a scheduled job |
-| `argus daemon history <job>` | Show recent run history for a job |
+| `argus daemon trigger <job_id_or_key>` | Manually trigger a job (supports `job:stream`) |
+| `argus daemon history <job_id_or_key>` | Show recent run history (supports `job:stream`) |
 
 ### Common Options
 
@@ -204,6 +199,11 @@ The smoke test:
 
 For VPS deployment, Argus can run as a long-lived daemon with internal scheduling, eliminating the need for external cron configuration.
 
+### Scheduling model (multi-stream)
+
+- `ingest:<stream>` runs on a short interval and continuously writes new items into the DB for that stream.
+- Scheduled report jobs (`us_close:<stream>`, `crypto_daily:<stream>`, etc.) run `score → enrich → bundle → generate → publish` using the DB window (they do not ingest).
+
 **Note:** `argus daemon start` also starts the Telegram control plane (long polling) when `TELEGRAM_OWNER_USER_ID` and `TELEGRAM_ADMIN_CHAT_ID` are set.
 
 ```bash
@@ -213,11 +213,12 @@ argus daemon start
 # Check status
 argus daemon status
 
-# Manually trigger a job
-argus daemon trigger ingest
+# Manually trigger a per-stream job
+argus daemon trigger ingest:crypto
+argus daemon trigger crypto_daily:crypto
 
 # View job history
-argus daemon history us_close
+argus daemon history crypto_daily:crypto
 ```
 
 Configure daemon behavior in `config.yaml`:
@@ -241,6 +242,12 @@ daemon:
 ```
 
 For systemd deployment, see the [Operations Guide](docs/OPERATIONS.md#daemon-mode-deployment-recommended).
+
+## Crypto Stream
+
+- RSS allowlist: `rss/crypto.txt`
+- Run locally (no publish): `argus run --stream crypto --mode crypto_daily --skip-publish --print-message`
+- Optional: set `CHARTINSPECT_API` for ChartInspect OHLCV; otherwise Argus falls back to CoinGecko where possible.
 
 ## Development
 

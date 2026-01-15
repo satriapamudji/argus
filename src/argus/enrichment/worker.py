@@ -82,16 +82,21 @@ class EnrichmentWorker:
         query = """
             SELECT ni.id, ni.source_url, ni.title, ni.ingested_at, ns.impact_score
             FROM news_items ni
-            JOIN news_scores ns ON ni.id = ns.news_item_id
-            LEFT JOIN news_content nc ON ni.id = nc.news_item_id
+            JOIN news_scores ns
+              ON ni.id = ns.news_item_id
+             AND ns.stream_name = ni.stream_name
+            LEFT JOIN news_content nc
+              ON ni.id = nc.news_item_id
+             AND nc.stream_name = ni.stream_name
             WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+              AND ni.stream_name = %s
               AND nc.id IS NULL
             ORDER BY ns.impact_score DESC
             LIMIT %s
         """
 
         with self.conn.cursor() as cur:
-            cur.execute(query, (self.window_hours, limit))
+            cur.execute(query, (self.window_hours, self.config.stream.name, limit))
             rows = cur.fetchall()
 
         return [EnrichmentCandidate.from_row(row) for row in rows]
@@ -100,8 +105,8 @@ class EnrichmentWorker:
         """Check if a news item already has content stored."""
         with self.conn.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM news_content WHERE news_item_id = %s LIMIT 1",
-                (news_item_id,),
+                "SELECT 1 FROM news_content WHERE news_item_id = %s AND stream_name = %s LIMIT 1",
+                (news_item_id, self.config.stream.name),
             )
             return cur.fetchone() is not None
 

@@ -321,8 +321,9 @@ class TestSchedulerJobIds:
         assert "us_close" in ALL_JOBS
         assert "weekend_wrap" in ALL_JOBS
         assert "monday_preview" in ALL_JOBS
+        assert "crypto_daily" in ALL_JOBS
         assert "retention" in ALL_JOBS
-        assert len(ALL_JOBS) == 5
+        assert len(ALL_JOBS) == 6
 
     def test_catchup_jobs_constant(self):
         """Test CATCHUP_JOBS contains expected jobs."""

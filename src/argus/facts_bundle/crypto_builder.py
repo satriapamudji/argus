@@ -72,21 +72,33 @@ class CryptoBundleBuilderConfig:
 
     @classmethod
     def from_argus_config(
-        cls, config: ArgusConfig, run_mode: str = "crypto_daily"
+        cls,
+        config: ArgusConfig,
+        run_mode: str = "crypto_daily",
+        stream_name: Optional[str] = None,
     ) -> "CryptoBundleBuilderConfig":
         """Create builder config from ArgusConfig.
 
         Args:
             config: Main Argus configuration.
-            run_mode: Run mode for the bundle.
+            run_mode: Run mode for the bundle (e.g., 'crypto_daily', 'crypto_weekly').
+            stream_name: Optional stream name. If None, derives from run_mode
+                       (e.g., 'crypto_daily' -> 'crypto') or falls back to config.stream.name.
 
         Returns:
             CryptoBundleBuilderConfig instance.
         """
         crypto_config: CryptoStreamConfig = config.stream.crypto
 
+        # Determine stream name: explicit param -> derive from run_mode -> config default
+        if stream_name is None:
+            if run_mode.startswith("crypto_"):
+                stream_name = "crypto"
+            else:
+                stream_name = config.stream.name
+
         return cls(
-            stream_name=config.stream.name,
+            stream_name=stream_name,
             run_mode=run_mode,
             window_hours=config.stream.scoring.window_hours,
             top_n_market_cap=crypto_config.top_n_market_cap,
@@ -316,9 +328,24 @@ class CryptoFactsBundleBuilder:
         funding_dict = {
             fr.symbol.replace("USDT", ""): Decimal(str(fr.rate)) for fr in funding_rates
         }
-        oi_dict = {
-            oi.symbol.replace("USDT", ""): Decimal(str(oi.open_interest)) for oi in open_interest
-        }
+
+        # Build price lookup dict for OI conversion (OI from Binance is in base asset, not USD)
+        price_lookup = {a.symbol: Decimal(str(a.price_usd)) for a in assets}
+
+        # Convert open interest to USD by multiplying by asset price
+        oi_dict = {}
+        for oi in open_interest:
+            symbol = oi.symbol.replace("USDT", "")
+            oi_value = Decimal(str(oi.open_interest))
+            price_usd = price_lookup.get(symbol)
+
+            if price_usd is not None:
+                # OI from Binance is in base asset units (e.g., BTC), multiply by price to get USD
+                oi_usd = oi_value * price_usd
+                oi_dict[symbol] = oi_usd
+            else:
+                # No price data available, skip this symbol
+                logger.debug(f"No price data for {symbol}, skipping OI conversion")
 
         # Build crypto metrics
         crypto_metrics = CryptoMarketData(
