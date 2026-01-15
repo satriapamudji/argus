@@ -17,6 +17,7 @@ from argus.config import ArgusConfig, ScoringConfig
 from argus.db.connection import get_connection
 from argus.scoring.heuristics import HeuristicScorer
 from argus.scoring.heuristics_v2 import score_candidates_v2
+from argus.scoring.heuristics_v3 import score_candidates_v3
 from argus.scoring.llm_triage import apply_llm_triage
 from argus.scoring.types import ScoringCandidate, ScoringResult, ScoringStats
 
@@ -37,6 +38,7 @@ class ScoringWorker:
         window_hours: Optional[int] = None,
         dry_run: bool = False,
         use_v2: bool = False,
+        use_v3: bool = False,
     ) -> None:
         """Initialize the scoring worker.
 
@@ -46,6 +48,7 @@ class ScoringWorker:
             window_hours: Look back window in hours. Defaults to config value.
             dry_run: If True, don't write to database.
             use_v2: If True, use heuristic_v2 scoring with macro-first prioritization.
+            use_v3: If True, use heuristic_v3 scoring with crypto-first prioritization.
         """
         self.config = config
         self.scoring_config: ScoringConfig = config.stream.scoring
@@ -54,6 +57,7 @@ class ScoringWorker:
         self.window_hours = window_hours or self.scoring_config.window_hours
         self.dry_run = dry_run
         self.use_v2 = use_v2
+        self.use_v3 = use_v3
 
     @property
     def conn(self) -> Connection:
@@ -214,8 +218,16 @@ class ScoringWorker:
         recent_simhashes = self._get_recent_simhashes()
         logger.debug(f"Loaded {len(recent_simhashes)} recent SimHashes for comparison")
 
-        # Score candidates using v2 or v1
-        if self.use_v2:
+        # Score candidates using v3, v2, or v1
+        if self.use_v3:
+            try:
+                results = score_candidates_v3(candidates, self.scoring_config, recent_simhashes)
+                logger.info("Using heuristic_v3 scorer with crypto-first prioritization")
+            except Exception as e:
+                logger.warning(f"v3 scoring failed: {e}, falling back to v2")
+                results = score_candidates_v2(candidates, self.scoring_config, recent_simhashes)
+                logger.info("Fallback: using heuristic_v2 scorer with macro-first prioritization")
+        elif self.use_v2:
             results = score_candidates_v2(candidates, self.scoring_config, recent_simhashes)
             logger.info("Using heuristic_v2 scorer with macro-first prioritization")
         else:

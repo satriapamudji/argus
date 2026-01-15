@@ -17,6 +17,7 @@ from argus.pipeline.providers.publisher_null import NullPublisherProvider
 from argus.pipeline.providers.publisher_telegram import TelegramPublisherProvider
 from argus.pipeline.providers.scoring_heuristic_v1 import HeuristicV1ScoringProvider
 from argus.pipeline.providers.scoring_heuristic_v2 import HeuristicV2ScoringProvider
+from argus.pipeline.providers.scoring_heuristic_v3 import HeuristicV3ScoringProvider
 
 
 @dataclass(frozen=True)
@@ -54,7 +55,7 @@ def get_ingestion_provider(stream: StreamConfig) -> IngestionProvider:
 
 def get_scoring_provider(stream: StreamConfig) -> ScoringProvider:
     key = stream.providers.scoring
-    supported = {"heuristic_v1", "heuristic_v2"}
+    supported = {"heuristic_v1", "heuristic_v2", "heuristic_v3"}
     _require_key(stage="scoring", key=key, supported=supported)
 
     if key == "heuristic_v1":
@@ -62,6 +63,9 @@ def get_scoring_provider(stream: StreamConfig) -> ScoringProvider:
 
     if key == "heuristic_v2":
         return HeuristicV2ScoringProvider()
+
+    if key == "heuristic_v3":
+        return HeuristicV3ScoringProvider()
 
     raise AssertionError("unreachable")
 
