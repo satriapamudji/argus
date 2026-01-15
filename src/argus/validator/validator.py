@@ -7,7 +7,7 @@ import re
 import logging
 from decimal import Decimal
 from typing import Optional, Any
-from argus.facts_bundle.types import FactsBundle
+from argus.facts_bundle.types import CryptoFactsBundle, CryptoMarketSnapshotBundle, FactsBundle
 from argus.generator.types import GeneratorResult
 from argus.validator.types import ValidationResult
 
@@ -40,7 +40,9 @@ class MessageValidator:
         """
         self.constraints = constraints
 
-    def validate(self, result: GeneratorResult, bundle: FactsBundle) -> ValidationResult:
+    def validate(
+        self, result: GeneratorResult, bundle: FactsBundle | CryptoFactsBundle
+    ) -> ValidationResult:
         """Validate a generator result against a facts bundle.
 
         Args:
@@ -88,9 +90,32 @@ class MessageValidator:
         - us_close: Market Update, Investor Key Takeaways, Key Dates, What to Watch Next, Sources
         - weekend_wrap: Weekly Wrap Up, Key Takeaways for the Week, Sources
         - monday_preview: Monday Preview, Key Things to Look Out For, Key Dates
+        - crypto_daily: Crypto Daily Recap, Investor Key Takeaways, What to Watch
         """
         # Define required sections per mode
-        if run_mode == "weekend_wrap":
+        if run_mode == "crypto_daily":
+            required_sections = [
+                ("Crypto Daily Recap", ["*Crypto Daily Recap*"]),
+                (
+                    "Investor Key Takeaways",
+                    [
+                        "*Investor Key Takeaways*",
+                        "*Investor Key Takeaways:*",
+                        "__Investor Key Takeaways__",
+                        "__*Investor Key Takeaways*__",
+                    ],
+                ),
+                (
+                    "What to Watch",
+                    [
+                        "*What to Watch*",
+                        "*What to Watch:*",
+                        "__What to Watch__",
+                        "__*What to Watch*__",
+                    ],
+                ),
+            ]
+        elif run_mode == "weekend_wrap":
             required_sections = [
                 ("Weekly Wrap Up", ["*Weekly Wrap Up*"]),
                 (
@@ -192,11 +217,15 @@ class MessageValidator:
         - us_close: Investor Key Takeaways
         - weekend_wrap: Key Takeaways for the Week
         - monday_preview: Key Things to Look Out For
+        - crypto_daily: Investor Key Takeaways
         """
         valid = True
 
         # Define takeaway header pattern based on mode
-        if run_mode == "weekend_wrap":
+        if run_mode == "crypto_daily":
+            takeaway_header = r"(?:__\*|\*|__)Investor Key Takeaways(?:\*__|__|\*)"
+            next_section = r"(?:(?:__\*|\*|__)What to Watch|\Z)"
+        elif run_mode == "weekend_wrap":
             takeaway_header = r"(?:__\*|\*|__)Key Takeaways for the Week(?:\*__|__|\*)"
             next_section = r"(?:(?:__\*|\*|__)Sources|\Z)"
         elif run_mode == "monday_preview":
@@ -238,7 +267,9 @@ class MessageValidator:
 
         return valid
 
-    def _check_hallucinations(self, text: str, bundle: FactsBundle, errors: list[str]) -> bool:
+    def _check_hallucinations(
+        self, text: str, bundle: FactsBundle | CryptoFactsBundle, errors: list[str]
+    ) -> bool:
         """Hallucination check: citations, links, and numbers.
 
         High-confidence checks:
@@ -308,7 +339,7 @@ class MessageValidator:
 
         return valid
 
-    def _extract_allowed_numbers(self, bundle: FactsBundle) -> set[str]:
+    def _extract_allowed_numbers(self, bundle: FactsBundle | CryptoFactsBundle) -> set[str]:
         """Extract all allowed numbers from the facts bundle.
 
         Returns:
@@ -316,33 +347,89 @@ class MessageValidator:
         """
         allowed: set[str] = set()
 
-        # Market snapshot numbers
+        # Market snapshot numbers - handle crypto vs traditional bundles
         snapshot = bundle.market_snapshot
-        for index_data in [snapshot.sp500, snapshot.dow, snapshot.nasdaq]:
-            allowed.add(self._normalize_number(str(index_data.level)))
-            allowed.add(self._normalize_number(str(index_data.change_1d_pct)))
-            allowed.add(self._normalize_number(str(index_data.change_1d_pts)))
 
-        # Cross-asset data if present
-        if snapshot.cross_assets:
-            ca = snapshot.cross_assets
-            for val in [
-                ca.vix_level,
-                ca.vix_change_pct,
-                ca.us10y_yield,
-                ca.us10y_change_bps,
-                ca.dxy_level,
-                ca.dxy_change_pct,
-                ca.wti_level,
-                ca.wti_change_pct,
-                ca.gold_level,
-                ca.gold_change_pct,
-            ]:
-                if val is not None:
-                    allowed.add(self._normalize_number(str(val)))
+        if isinstance(snapshot, CryptoMarketSnapshotBundle):
+            # Crypto market snapshot
+            # BTC data
+            allowed.add(self._normalize_number(str(snapshot.btc.price_usd)))
+            allowed.add(self._normalize_number(str(snapshot.btc.change_1d_pct)))
+            if snapshot.btc.market_cap_usd:
+                allowed.add(self._normalize_number(str(snapshot.btc.market_cap_usd)))
 
-        # Weekly stats returns if present
-        if bundle.weekly_stats is not None:
+            # ETH data
+            allowed.add(self._normalize_number(str(snapshot.eth.price_usd)))
+            allowed.add(self._normalize_number(str(snapshot.eth.change_1d_pct)))
+            if snapshot.eth.market_cap_usd:
+                allowed.add(self._normalize_number(str(snapshot.eth.market_cap_usd)))
+
+            # Major alts
+            if snapshot.major_alts:
+                for alt in snapshot.major_alts:
+                    allowed.add(self._normalize_number(str(alt.price_usd)))
+                    allowed.add(self._normalize_number(str(alt.change_1d_pct)))
+
+            # Crypto metrics
+            if snapshot.crypto_metrics:
+                metrics = snapshot.crypto_metrics
+                if metrics.total_market_cap:
+                    mcap = float(metrics.total_market_cap)
+                    allowed.add(self._normalize_number(str(metrics.total_market_cap)))
+                    # Add billion-scale version (e.g., 3396.7 for $3.4T)
+                    mcap_b = mcap / 1e9
+                    allowed.add(self._normalize_number(f"{mcap_b:.1f}"))
+                    allowed.add(self._normalize_number(f"{mcap_b:.0f}"))
+                    # Add trillion-scale version
+                    mcap_t = mcap / 1e12
+                    allowed.add(self._normalize_number(f"{mcap_t:.2f}"))
+                    allowed.add(self._normalize_number(f"{mcap_t:.1f}"))
+                if metrics.btc_dominance:
+                    allowed.add(self._normalize_number(str(metrics.btc_dominance)))
+                if metrics.fear_greed_index:
+                    allowed.add(self._normalize_number(str(metrics.fear_greed_index)))
+                # Funding rates
+                if metrics.funding_rates:
+                    for symbol, rate in metrics.funding_rates.items():
+                        allowed.add(self._normalize_number(str(rate)))
+                        # Also add basis points version
+                        bps = float(rate) * 10000
+                        allowed.add(self._normalize_number(f"{bps:.1f}"))
+                # Open interest
+                if metrics.open_interest:
+                    for symbol, oi in metrics.open_interest.items():
+                        allowed.add(self._normalize_number(str(oi)))
+
+            # DeFi TVL
+            if snapshot.defi_tvl:
+                allowed.add(self._normalize_number(str(snapshot.defi_tvl.total_tvl_usd)))
+        else:
+            # Traditional market snapshot (US markets)
+            for index_data in [snapshot.sp500, snapshot.dow, snapshot.nasdaq]:
+                allowed.add(self._normalize_number(str(index_data.level)))
+                allowed.add(self._normalize_number(str(index_data.change_1d_pct)))
+                allowed.add(self._normalize_number(str(index_data.change_1d_pts)))
+
+            # Cross-asset data if present
+            if snapshot.cross_assets:
+                ca = snapshot.cross_assets
+                for val in [
+                    ca.vix_level,
+                    ca.vix_change_pct,
+                    ca.us10y_yield,
+                    ca.us10y_change_bps,
+                    ca.dxy_level,
+                    ca.dxy_change_pct,
+                    ca.wti_level,
+                    ca.wti_change_pct,
+                    ca.gold_level,
+                    ca.gold_change_pct,
+                ]:
+                    if val is not None:
+                        allowed.add(self._normalize_number(str(val)))
+
+        # Weekly stats returns if present (only for traditional bundles)
+        if isinstance(bundle, FactsBundle) and bundle.weekly_stats is not None:
             for weekly_return in [
                 bundle.weekly_stats.sp500_return,
                 bundle.weekly_stats.dow_return,

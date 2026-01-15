@@ -17,6 +17,17 @@ This is an **experimental stream** to validate data source reliability, API cost
 - Existing `us_markets` stream architecture can be extended
 - Multi-stream support already implemented (Task 21)
 
+## Decisions / Requirements (2026-01-13)
+
+- Recap schedule: run **daily at 00:00 UTC**.
+- Trading day definition: **close-to-close by UTC date** (use the day that just ended; `trading_date = (now_utc.date() - 1 day)`).
+- Top N: **dynamic top 10 by market cap**, always include **BTC/ETH**, exclude stablecoins (**USDT/USDC/DAI**).
+- News ingestion: **RSS only** for the crypto stream (v1).
+- Derivatives: **Binance-only** (funding + open interest + long/short ratio).
+- DeFi TVL: include (DeFiLlama).
+- ChartInspect: use for **daily OHLCV** (close-to-close) and optional BTC on-chain metrics; env `CHARTINSPECT_API`.
+- Tests: prefer **live API calls** (no mocked data).
+
 ## Background
 
 ### Why a Crypto Stream?
@@ -36,11 +47,11 @@ This is an **experimental stream** to validate data source reliability, API cost
 | Fear & Greed Index | Market sentiment gauge | P0 (Essential) |
 | CEX Funding Rates | Derivatives sentiment (long/short bias) | P0 (Essential) |
 | CEX Open Interest | Leverage in the system | P1 (Important) |
-| CEX Exchange Reserves | BTC/ETH held on exchanges | P1 (Important) |
+| CEX Exchange Reserves | BTC/ETH held on exchanges | P2 (Future) |
 | News | Crypto-specific headlines | P0 (Essential) |
 | DeFi TVL | Ecosystem health indicator | P1 (Include in v1) |
 
-**Note:** Whale tracking on DEXes is de-prioritized as most meaningful institutional flow occurs on CEXes. Focus is on CEX-derived metrics (Binance, OKX, Bybit, Coinbase data).
+**Note:** Whale tracking on DEXes is de-prioritized. For v1 we focus on **Binance-only** derivatives (funding, open interest, long/short ratio) + broader market context (CoinGecko + ChartInspect).
 
 ## Data Source Analysis
 
@@ -84,9 +95,9 @@ Example response shapes (docs examples):
 - `/onchain/mvrv-data?days=90` returns `{ date, mvrv, marketCap, realizedCap }[]` + `metadata`.
 
 How this fits Task 28:
-- Can supply **BTC/ETH daily OHLCV** aligned to “day ended” recaps.
+- Can supply **daily OHLCV** aligned to UTC close-to-close recaps.
 - Can supply **Bitcoin on-chain metrics** (e.g., MVRV, SOPR) on the free tier.
-- Derivatives/indicators/exchange+ETF endpoints require Pro; for v1 (free tier) we still need **Binance/CoinGlass** for funding + open interest.
+- Derivatives/indicators/exchange+ETF endpoints require Pro; for v1 (free tier) we use **Binance** for funding + open interest + long/short ratio.
 - `crypto/prices/list` is symbols-only, so we still need **CoinGecko** (or equivalent) for **dynamic top N by market cap**.
 
 ### 1. Price & Market Data
@@ -182,14 +193,24 @@ GET https://api.llama.fi/chains     # TVL by chain
 | Provider | Free Tier | Coverage | API |
 |----------|-----------|----------|-----|
 | **ChartInspect** | Pro required | Funding + open interest | REST API |
-| **CoinGlass** | ✅ Limited free | All major exchanges | REST API |
 | **Binance API** | ✅ Free | Binance Futures only | Direct API |
-| **CoinAPI** | Paid | Multi-exchange | REST API |
 
 **Binance Funding Rate Endpoint:**
 
 ```
 GET https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1
+```
+
+**Binance Open Interest Endpoint:**
+
+```
+GET https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT
+```
+
+**Binance Long/Short Ratio Endpoint:**
+
+```
+GET https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1d&limit=2
 ```
 
 **What Funding Rates Tell Us:**
@@ -208,22 +229,21 @@ GET https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1
 | Provider | Free Tier | Data Type | Coverage |
 |----------|-----------|-----------|----------|
 | **ChartInspect** | Pro required | Exchange balances, ETF balances, OI, funding | Multi-source |
-| **CoinGlass** | ✅ Limited | OI, Funding, Liquidations | All major CEXes |
 | **CryptoQuant** | ✅ Limited | Exchange Reserves, Flows | BTC, ETH on CEXes |
 | **Coinalyze** | ✅ Free | OI, Funding, Long/Short | Major pairs |
 | **Binance API** | ✅ Free | Own exchange data | Binance only |
 
-**CoinGlass Data (Recommended for CEX Aggregated Data):**
+**Binance Futures (v1 implementation target):**
 
 ```
-# Open Interest (aggregated across CEXes)
-GET https://open-api.coinglass.com/public/v2/open_interest?symbol=BTC
+# Open interest (Binance only)
+GET https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT
 
-# Funding Rates (all exchanges)
-GET https://open-api.coinglass.com/public/v2/funding?symbol=BTC
+# Funding rate (Binance only)
+GET https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=1
 
-# Long/Short Ratio
-GET https://open-api.coinglass.com/public/v2/long_short?symbol=BTC
+# Long/short ratio (Binance only)
+GET https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1d&limit=2
 ```
 
 **CryptoQuant Data (Exchange Reserves):**
@@ -264,7 +284,9 @@ GET https://open-api.coinglass.com/public/v2/long_short?symbol=BTC
 | **Bitcoin Magazine** | `https://bitcoinmagazine.com/feed` | BTC-focused |
 | **DeFi Pulse** | N/A | DeFi-specific |
 
-#### News APIs
+#### News APIs (P2 / Future)
+
+v1 is **RSS-only** for crypto news ingestion. Keep this section as research for later if RSS quality/coverage is insufficient.
 
 | Provider | Free Tier | Crypto Coverage |
 |----------|-----------|-----------------|
@@ -296,29 +318,28 @@ https://defillama.com/rss  # If available
 streams:
   us_markets:
     enabled: true
-    # ... existing config ...
+    # ... existing us_markets config ...
 
   crypto:
     enabled: true
-    experimental: true  # Flag for monitoring
+    rss:
+      allowlist_files:
+        - "rss/crypto.txt"
     schedule:
-      daily_recap_utc: "00:00"  # Midnight UTC daily
-    rss_files:
-      - "rss/crypto.txt"
-    providers:
-      ingestion: "rss"  # Or "api_newsapi" with crypto filter
-      scoring: "heuristic_v2"
-    market_data:
-      provider: "coingecko"
-      assets:
-        - bitcoin
-        - ethereum
-        - solana
-        - binancecoin
-        - ripple
-      include_fear_greed: true
-      include_funding_rates: true
-      include_defi_tvl: true
+      daily_crypto_utc: "00:00"  # Recap the day that just ended (UTC)
+
+    # New Task 28 config block (to implement)
+    crypto:
+      top_n_market_cap: 10
+      always_include_symbols: ["BTC", "ETH"]
+      exclude_symbols: ["USDT", "USDC", "DAI"]
+
+      # Source routing
+      market_cap_provider: "coingecko"      # Dynamic top N by market cap
+      ohlcv_provider: "chartinspect"        # Daily candles (UTC close-to-close)
+      derivatives_provider: "binance"       # Funding + open interest + long/short ratio (Binance-only)
+      fear_greed_provider: "alternative_me"
+      defi_tvl_provider: "defillama"
 ```
 
 ### 2. New Data Adapters
@@ -481,9 +502,9 @@ async def get_defi_tvl() -> DeFiTVLSnapshot:
         )
 ```
 
-#### Funding Rates Adapter
+#### Binance Derivatives Adapter (Funding + Open Interest + Long/Short)
 
-**File:** `src/argus/adapters/funding_rates.py`
+**File:** `src/argus/adapters/binance_derivatives.py`
 
 ```python
 @dataclass(frozen=True)
@@ -493,8 +514,28 @@ class FundingRate:
     next_funding_time: datetime
     interpretation: str  # "Bullish", "Bearish", "Neutral"
 
+@dataclass(frozen=True)
+class OpenInterest:
+    symbol: str          # "BTCUSDT"
+    open_interest: Decimal  # contract units (as returned by Binance)
+
+@dataclass(frozen=True)
+class LongShortRatio:
+    symbol: str
+    long_short_ratio: Decimal
+    long_account_pct: Decimal
+    short_account_pct: Decimal
+    timestamp: datetime
+
+@dataclass(frozen=True)
+class BinanceDerivativesSnapshot:
+    timestamp: datetime
+    funding_rates: list[FundingRate]
+    open_interest: list[OpenInterest]
+    long_short_ratios: list[LongShortRatio]
+
 async def get_funding_rates(symbols: list[str] = ["BTCUSDT", "ETHUSDT"]) -> list[FundingRate]:
-    """Fetch funding rates from Binance Futures."""
+    """Fetch funding rates from Binance USDⓈ-M Futures."""
     async with httpx.AsyncClient() as client:
         rates = []
         for symbol in symbols:
@@ -519,6 +560,32 @@ async def get_funding_rates(symbols: list[str] = ["BTCUSDT", "ETHUSDT"]) -> list
             ))
 
         return rates
+
+async def get_open_interest(symbol: str) -> OpenInterest:
+    """Fetch open interest (Binance USDⓈ-M)."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://fapi.binance.com/fapi/v1/openInterest",
+            params={"symbol": symbol},
+        )
+        data = resp.json()
+        return OpenInterest(symbol=symbol, open_interest=Decimal(data["openInterest"]))
+
+async def get_long_short_ratio(symbol: str, *, period: str = "1d") -> LongShortRatio:
+    """Fetch global long/short account ratio (Binance Futures)."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://fapi.binance.com/futures/data/globalLongShortAccountRatio",
+            params={"symbol": symbol, "period": period, "limit": 1},
+        )
+        data = resp.json()[0]
+        return LongShortRatio(
+            symbol=symbol,
+            long_short_ratio=Decimal(data["longShortRatio"]),
+            long_account_pct=Decimal(data["longAccount"]),
+            short_account_pct=Decimal(data["shortAccount"]),
+            timestamp=datetime.fromtimestamp(int(data["timestamp"]) / 1000),
+        )
 ```
 
 ### 3. Crypto Facts Bundle
@@ -542,7 +609,7 @@ class CryptoFactsBundle:
     defi_tvl: Optional[DeFiTVLSnapshot] = None
 
     # Derivatives (optional)
-    funding_rates: Optional[list[FundingRate]] = None
+    derivatives: Optional["BinanceDerivativesSnapshot"] = None
 
     # News
     news_items: list[NewsItemBundle] = field(default_factory=list)
@@ -576,9 +643,8 @@ Your report should cover:
    - Any catalysts from the news [#CITEKEY]
 
 4. **On-Chain Insights** (if data available)
-   - DeFi TVL trend
-   - Funding rates (bullish/bearish bias)
-   - Whale activity of note
+    - DeFi TVL trend
+    - Funding rates + open interest + long/short ratio (Binance-only)
 
 5. **What to Watch**
    - Upcoming events (unlocks, upgrades, regulatory)
@@ -671,8 +737,7 @@ def _fear_greed_emoji(value: int) -> str:
 | `src/argus/adapters/coingecko.py` | CoinGecko API client |
 | `src/argus/adapters/fear_greed.py` | Fear & Greed Index client |
 | `src/argus/adapters/defillama.py` | DeFiLlama TVL client |
-| `src/argus/adapters/funding_rates.py` | Binance funding rates client |
-| `src/argus/adapters/coinglass.py` | CoinGlass CEX data (OI, funding, liquidations) |
+| `src/argus/adapters/binance_derivatives.py` | Binance USDⓈ-M derivatives client (funding, OI, long/short) |
 | `src/argus/generator/prompts_crypto.py` | Crypto-specific LLM prompts |
 | `src/argus/generator/renderer_crypto.py` | Crypto message formatter |
 | `src/argus/facts_bundle/crypto_builder.py` | Crypto facts bundle builder |
@@ -701,7 +766,6 @@ def _fear_greed_emoji(value: int) -> str:
 | Alternative.me | Unlimited | ~2 calls/day | ✅ Free |
 | DeFiLlama | Unlimited | ~5 calls/day | ✅ Free |
 | Binance | 1200 req/min | ~5 calls/day | ✅ Plenty |
-| Whale Alert | 10 req/min (free) | ~5 calls/day | ⚠️ Limited |
 
 **Total Estimated API Calls:** ~25 calls/day = well within free tiers
 
@@ -712,7 +776,7 @@ def _fear_greed_emoji(value: int) -> str:
 | CoinGecko | CoinMarketCap | Rate limit hit |
 | Alternative.me | CoinMarketCap F&G | API down |
 | DeFiLlama | Skip section | API down |
-| Binance Funding | CoinGlass scrape | API change |
+| Binance derivatives | Skip derivatives section | API error / schema change |
 
 ## Acceptance Criteria
 
@@ -720,12 +784,14 @@ def _fear_greed_emoji(value: int) -> str:
 
 | ID | Criterion | Verification |
 |----|-----------|--------------|
-| AC-1 | CoinGecko adapter fetches BTC, ETH, top 10 | Unit test |
-| AC-2 | Fear & Greed Index fetched and parsed | Unit test |
-| AC-3 | DeFi TVL from DeFiLlama | Unit test |
-| AC-4 | Crypto RSS feeds ingested | Integration test |
-| AC-5 | Crypto daily message generated | End-to-end test |
-| AC-6 | Message published to Telegram | Manual test |
+| AC-1 | Top 10 selection is dynamic by market cap; BTC/ETH always included; stablecoins excluded | Unit test |
+| AC-2 | ChartInspect OHLCV fetched for selected symbols; close-to-close % computed by UTC date | Integration test |
+| AC-3 | Binance derivatives fetched (funding + open interest + long/short ratio) | Integration test |
+| AC-4 | Fear & Greed Index fetched and parsed | Unit test |
+| AC-5 | DeFi TVL from DeFiLlama | Unit test |
+| AC-6 | Crypto RSS feeds ingested | Integration test |
+| AC-7 | Crypto daily message generated | End-to-end test |
+| AC-8 | Message published to Telegram only for subscribers | Manual test |
 
 ### Data Quality
 
@@ -733,7 +799,7 @@ def _fear_greed_emoji(value: int) -> str:
 |----|-----------|--------------|
 | DQ-1 | BTC price within 1% of actual | Compare to exchange |
 | DQ-2 | Fear & Greed matches Alternative.me | Manual check |
-| DQ-3 | No stale data (>1 hour old) | Timestamp validation |
+| DQ-3 | Recap uses the completed UTC day (no partial-day candles) | Timestamp validation |
 
 ### Quality Gates
 
@@ -795,9 +861,10 @@ def _fear_greed_emoji(value: int) -> str:
 | Component | Estimate |
 |-----------|----------|
 | CoinGecko adapter | 2 hours |
+| ChartInspect adapter | 2 hours |
 | Fear & Greed adapter | 1 hour |
 | DeFiLlama adapter | 1.5 hours |
-| Funding rates adapter | 1.5 hours |
+| Binance derivatives adapter | 2 hours |
 | RSS feed curation | 1 hour |
 | Crypto facts bundle | 2 hours |
 | Crypto prompts | 2 hours |
@@ -811,22 +878,23 @@ def _fear_greed_emoji(value: int) -> str:
 ## Phased Rollout
 
 ### Phase 1: MVP (Week 1)
-- CoinGecko price data (BTC, ETH, top 5)
+- Dynamic top 10 by market cap (CoinGecko), always include BTC/ETH, exclude stablecoins
+- Daily OHLCV and close-to-close % changes (ChartInspect primary)
 - Fear & Greed Index
+- Binance-only derivatives (funding + open interest + long/short ratio)
+- DeFi TVL (DeFiLlama)
 - Crypto RSS feeds (Cointelegraph, CoinDesk, The Block)
 - Basic daily message
 
 ### Phase 2: CEX Data Integration (Week 2)
-- CoinGlass Open Interest (aggregated across CEXes)
-- Funding rates (Binance + aggregated)
-- Long/Short ratio
+- Improve derivatives narrative (trend vs 7d average, extremes)
 - Improved prompts with derivatives context
 
 ### Phase 3: Advanced CEX Metrics (Week 3+)
 - Exchange reserves (CryptoQuant if free tier sufficient)
 - Liquidation data (24h liquidations)
 - Interactive message buttons (from Task 27)
-- DeFi TVL (low priority, add if users request)
+- Optional BTC on-chain metrics (ChartInspect free tier: MVRV/SOPR) if useful
 
 ## Example Output Message
 
@@ -875,10 +943,9 @@ __Sources__
 
 ## References
 
+- [ChartInspect API Documentation](https://chartinspect.com/api-docs)
 - [CoinGecko API Documentation](https://www.coingecko.com/api/documentation)
 - [Alternative.me Fear & Greed API](https://alternative.me/crypto/fear-and-greed-index/)
 - [DeFiLlama API](https://defillama.com/docs/api)
 - [Binance Futures API](https://developers.binance.com/docs/derivatives/usds-margined-futures/market-data)
-- [Whale Alert API](https://docs.whale-alert.io/)
 - [Top Crypto RSS Feeds](https://rss.feedspot.com/cryptocurrency_rss_feeds/)
-- [CoinGlass Funding Rates](https://www.coinglass.com/FundingRate)

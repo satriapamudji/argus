@@ -414,6 +414,223 @@ class FactsBundle:
 
 
 # =============================================================================
+# Crypto Types
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class CryptoIndexData:
+    """Crypto asset data for the crypto facts bundle.
+
+    Similar to IndexData but with additional crypto-specific fields.
+    """
+
+    symbol: str
+    name: str
+    price_usd: Decimal
+    change_1d_pct: Decimal
+    market_cap_usd: Optional[Decimal] = None
+    volume_24h_usd: Optional[Decimal] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "symbol": self.symbol,
+            "name": self.name,
+            "price_usd": str(self.price_usd),
+            "change_1d_pct": str(self.change_1d_pct),
+        }
+        if self.market_cap_usd is not None:
+            result["market_cap_usd"] = str(self.market_cap_usd)
+        if self.volume_24h_usd is not None:
+            result["volume_24h_usd"] = str(self.volume_24h_usd)
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CryptoIndexData":
+        return cls(
+            symbol=data["symbol"],
+            name=data["name"],
+            price_usd=Decimal(data["price_usd"]),
+            change_1d_pct=Decimal(data["change_1d_pct"]),
+            market_cap_usd=Decimal(data["market_cap_usd"]) if data.get("market_cap_usd") else None,
+            volume_24h_usd=Decimal(data["volume_24h_usd"]) if data.get("volume_24h_usd") else None,
+        )
+
+
+@dataclass(frozen=True)
+class CryptoMarketData:
+    """Crypto-specific market metrics.
+
+    Optional fields - missing data does not break the bundle.
+    """
+
+    btc_dominance: Optional[Decimal] = None
+    total_market_cap: Optional[Decimal] = None
+    fear_greed_index: Optional[int] = None
+    funding_rates: Optional[dict[str, Decimal]] = None
+    open_interest: Optional[dict[str, Decimal]] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        if self.btc_dominance is not None:
+            result["btc_dominance"] = str(self.btc_dominance)
+        if self.total_market_cap is not None:
+            result["total_market_cap"] = str(self.total_market_cap)
+        if self.fear_greed_index is not None:
+            result["fear_greed_index"] = self.fear_greed_index
+        if self.funding_rates is not None:
+            result["funding_rates"] = {k: str(v) for k, v in self.funding_rates.items()}
+        if self.open_interest is not None:
+            result["open_interest"] = {k: str(v) for k, v in self.open_interest.items()}
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CryptoMarketData":
+        funding_rates = None
+        if data.get("funding_rates"):
+            funding_rates = {k: Decimal(v) for k, v in data["funding_rates"].items()}
+
+        open_interest = None
+        if data.get("open_interest"):
+            open_interest = {k: Decimal(v) for k, v in data["open_interest"].items()}
+
+        return cls(
+            btc_dominance=Decimal(data["btc_dominance"]) if data.get("btc_dominance") else None,
+            total_market_cap=Decimal(data["total_market_cap"]) if data.get("total_market_cap") else None,
+            fear_greed_index=data.get("fear_greed_index"),
+            funding_rates=funding_rates,
+            open_interest=open_interest,
+        )
+
+
+@dataclass(frozen=True)
+class DeFiTVLSnapshot:
+    """DeFi TVL snapshot data.
+
+    This is a simplified version of the full DeFiLlama data.
+    """
+
+    total_tvl_usd: Decimal
+    top_protocols: tuple[tuple[str, Decimal], ...]
+    chain_breakdown: dict[str, Decimal]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_tvl_usd": str(self.total_tvl_usd),
+            "top_protocols": [[name, str(tvl)] for name, tvl in self.top_protocols],
+            "chain_breakdown": {k: str(v) for k, v in self.chain_breakdown.items()},
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "DeFiTVLSnapshot":
+        top_protocols = tuple(
+            (name, Decimal(tvl_str)) for name, tvl_str in data.get("top_protocols", [])
+        )
+        chain_breakdown = {k: Decimal(v) for k, v in data.get("chain_breakdown", {}).items()}
+        return cls(
+            total_tvl_usd=Decimal(data["total_tvl_usd"]),
+            top_protocols=top_protocols,
+            chain_breakdown=chain_breakdown,
+        )
+
+
+@dataclass(frozen=True)
+class CryptoMarketSnapshotBundle:
+    """Complete crypto market snapshot for the facts bundle."""
+
+    trading_date: date
+    btc: CryptoIndexData
+    eth: CryptoIndexData
+    major_alts: tuple[CryptoIndexData, ...]
+    crypto_metrics: Optional[CryptoMarketData] = None
+    defi_tvl: Optional[DeFiTVLSnapshot] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "trading_date": self.trading_date.isoformat(),
+            "btc": self.btc.to_dict(),
+            "eth": self.eth.to_dict(),
+            "major_alts": [alt.to_dict() for alt in self.major_alts],
+        }
+        if self.crypto_metrics is not None:
+            result["crypto_metrics"] = self.crypto_metrics.to_dict()
+        if self.defi_tvl is not None:
+            result["defi_tvl"] = self.defi_tvl.to_dict()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CryptoMarketSnapshotBundle":
+        crypto_metrics = None
+        if data.get("crypto_metrics"):
+            crypto_metrics = CryptoMarketData.from_dict(data["crypto_metrics"])
+
+        defi_tvl = None
+        if data.get("defi_tvl"):
+            defi_tvl = DeFiTVLSnapshot.from_dict(data["defi_tvl"])
+
+        return cls(
+            trading_date=date.fromisoformat(data["trading_date"]),
+            btc=CryptoIndexData.from_dict(data["btc"]),
+            eth=CryptoIndexData.from_dict(data["eth"]),
+            major_alts=tuple(CryptoIndexData.from_dict(alt) for alt in data["major_alts"]),
+            crypto_metrics=crypto_metrics,
+            defi_tvl=defi_tvl,
+        )
+
+
+@dataclass(frozen=True)
+class CryptoFactsBundle:
+    """The complete crypto facts bundle - sole source of truth for the LLM.
+
+    This is the immutable contract between the bundle builder and the generator.
+    """
+
+    version: str
+    stream_name: str  # "crypto"
+    run_mode: str  # "crypto_daily"
+    generated_at: datetime
+    trading_date: date
+    market_snapshot: CryptoMarketSnapshotBundle
+    news_items: tuple[NewsItemBundle, ...]
+    calendar_events: tuple[CalendarEventBundle, ...]
+    spotlight: Optional[SpotlightBundle] = None
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "version": self.version,
+            "stream_name": self.stream_name,
+            "run_mode": self.run_mode,
+            "generated_at": self.generated_at.isoformat(),
+            "trading_date": self.trading_date.isoformat(),
+            "market_snapshot": self.market_snapshot.to_dict(),
+            "news_items": [item.to_dict() for item in self.news_items],
+            "calendar_events": [event.to_dict() for event in self.calendar_events],
+        }
+        if self.spotlight is not None:
+            result["spotlight"] = self.spotlight.to_dict()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "CryptoFactsBundle":
+        spotlight = None
+        if data.get("spotlight"):
+            spotlight = SpotlightBundle.from_dict(data["spotlight"])
+        return cls(
+            version=data["version"],
+            stream_name=data["stream_name"],
+            run_mode=data["run_mode"],
+            generated_at=datetime.fromisoformat(data["generated_at"]),
+            trading_date=date.fromisoformat(data["trading_date"]),
+            market_snapshot=CryptoMarketSnapshotBundle.from_dict(data["market_snapshot"]),
+            news_items=tuple(NewsItemBundle.from_dict(item) for item in data["news_items"]),
+            calendar_events=tuple(
+                CalendarEventBundle.from_dict(event) for event in data["calendar_events"]
+            ),
+            spotlight=spotlight,
+        )
+
+
+# =============================================================================
 # Internal Selection Types
 # =============================================================================
 

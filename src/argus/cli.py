@@ -33,7 +33,7 @@ def cli(ctx: click.Context, config: Optional[Path]) -> None:
 )
 @click.option(
     "--mode",
-    type=click.Choice(["us_close", "weekend_wrap", "monday_preview"]),
+    type=click.Choice(["us_close", "weekend_wrap", "monday_preview", "crypto_daily"]),
     required=True,
     help="Run mode",
 )
@@ -1766,7 +1766,7 @@ def evaluate(
 )
 @click.option(
     "--mode",
-    type=click.Choice(["us_close", "weekend_wrap", "monday_preview"]),
+    type=click.Choice(["us_close", "weekend_wrap", "monday_preview", "crypto_daily"]),
     default=None,
     help="Override generation mode (defaults to bundle's run_mode)",
 )
@@ -1915,7 +1915,7 @@ def generate(
 @click.option("--window-hours", default=24, help="Look back window in hours (default 24)")
 @click.option(
     "--mode",
-    type=click.Choice(["us_close", "weekend_wrap", "monday_preview"]),
+    type=click.Choice(["us_close", "weekend_wrap", "monday_preview", "crypto_daily"]),
     default="us_close",
     help="Run mode (default us_close)",
 )

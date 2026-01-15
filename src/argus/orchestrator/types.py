@@ -16,6 +16,7 @@ class RunMode(Enum):
     US_CLOSE = "us_close"
     WEEKEND_WRAP = "weekend_wrap"
     MONDAY_PREVIEW = "monday_preview"
+    CRYPTO_DAILY = "crypto_daily"
 
     @classmethod
     def from_string(cls, value: str) -> "RunMode":

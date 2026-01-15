@@ -6,8 +6,13 @@ The LLM cites news using stable cite keys like [#A1B2C3D4].
 
 import hashlib
 
-from argus.facts_bundle.types import FactsBundle
+from argus.facts_bundle.types import (
+    CryptoFactsBundle,
+    CryptoMarketSnapshotBundle,
+    FactsBundle,
+)
 from argus.generator.types import GenerationMode, NewsContext
+from argus.generator.prompts_crypto import get_crypto_daily_prompt
 
 # =============================================================================
 # System Prompts
@@ -221,6 +226,7 @@ def get_system_prompt(mode: GenerationMode) -> str:
         GenerationMode.US_CLOSE: SYSTEM_PROMPT_US_CLOSE,
         GenerationMode.WEEKEND_WRAP: SYSTEM_PROMPT_WEEKEND_WRAP,
         GenerationMode.MONDAY_PREVIEW: SYSTEM_PROMPT_MONDAY_PREVIEW,
+        GenerationMode.CRYPTO_DAILY: get_crypto_daily_prompt(),
     }
     return prompt_map[mode]
 
@@ -267,7 +273,7 @@ def build_news_contexts(bundle: FactsBundle) -> list[NewsContext]:
     return contexts
 
 
-def format_market_data_for_prompt(bundle: FactsBundle) -> str:
+def format_market_data_for_prompt(bundle: FactsBundle | CryptoFactsBundle) -> str:
     """Format market snapshot data for inclusion in prompt.
 
     Args:
@@ -278,6 +284,46 @@ def format_market_data_for_prompt(bundle: FactsBundle) -> str:
     """
     snapshot = bundle.market_snapshot
 
+    # Check if this is a crypto bundle
+    if isinstance(snapshot, CryptoMarketSnapshotBundle):
+        lines = [
+            "MARKET DATA:",
+            f"Trading Date: {bundle.trading_date.strftime('%d %b %Y')}",
+            "",
+            "Crypto Performance (1D):",
+            f"- BTC: ${snapshot.btc.price_usd} ({snapshot.btc.change_1d_pct:+}%)",
+            f"- ETH: ${snapshot.eth.price_usd} ({snapshot.eth.change_1d_pct:+}%)",
+        ]
+
+        # Add major alts
+        if snapshot.major_alts:
+            lines.append("")
+            lines.append("Major Alts:")
+            for alt in snapshot.major_alts[:5]:  # Top 5
+                lines.append(f"- {alt.symbol}: ${alt.price_usd} ({alt.change_1d_pct:+}%)")
+
+        # Add crypto metrics if available
+        if snapshot.crypto_metrics:
+            metrics = snapshot.crypto_metrics
+            lines.append("")
+            lines.append("Market Metrics:")
+            if metrics.total_market_cap:
+                lines.append(f"- Total Market Cap: ${float(metrics.total_market_cap) / 1e9:.1f}B")
+            if metrics.btc_dominance:
+                lines.append(f"- BTC Dominance: {float(metrics.btc_dominance):.1f}%")
+            if metrics.fear_greed_index:
+                lines.append(f"- Fear & Greed Index: {metrics.fear_greed_index}/100")
+
+        # Add DeFi TVL if available
+        if snapshot.defi_tvl:
+            defi = snapshot.defi_tvl
+            lines.append("")
+            lines.append("DeFi TVL:")
+            lines.append(f"- Total: ${float(defi.total_tvl_usd) / 1e9:.1f}B")
+
+        return "\n".join(lines)
+
+    # US Markets bundle
     lines = [
         "MARKET DATA:",
         f"Trading Date: {bundle.trading_date.strftime('%d %b %Y')}",
@@ -320,8 +366,11 @@ def _format_weekly_return_line(label: str, weekly_return: object) -> str:
     return f"- {label}: {pct:+.2f}% ({getattr(weekly_return, 'label')} {start.strftime('%d %b')}→{end.strftime('%d %b')})"
 
 
-def format_weekly_stats_for_prompt(bundle: FactsBundle, mode: GenerationMode) -> str:
+def format_weekly_stats_for_prompt(bundle: FactsBundle | CryptoFactsBundle, mode: GenerationMode) -> str:
     """Format weekly stats for inclusion in prompt (if available)."""
+    # Crypto bundles don't have weekly stats
+    if isinstance(bundle, CryptoFactsBundle):
+        return ""
     if bundle.weekly_stats is None:
         return ""
 
@@ -349,7 +398,7 @@ def format_weekly_stats_for_prompt(bundle: FactsBundle, mode: GenerationMode) ->
     return "\n".join(lines)
 
 
-def format_calendar_for_prompt(bundle: FactsBundle) -> str:
+def format_calendar_for_prompt(bundle: FactsBundle | CryptoFactsBundle) -> str:
     """Format calendar events for inclusion in prompt.
 
     Args:
@@ -369,7 +418,7 @@ def format_calendar_for_prompt(bundle: FactsBundle) -> str:
 
 
 def build_user_prompt(
-    bundle: FactsBundle,
+    bundle: FactsBundle | CryptoFactsBundle,
     news_contexts: list[NewsContext],
     mode: GenerationMode,
     max_words: int,
@@ -407,6 +456,7 @@ def build_user_prompt(
         GenerationMode.US_CLOSE: "Daily US Close",
         GenerationMode.WEEKEND_WRAP: "Weekend Wrap",
         GenerationMode.MONDAY_PREVIEW: "Monday Preview",
+        GenerationMode.CRYPTO_DAILY: "Crypto Daily",
     }[mode]
 
     # Build final prompt

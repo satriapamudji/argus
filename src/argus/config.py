@@ -47,6 +47,7 @@ class ScheduleConfig:
     daily_us_close_sgt: str = "06:00"
     weekend_wrap_sgt: str = "10:00"
     monday_preview_ny: str = "SUN 18:10"
+    daily_crypto_utc: str = "00:00"
 
 
 @dataclass
@@ -557,6 +558,29 @@ class NewsApiConfig:
 
 
 @dataclass
+class CryptoStreamConfig:
+    """Crypto-specific stream configuration.
+
+    Controls crypto stream behavior including symbol selection and data sources.
+    """
+
+    top_n_market_cap: int = 10
+    always_include_symbols: list[str] = field(default_factory=lambda: ["BTC", "ETH"])
+    exclude_symbols: list[str] = field(default_factory=lambda: ["USDT", "USDC", "DAI"])
+    chartinspect_api_key_env: str = "CHARTINSPECT_API"
+
+    def __post_init__(self) -> None:
+        """Validate crypto configuration."""
+        if self.top_n_market_cap < 1:
+            raise ValueError("top_n_market_cap must be at least 1")
+
+    @property
+    def chartinspect_api_key(self) -> str:
+        """Get ChartInspect API key from environment."""
+        return os.getenv(self.chartinspect_api_key_env, "")
+
+
+@dataclass
 class StreamConfig:
     """Stream configuration."""
 
@@ -578,6 +602,7 @@ class StreamConfig:
     economic_calendar: EconomicCalendarConfig = field(default_factory=EconomicCalendarConfig)
     holiday_behavior: HolidayBehaviorConfig = field(default_factory=HolidayBehaviorConfig)
     news_api: NewsApiConfig = field(default_factory=NewsApiConfig)
+    crypto: CryptoStreamConfig = field(default_factory=CryptoStreamConfig)
 
 
 @dataclass
@@ -781,6 +806,17 @@ class ArgusConfig:
 
             news_api = NewsApiConfig(config_file=newsapi_config_file)
 
+            # Crypto-specific configuration
+            crypto_raw = stream_raw.get("crypto", {})
+            crypto = CryptoStreamConfig(
+                top_n_market_cap=crypto_raw.get("top_n_market_cap", 10),
+                always_include_symbols=crypto_raw.get("always_include_symbols", ["BTC", "ETH"]),
+                exclude_symbols=crypto_raw.get("exclude_symbols", ["USDT", "USDC", "DAI"]),
+                chartinspect_api_key_env=crypto_raw.get(
+                    "chartinspect_api_key_env", "CHARTINSPECT_API"
+                ),
+            )
+
             return StreamConfig(
                 name=stream_raw.get("name", "us_markets"),
                 enabled=stream_raw.get("enabled", True),
@@ -800,6 +836,7 @@ class ArgusConfig:
                 economic_calendar=economic_calendar,
                 holiday_behavior=holiday_behavior,
                 news_api=news_api,
+                crypto=crypto,
             )
 
         # Build stream config(s) from YAML.

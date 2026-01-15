@@ -508,6 +508,18 @@ class RunOrchestrator:
         Returns:
             Tuple of (FactsBundle, BundleStats).
         """
+        if self.mode == RunMode.CRYPTO_DAILY:
+            from argus.facts_bundle.crypto_builder import (
+                CryptoBundleBuilderConfig,
+                CryptoFactsBundleBuilder,
+            )
+
+            builder_config = CryptoBundleBuilderConfig.from_argus_config(
+                self.config, self.mode.value
+            )
+            builder = CryptoFactsBundleBuilder(config=builder_config, conn=conn)
+            return builder.build(trading_date=trading_date)
+
         from argus.facts_bundle.builder import BundleBuilderConfig, FactsBundleBuilder
 
         builder_config = BundleBuilderConfig.from_argus_config(self.config, self.mode.value)

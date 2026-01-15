@@ -13,12 +13,15 @@ from decimal import Decimal
 
 from argus.facts_bundle.types import (
     CalendarEventBundle,
+    CryptoFactsBundle,
+    CryptoMarketSnapshotBundle,
     FactsBundle,
     MarketSnapshotBundle,
     SpotlightBundle,
     WeeklyReturnBundle,
     WeeklyStatsBundle,
 )
+from argus.generator.renderer_crypto import CryptoMessageRenderer
 from argus.generator.types import LLMGeneratedContent, NewsContext
 
 # MarkdownV2 reserved characters that need escaping
@@ -811,7 +814,7 @@ class MessageRenderer:
         Dispatches to mode-specific rendering methods.
 
         Args:
-            llm_content: Generated content from the LLM.
+            llm_content: Generated content from LLM.
 
         Returns:
             Raw message string.
@@ -822,6 +825,15 @@ class MessageRenderer:
             return self._render_weekend_wrap(llm_content)
         elif run_mode == "monday_preview":
             return self._render_monday_preview(llm_content)
+        elif run_mode == "crypto_daily":
+            # Use crypto-specific renderer
+            if not isinstance(self.bundle, CryptoFactsBundle):
+                raise ValueError(
+                    f"Crypto bundle required for crypto_daily mode, got {type(self.bundle)}"
+                )
+            crypto_renderer = CryptoMessageRenderer(self.news_contexts)
+            message_text, _ = crypto_renderer.render(self.bundle, llm_content)
+            return message_text
         else:
             return self._render_us_close(llm_content)
 

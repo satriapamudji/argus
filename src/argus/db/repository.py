@@ -1096,6 +1096,7 @@ def get_scored_items_for_bundle(
     conn: Connection,
     window_hours: int = 24,
     limit: int = 100,
+    stream_name: str = "us_markets",
 ) -> list[dict[str, Any]]:
     """Get scored news items for facts bundle building.
 
@@ -1106,6 +1107,7 @@ def get_scored_items_for_bundle(
         conn: Database connection.
         window_hours: Look back window in hours.
         limit: Maximum number of items to return.
+        stream_name: Stream name to filter items (e.g., 'us_markets', 'crypto').
 
     Returns:
         List of dicts with keys: id, title, source_name, source_url,
@@ -1129,12 +1131,13 @@ def get_scored_items_for_bundle(
         JOIN news_scores ns ON ni.id = ns.news_item_id
         LEFT JOIN news_content nc ON ni.id = nc.news_item_id
         WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+          AND ni.stream_name = %s
         ORDER BY ns.impact_score DESC, ni.id ASC
         LIMIT %s
     """
 
     with conn.cursor() as cur:
-        cur.execute(query, (window_hours, limit))
+        cur.execute(query, (window_hours, stream_name, limit))
         rows = cur.fetchall()
 
     # Convert to list of dicts

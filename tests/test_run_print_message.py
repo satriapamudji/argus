@@ -32,7 +32,7 @@ def test_run_prints_message_when_enabled(monkeypatch):
         sys.executable,
         "-c",
         f"{stub}"
-        "import sys as _sys; from argus.cli import cli as _cli; _sys.argv=['argus','run','--mode','us_close','--skip-publish','--print-message']; _cli()",
+        "import sys as _sys; from argus.cli import cli as _cli; _sys.argv=['argus','run','--stream','us_markets','--mode','us_close','--skip-publish','--print-message']; _cli()",
     ]
 
     result = subprocess.run(
