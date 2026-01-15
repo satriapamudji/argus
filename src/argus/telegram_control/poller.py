@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from argus.config import ArgusConfig
+from argus.config import ArgusConfig, is_job_enabled_for_stream
 from argus.db.connection import get_connection
 from argus.db.telegram_repository import (
     approve_access_request,
@@ -108,6 +108,67 @@ def _format_countdown(now_utc: datetime, next_run: datetime) -> tuple[int, int]:
     hours = delta_seconds // 3600
     minutes = (delta_seconds % 3600) // 60
     return hours, minutes
+
+
+def _get_next_report_run_utc(config: ArgusConfig, stream_name: str, now_utc: datetime) -> datetime | None:
+    """Best-effort next report run time for a stream (UTC).
+
+    This mirrors the daemon scheduling model:
+    - ingest is separate (interval)
+    - report jobs (us_close/weekend_wrap/monday_preview/crypto_daily) publish updates
+    """
+    try:
+        from apscheduler.triggers.cron import CronTrigger
+    except Exception:
+        return None
+
+    try:
+        stream_cfg = config.get_stream(stream_name)
+    except Exception:
+        return None
+
+    triggers: list[CronTrigger] = []
+
+    # US Close: Tue-Fri in Asia/Singapore
+    if is_job_enabled_for_stream(stream_cfg, "us_close", config.daemon):
+        hour, minute = (int(x) for x in stream_cfg.schedule.daily_us_close_sgt.split(":", 1))
+        triggers.append(
+            CronTrigger(
+                hour=hour,
+                minute=minute,
+                day_of_week="tue-fri",
+                timezone="Asia/Singapore",
+            )
+        )
+
+    # Weekend Wrap: Saturday in Asia/Singapore
+    if is_job_enabled_for_stream(stream_cfg, "weekend_wrap", config.daemon):
+        hour, minute = (int(x) for x in stream_cfg.schedule.weekend_wrap_sgt.split(":", 1))
+        triggers.append(
+            CronTrigger(hour=hour, minute=minute, day_of_week="sat", timezone="Asia/Singapore")
+        )
+
+    # Monday Preview: Sunday in America/New_York (monday_preview_ny may include "SUN 18:10")
+    if is_job_enabled_for_stream(stream_cfg, "monday_preview", config.daemon):
+        parts = stream_cfg.schedule.monday_preview_ny.split()
+        time_str = parts[-1] if len(parts) > 1 else parts[0]
+        hour, minute = (int(x) for x in time_str.split(":", 1))
+        triggers.append(
+            CronTrigger(hour=hour, minute=minute, day_of_week="sun", timezone="America/New_York")
+        )
+
+    # Crypto Daily: daily in UTC
+    if is_job_enabled_for_stream(stream_cfg, "crypto_daily", config.daemon):
+        hour, minute = (int(x) for x in stream_cfg.schedule.daily_crypto_utc.split(":", 1))
+        triggers.append(CronTrigger(hour=hour, minute=minute, timezone="UTC"))
+
+    next_runs: list[datetime] = []
+    for trigger in triggers:
+        nxt = trigger.get_next_fire_time(previous_fire_time=None, now=now_utc)
+        if nxt is not None:
+            next_runs.append(nxt.astimezone(timezone.utc))
+
+    return min(next_runs) if next_runs else None
 
 
 def _poll_iteration(
@@ -466,28 +527,10 @@ def _handle_user_command(
         )
         msg = f"You are subscribed to {stream}."
 
-        # Best-effort countdown to next scheduled job run.
-        # If daemon scheduler is not running in this process, we fall back to no countdown.
+        # Best-effort countdown to the stream's next report job run.
+        # (This is cosmetic; the daemon remains the source of truth.)
         now = datetime.now(timezone.utc)
-        next_run = None
-        try:
-            # Import inside handler to avoid import cost and circular issues.
-            from apscheduler.triggers.cron import CronTrigger
-
-            stream_cfg = config.get_stream(stream)
-
-            # Determine which job governs the stream's next update.
-            # For now, streams map to us_close cadence.
-            hour, minute = (int(x) for x in stream_cfg.schedule.daily_us_close_sgt.split(":", 1))
-            trigger = CronTrigger(
-                hour=hour,
-                minute=minute,
-                day_of_week="tue-fri",
-                timezone="Asia/Singapore",
-            )
-            next_run = trigger.get_next_fire_time(previous_fire_time=None, now=now)
-        except Exception:
-            next_run = None
+        next_run = _get_next_report_run_utc(config, stream_name=stream, now_utc=now)
 
         if next_run is not None:
             h, m = _format_countdown(now, next_run)
