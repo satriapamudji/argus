@@ -522,10 +522,12 @@ def _handle_user_command(
         if stream not in config.list_streams():
             api.send_message(chat_id=chat_id, text=_escape_md_v2(f"Unknown stream: {stream}"))
             return
+
+        already_enabled = stream in list_enabled_subscriptions(conn, chat_id=chat_id)
         set_subscription_enabled(
             conn, chat_id=chat_id, stream_name=stream, enabled=True, actor_user_id=from_user_id
         )
-        msg = f"You are subscribed to {stream}."
+        msg = f"You are already subscribed to {stream}." if already_enabled else f"You are subscribed to {stream}."
 
         # Best-effort countdown to the stream's next report job run.
         # (This is cosmetic; the daemon remains the source of truth.)
