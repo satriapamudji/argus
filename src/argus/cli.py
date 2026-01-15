@@ -33,7 +33,7 @@ def cli(ctx: click.Context, config: Optional[Path]) -> None:
 )
 @click.option(
     "--mode",
-    type=click.Choice(["us_close", "weekend_wrap", "monday_preview"]),
+    type=click.Choice(["us_close", "weekend_wrap", "monday_preview", "crypto_daily"]),
     required=True,
     help="Run mode",
 )
@@ -296,7 +296,14 @@ def run(
             if print_message:
                 click.echo()
                 click.echo("--- FINAL GENERATED MESSAGE ---")
-                click.echo(result.message_content)
+                try:
+                    click.echo(result.message_content)
+                except UnicodeEncodeError:
+                    import sys
+
+                    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+                    sys.stdout.buffer.write(result.message_content.encode(encoding, errors="replace"))
+                    sys.stdout.buffer.write(b"\n")
                 click.echo("--- END MESSAGE ---")
 
             if save_message is not None:
@@ -1140,10 +1147,13 @@ def sources(language: str, locale: str, categories: Optional[str], limit: int) -
 
 
 @cli.command()
+@click.option(
+    "--stream", default=None, help="Stream name (required when using multi-stream config)"
+)
 @click.option("--window-hours", default=24, help="Look back window in hours (default 24)")
 @click.option("--dry-run", is_flag=True, help="Show candidates but don't fetch content")
 @click.pass_context
-def enrich(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
+def enrich(ctx: click.Context, stream: Optional[str], window_hours: int, dry_run: bool) -> None:
     """Enrich top-scored news items with full article content.
 
     Fetches content for the top-scored news items that haven't been
@@ -1153,6 +1163,24 @@ def enrich(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
 
     config_path = ctx.obj.get("config_path")
     config = ArgusConfig.load(config_path)
+
+    if stream is None:
+        if len(config.streams) > 1:
+            click.echo(
+                "Error: --stream is required when config.yaml defines multiple streams. "
+                f"Available: {', '.join(config.list_streams())}",
+                err=True,
+            )
+            raise SystemExit(2)
+
+        # Single-stream backward compatibility
+        stream = config.stream.name
+
+    try:
+        config.select_stream(stream)
+    except UnknownStreamError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(2)
 
     if not config.stream.enrichment.enabled:
         click.echo("Enrichment is disabled in configuration.")
@@ -1183,6 +1211,7 @@ def enrich(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
             conn,
             window_hours=window_hours,
             limit=config.stream.enrichment.max_enrich_per_run,
+            stream_name=config.stream.name,
         )
         conn.close()
 
@@ -1219,10 +1248,13 @@ def enrich(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
 
 
 @cli.command()
+@click.option(
+    "--stream", default=None, help="Stream name (required when using multi-stream config)"
+)
 @click.option("--window-hours", default=24, help="Look back window in hours (default 24)")
 @click.option("--dry-run", is_flag=True, help="Score items but don't write to database")
 @click.pass_context
-def score(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
+def score(ctx: click.Context, stream: Optional[str], window_hours: int, dry_run: bool) -> None:
     """Score news items using heuristics and optional LLM triage.
 
     Scores unscored news items from the window using the configured
@@ -1235,6 +1267,24 @@ def score(ctx: click.Context, window_hours: int, dry_run: bool) -> None:
 
     config_path = ctx.obj.get("config_path")
     config = ArgusConfig.load(config_path)
+
+    if stream is None:
+        if len(config.streams) > 1:
+            click.echo(
+                "Error: --stream is required when config.yaml defines multiple streams. "
+                f"Available: {', '.join(config.list_streams())}",
+                err=True,
+            )
+            raise SystemExit(2)
+
+        # Single-stream backward compatibility
+        stream = config.stream.name
+
+    try:
+        config.select_stream(stream)
+    except UnknownStreamError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(2)
 
     if not config.stream.scoring.enabled:
         click.echo("Scoring is disabled in configuration.")
@@ -1766,7 +1816,7 @@ def evaluate(
 )
 @click.option(
     "--mode",
-    type=click.Choice(["us_close", "weekend_wrap", "monday_preview"]),
+    type=click.Choice(["us_close", "weekend_wrap", "monday_preview", "crypto_daily"]),
     default=None,
     help="Override generation mode (defaults to bundle's run_mode)",
 )
@@ -1915,7 +1965,7 @@ def generate(
 @click.option("--window-hours", default=24, help="Look back window in hours (default 24)")
 @click.option(
     "--mode",
-    type=click.Choice(["us_close", "weekend_wrap", "monday_preview"]),
+    type=click.Choice(["us_close", "weekend_wrap", "monday_preview", "crypto_daily"]),
     default="us_close",
     help="Run mode (default us_close)",
 )
@@ -2786,10 +2836,7 @@ def daemon_status(config_path: Optional[Path], as_json: bool) -> None:
 
 
 @daemon.command("trigger")
-@click.argument(
-    "job_id",
-    type=click.Choice(["ingest", "us_close", "weekend_wrap", "monday_preview", "retention"]),
-)
+@click.argument("job_id")
 @click.option(
     "--config",
     "config_path",
@@ -2802,23 +2849,30 @@ def daemon_trigger(job_id: str, config_path: Optional[Path]) -> None:
     Sends a request to the running daemon to trigger the specified job.
     The daemon must be running for this command to work.
 
-    Example:
+    Examples:
+        # Trigger a base job across the default stream (back-compat)
         argus daemon trigger ingest
-        argus daemon trigger us_close
+
+        # Trigger a per-stream job (multi-stream)
+        argus daemon trigger ingest:crypto
+        argus daemon trigger crypto_daily:crypto
     """
     import json
     import urllib.request
     import urllib.error
+    import urllib.parse
 
     from .config import ArgusConfig
 
     # Load config to get health endpoint
     config = ArgusConfig.load(config_path)
-    url = f"http://{config.daemon.health_bind}:{config.daemon.health_port}/trigger/{job_id}"
+    url_job_id = urllib.parse.quote(job_id, safe="")
+    url = f"http://{config.daemon.health_bind}:{config.daemon.health_port}/trigger/{url_job_id}"
 
     try:
         req = urllib.request.Request(url, method="POST")
-        with urllib.request.urlopen(req, timeout=10) as response:
+        # Trigger requests block until the job completes (can take minutes for full runs).
+        with urllib.request.urlopen(req, timeout=300) as response:
             data = json.loads(response.read().decode())
     except urllib.error.HTTPError as e:
         # HTTPError must be caught before URLError (it's a subclass)
@@ -2845,10 +2899,7 @@ def daemon_trigger(job_id: str, config_path: Optional[Path]) -> None:
 
 
 @daemon.command("history")
-@click.argument(
-    "job_id",
-    type=click.Choice(["ingest", "us_close", "weekend_wrap", "monday_preview", "retention"]),
-)
+@click.argument("job_id")
 @click.option("--limit", default=10, help="Number of records to show")
 @click.option(
     "--config",
@@ -2863,19 +2914,21 @@ def daemon_history(job_id: str, limit: int, config_path: Optional[Path], as_json
     Queries the daemon's health endpoint to get job run history.
     The daemon must be running for this command to work.
 
-    Example:
+    Examples:
         argus daemon history ingest
-        argus daemon history us_close --limit 20
+        argus daemon history ingest:crypto --limit 20
     """
     import json
     import urllib.request
     import urllib.error
+    import urllib.parse
 
     from .config import ArgusConfig
 
     # Load config to get health endpoint
     config = ArgusConfig.load(config_path)
-    url = f"http://{config.daemon.health_bind}:{config.daemon.health_port}/health/jobs/{job_id}/history?limit={limit}"
+    url_job_id = urllib.parse.quote(job_id, safe="")
+    url = f"http://{config.daemon.health_bind}:{config.daemon.health_port}/health/jobs/{url_job_id}/history?limit={limit}"
 
     try:
         with urllib.request.urlopen(url, timeout=5) as response:

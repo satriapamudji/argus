@@ -16,7 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from argus import __version__
-from argus.config import ArgusConfig
+from argus.config import ArgusConfig, is_job_enabled_for_stream
 from argus.daemon.health import HealthServer
 from argus.daemon.persistence import (
     cleanup_stale_running_jobs,
@@ -37,12 +37,20 @@ JOB_INGEST = "ingest"
 JOB_US_CLOSE = "us_close"
 JOB_WEEKEND_WRAP = "weekend_wrap"
 JOB_MONDAY_PREVIEW = "monday_preview"
+JOB_CRYPTO_DAILY = "crypto_daily"
 JOB_RETENTION = "retention"
 JOB_HEALTH_PING = "health_ping"
 
 JOB_SEPARATOR = ":"
 
-ALL_JOBS = [JOB_INGEST, JOB_US_CLOSE, JOB_WEEKEND_WRAP, JOB_MONDAY_PREVIEW, JOB_RETENTION]
+ALL_JOBS = [
+    JOB_INGEST,
+    JOB_US_CLOSE,
+    JOB_WEEKEND_WRAP,
+    JOB_MONDAY_PREVIEW,
+    JOB_CRYPTO_DAILY,
+    JOB_RETENTION,
+]
 
 # Jobs that should run immediately if missed (catch-up on restart)
 CATCHUP_JOBS = {JOB_INGEST, JOB_RETENTION}
@@ -183,7 +191,7 @@ class ArgusDaemon:
             rss_config = stream_cfg.rss
 
             # Ingest job - runs every N minutes
-            if self.daemon_config.is_job_enabled(JOB_INGEST):
+            if is_job_enabled_for_stream(stream_cfg, JOB_INGEST, self.daemon_config):
                 jid = self._job_key(JOB_INGEST, stream_name)
                 self._scheduler.add_job(
                     self._run_ingest_for_stream,
@@ -196,7 +204,7 @@ class ArgusDaemon:
                 logger.info(f"Scheduled {jid}: every {rss_config.poll_interval_minutes} minutes")
 
             # US Close job - Tue-Fri at configured time (SGT)
-            if self.daemon_config.is_job_enabled(JOB_US_CLOSE):
+            if is_job_enabled_for_stream(stream_cfg, JOB_US_CLOSE, self.daemon_config):
                 hour, minute = self._parse_time(schedule.daily_us_close_sgt)
                 jid = self._job_key(JOB_US_CLOSE, stream_name)
                 self._scheduler.add_job(
@@ -215,7 +223,7 @@ class ArgusDaemon:
                 logger.info(f"Scheduled {jid}: Tue-Fri {schedule.daily_us_close_sgt} SGT")
 
             # Weekend Wrap job - Saturday at configured time (SGT)
-            if self.daemon_config.is_job_enabled(JOB_WEEKEND_WRAP):
+            if is_job_enabled_for_stream(stream_cfg, JOB_WEEKEND_WRAP, self.daemon_config):
                 hour, minute = self._parse_time(schedule.weekend_wrap_sgt)
                 jid = self._job_key(JOB_WEEKEND_WRAP, stream_name)
                 self._scheduler.add_job(
@@ -234,7 +242,7 @@ class ArgusDaemon:
                 logger.info(f"Scheduled {jid}: Sat {schedule.weekend_wrap_sgt} SGT")
 
             # Monday Preview job - Sunday at configured time (NY)
-            if self.daemon_config.is_job_enabled(JOB_MONDAY_PREVIEW):
+            if is_job_enabled_for_stream(stream_cfg, JOB_MONDAY_PREVIEW, self.daemon_config):
                 parts = schedule.monday_preview_ny.split()
                 time_str = parts[-1] if len(parts) > 1 else parts[0]
                 hour, minute = self._parse_time(time_str)
@@ -254,8 +262,22 @@ class ArgusDaemon:
                 )
                 logger.info(f"Scheduled {jid}: Sun {time_str} NY")
 
+            # Crypto Daily job - daily at configured time (UTC)
+            if is_job_enabled_for_stream(stream_cfg, JOB_CRYPTO_DAILY, self.daemon_config):
+                hour, minute = self._parse_time(schedule.daily_crypto_utc)
+                jid = self._job_key(JOB_CRYPTO_DAILY, stream_name)
+                self._scheduler.add_job(
+                    self._run_crypto_daily_for_stream,
+                    CronTrigger(hour=hour, minute=minute, timezone="UTC"),
+                    args=[stream_name],
+                    id=jid,
+                    name=f"Crypto Daily ({stream_name})",
+                    replace_existing=True,
+                )
+                logger.info(f"Scheduled {jid}: daily at {schedule.daily_crypto_utc} UTC")
+
             # Retention job - daily at configured hour (UTC)
-            if self.daemon_config.is_job_enabled(JOB_RETENTION):
+            if is_job_enabled_for_stream(stream_cfg, JOB_RETENTION, self.daemon_config):
                 retention_hour = self.daemon_config.retention_hour
                 jid = self._job_key(JOB_RETENTION, stream_name)
                 self._scheduler.add_job(
@@ -383,7 +405,8 @@ class ArgusDaemon:
                 stream_cfg = self.config.get_stream(stream_name)
 
                 for job_id in CATCHUP_JOBS:
-                    if not self.daemon_config.is_job_enabled(job_id):
+                    # Use per-stream job enablement check
+                    if not is_job_enabled_for_stream(stream_cfg, job_id, self.daemon_config):
                         continue
 
                     policy = self.daemon_config.get_missed_policy(job_id)
@@ -428,8 +451,22 @@ class ArgusDaemon:
         """
         base_job_id, stream_name = self._split_job_key(job_id_or_key)
 
-        if not self.daemon_config.is_job_enabled(base_job_id):
-            logger.warning(f"Job {base_job_id} is disabled, skipping trigger")
+        # Determine the stream config for per-stream job enablement check
+        if stream_name:
+            try:
+                stream_cfg = self.config.get_stream(stream_name)
+            except Exception:
+                logger.warning(f"Unknown stream '{stream_name}' for job {base_job_id}")
+                return None
+        else:
+            # Back-compat: use default stream
+            stream_cfg = self.config.stream
+
+        # Check per-stream job enablement
+        if not is_job_enabled_for_stream(stream_cfg, base_job_id, self.daemon_config):
+            logger.warning(
+                f"Job {base_job_id} is disabled for stream {stream_cfg.name} (via stream override)"
+            )
             return None
 
         if stream_name is None:
@@ -448,6 +485,7 @@ class ArgusDaemon:
             JOB_US_CLOSE: self._run_us_close,
             JOB_WEEKEND_WRAP: self._run_weekend_wrap,
             JOB_MONDAY_PREVIEW: self._run_monday_preview,
+            JOB_CRYPTO_DAILY: self._run_crypto_daily_for_stream,
             JOB_RETENTION: self._run_retention,
         }
 
@@ -617,7 +655,9 @@ class ArgusDaemon:
             job_id, run_weekend_wrap_sync, trigger_type, stream_name=stream_name
         )
 
-    async def _run_monday_preview_for_stream(self, stream_name: str) -> Optional[JobRunRecord]:
+    async def _run_monday_preview_for_stream(
+        self, stream_name: str, trigger_type: str = "scheduled"
+    ) -> Optional[JobRunRecord]:
         """Run Monday Preview job for a specific stream."""
 
         def run_monday_preview_sync(config: ArgusConfig) -> Any:
@@ -634,7 +674,10 @@ class ArgusDaemon:
 
         job_id = self._job_key(JOB_MONDAY_PREVIEW, stream_name)
         return await self._run_job(
-            job_id, run_monday_preview_sync, trigger_type="scheduled", stream_name=stream_name
+            job_id=job_id,
+            job_func=run_monday_preview_sync,
+            trigger_type=trigger_type,
+            stream_name=stream_name,
         )
 
     async def _run_monday_preview(
@@ -662,6 +705,25 @@ class ArgusDaemon:
             job_id, run_monday_preview_sync, trigger_type, stream_name=stream_name
         )
 
+    async def _run_crypto_daily_for_stream(
+        self, trigger_type: str = "scheduled", stream_name: Optional[str] = None
+    ) -> Optional[JobRunRecord]:
+        """Run crypto daily update job for a specific stream."""
+
+        def run_crypto_daily_sync(config: ArgusConfig) -> Any:
+            from argus.orchestrator import RunOrchestrator, RunMode
+
+            orchestrator = RunOrchestrator(config, RunMode.CRYPTO_DAILY)
+            return orchestrator.run()
+
+        if stream_name is None:
+            return await self._run_job(JOB_CRYPTO_DAILY, run_crypto_daily_sync, trigger_type)
+
+        job_id = self._job_key(JOB_CRYPTO_DAILY, stream_name)
+        return await self._run_job(
+            job_id, run_crypto_daily_sync, trigger_type, stream_name=stream_name
+        )
+
     async def _run_retention_for_stream(self, stream_name: str) -> Optional[JobRunRecord]:
         """Run retention cleanup job for a specific stream."""
 
@@ -677,7 +739,10 @@ class ArgusDaemon:
 
         job_id = self._job_key(JOB_RETENTION, stream_name)
         return await self._run_job(
-            job_id, run_retention_sync, trigger_type="scheduled", stream_name=stream_name
+            job_id,
+            run_retention_sync,
+            trigger_type="scheduled",
+            stream_name=stream_name,
         )
 
     async def _run_retention(
@@ -720,6 +785,7 @@ class ArgusDaemon:
 
             # Multi-stream jobs
             for stream_name in self._iter_enabled_streams():
+                stream_cfg = self.config.get_stream(stream_name)
                 for base_job_id in ALL_JOBS:
                     job_key = self._job_key(base_job_id, stream_name)
 
@@ -733,9 +799,12 @@ class ArgusDaemon:
                         if job and job.next_run_time:
                             next_run = job.next_run_time
 
+                    # Use per-stream job enablement check
                     jobs[job_key] = JobStatus(
                         job_id=job_key,
-                        enabled=self.daemon_config.is_job_enabled(base_job_id),
+                        enabled=is_job_enabled_for_stream(
+                            stream_cfg, base_job_id, self.daemon_config
+                        ),
                         last_run=last_run.started_at if last_run else None,
                         last_status=last_run.status if last_run else None,
                         next_run=next_run,

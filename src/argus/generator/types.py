@@ -15,6 +15,7 @@ class GenerationMode(Enum):
     US_CLOSE = "us_close"
     WEEKEND_WRAP = "weekend_wrap"
     MONDAY_PREVIEW = "monday_preview"
+    CRYPTO_DAILY = "crypto_daily"
 
     @classmethod
     def from_string(cls, mode: str) -> "GenerationMode":
@@ -33,6 +34,7 @@ class GenerationMode(Enum):
             "us_close": cls.US_CLOSE,
             "weekend_wrap": cls.WEEKEND_WRAP,
             "monday_preview": cls.MONDAY_PREVIEW,
+            "crypto_daily": cls.CRYPTO_DAILY,
         }
         if mode not in mode_map:
             raise ValueError(f"Unknown generation mode: {mode}")

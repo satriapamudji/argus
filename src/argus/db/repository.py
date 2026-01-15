@@ -698,6 +698,7 @@ def get_news_items_for_enrichment(
     conn: Connection,
     window_hours: int = 24,
     limit: int = 25,
+    stream_name: str = "us_markets",
 ) -> list[tuple[int, str, str, datetime, int]]:
     """Get news items eligible for enrichment.
 
@@ -707,6 +708,7 @@ def get_news_items_for_enrichment(
         conn: Database connection.
         window_hours: Look back window in hours.
         limit: Maximum number of items to return.
+        stream_name: Stream name to filter items (e.g., 'us_markets', 'crypto').
 
     Returns:
         List of tuples: (id, source_url, title, ingested_at, impact_score)
@@ -714,16 +716,21 @@ def get_news_items_for_enrichment(
     query = """
         SELECT ni.id, ni.source_url, ni.title, ni.ingested_at, ns.impact_score
         FROM news_items ni
-        JOIN news_scores ns ON ni.id = ns.news_item_id
-        LEFT JOIN news_content nc ON ni.id = nc.news_item_id
+        JOIN news_scores ns
+          ON ni.id = ns.news_item_id
+         AND ns.stream_name = ni.stream_name
+        LEFT JOIN news_content nc
+          ON ni.id = nc.news_item_id
+         AND nc.stream_name = ni.stream_name
         WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+          AND ni.stream_name = %s
           AND nc.id IS NULL
         ORDER BY ns.impact_score DESC
         LIMIT %s
     """
 
     with conn.cursor() as cur:
-        cur.execute(query, (window_hours, limit))
+        cur.execute(query, (window_hours, stream_name, limit))
         return cur.fetchall()
 
 
@@ -805,6 +812,7 @@ def get_news_items_for_scoring(
     conn: Connection,
     window_hours: int = 24,
     limit: int = 100,
+    stream_name: str = "us_markets",
 ) -> list[
     tuple[int, int, str, str, str, Optional[str], Optional[datetime], datetime, Optional[int]]
 ]:
@@ -816,6 +824,7 @@ def get_news_items_for_scoring(
         conn: Database connection.
         window_hours: Look back window in hours.
         limit: Maximum number of items to return.
+        stream_name: Stream name to filter items (e.g., 'us_markets', 'crypto').
 
     Returns:
         List of tuples: (id, fingerprint_id, source_name, source_url, title,
@@ -833,22 +842,28 @@ def get_news_items_for_scoring(
             ni.ingested_at,
             nf.simhash
         FROM news_items ni
-        JOIN news_fingerprints nf ON ni.fingerprint_id = nf.id
-        LEFT JOIN news_scores ns ON ni.id = ns.news_item_id
+        JOIN news_fingerprints nf
+          ON ni.fingerprint_id = nf.id
+         AND nf.stream_name = ni.stream_name
+        LEFT JOIN news_scores ns
+          ON ni.id = ns.news_item_id
+         AND ns.stream_name = ni.stream_name
         WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+          AND ni.stream_name = %s
           AND ns.id IS NULL
         ORDER BY ni.ingested_at DESC
         LIMIT %s
     """
 
     with conn.cursor() as cur:
-        cur.execute(query, (window_hours, limit))
+        cur.execute(query, (window_hours, stream_name, limit))
         return cur.fetchall()
 
 
 def get_recent_simhashes(
     conn: Connection,
     window_hours: int = 24,
+    stream_name: str = "us_markets",
 ) -> list[int]:
     """Get SimHashes from recent items for uniqueness comparison.
 
@@ -857,6 +872,7 @@ def get_recent_simhashes(
     Args:
         conn: Database connection.
         window_hours: Look back window in hours.
+        stream_name: Stream name to filter items (e.g., 'us_markets', 'crypto').
 
     Returns:
         List of SimHash integers.
@@ -866,11 +882,12 @@ def get_recent_simhashes(
         FROM news_fingerprints nf
         JOIN news_items ni ON nf.id = ni.fingerprint_id
         WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+          AND ni.stream_name = %s
           AND nf.simhash IS NOT NULL
     """
 
     with conn.cursor() as cur:
-        cur.execute(query, (window_hours,))
+        cur.execute(query, (window_hours, stream_name))
         return [row[0] for row in cur.fetchall() if row[0] is not None]
 
 
@@ -1096,6 +1113,7 @@ def get_scored_items_for_bundle(
     conn: Connection,
     window_hours: int = 24,
     limit: int = 100,
+    stream_name: str = "us_markets",
 ) -> list[dict[str, Any]]:
     """Get scored news items for facts bundle building.
 
@@ -1106,6 +1124,7 @@ def get_scored_items_for_bundle(
         conn: Database connection.
         window_hours: Look back window in hours.
         limit: Maximum number of items to return.
+        stream_name: Stream name to filter items (e.g., 'us_markets', 'crypto').
 
     Returns:
         List of dicts with keys: id, title, source_name, source_url,
@@ -1126,15 +1145,20 @@ def get_scored_items_for_bundle(
             ns.impact_score,
             CASE WHEN nc.id IS NOT NULL THEN TRUE ELSE FALSE END AS has_content
         FROM news_items ni
-        JOIN news_scores ns ON ni.id = ns.news_item_id
-        LEFT JOIN news_content nc ON ni.id = nc.news_item_id
+        JOIN news_scores ns
+          ON ni.id = ns.news_item_id
+         AND ns.stream_name = ni.stream_name
+        LEFT JOIN news_content nc
+          ON ni.id = nc.news_item_id
+         AND nc.stream_name = ni.stream_name
         WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+          AND ni.stream_name = %s
         ORDER BY ns.impact_score DESC, ni.id ASC
         LIMIT %s
     """
 
     with conn.cursor() as cur:
-        cur.execute(query, (window_hours, limit))
+        cur.execute(query, (window_hours, stream_name, limit))
         rows = cur.fetchall()
 
     # Convert to list of dicts

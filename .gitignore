@@ -20,6 +20,11 @@ wheels/
 .installed.cfg
 *.egg
 tmp/
+thoughts/
+
+# Node (not used in this repo)
+package.json
+package-lock.json
 
 # Virtual environments
 venv/

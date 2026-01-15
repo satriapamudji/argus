@@ -23,12 +23,14 @@ DEFAULT_HOLIDAY_BEHAVIORS: dict[RunMode, HolidayBehavior] = {
     RunMode.US_CLOSE: HolidayBehavior.PUBLISH_CLOSED_NOTE,
     RunMode.WEEKEND_WRAP: HolidayBehavior.SKIP,  # Not applicable
     RunMode.MONDAY_PREVIEW: HolidayBehavior.PUBLISH_CLOSED_NOTE,
+    RunMode.CRYPTO_DAILY: HolidayBehavior.SKIP,  # Crypto markets are 24/7, no holidays
 }
 
 DEFAULT_HALF_DAY_BEHAVIORS: dict[RunMode, HalfDayBehavior] = {
     RunMode.US_CLOSE: HalfDayBehavior.LABEL_HALF_DAY,
     RunMode.WEEKEND_WRAP: HalfDayBehavior.LABEL_HALF_DAY,
     RunMode.MONDAY_PREVIEW: HalfDayBehavior.LABEL_HALF_DAY,
+    RunMode.CRYPTO_DAILY: HalfDayBehavior.SKIP,  # Crypto markets are 24/7, no half days
 }
 
 

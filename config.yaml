@@ -1,84 +1,171 @@
-stream:
-  name: us_markets
-  enabled: true
-
-# Fetch and persist optional cross-asset data for snapshots.
-include_cross_assets: true
-
-# Provider selection for each pipeline stage
-# Options:
-#   ingestion: "rss" (default) | "api_newsapi"
-#   scoring: "heuristic_v2" (default) | "heuristic_v1"
-#   enrichment: "fetch_extract" (default)
-#   publisher: "telegram" (default) | "null"
-providers:
-  ingestion: rss
-  scoring: heuristic_v2
-  # ingestion: api_newsapi  # Uncomment to use TheNewsAPI instead of RSS
-
-telegram:
-  # Prefer env vars; allow optional override per stream
-  bot_token_env: TELEGRAM_BOT_TOKEN
-  chat_id_env: TELEGRAM_CHAT_ID
-  parse_mode_env: TELEGRAM_PARSE_MODE
-
-schedule:
-  daily_us_close_sgt: "06:00"
-  weekend_wrap_sgt: "10:00"
-  monday_preview_ny: "SUN 18:10"
-
-monday_preview:
-  conditional: true
-  risk_threshold: 60
-  force_publish: false
-  force_skip: false
-
-retention:
-  news_items_days: 60
-  fingerprints_days: 3650
-  runs_days: 3650
-
-dedupe:
-  url_hash: true
-  text_hash: true
-  simhash:
+streams:
+  us_markets:
+    name: us_markets
     enabled: true
-    hamming_threshold: 3
-    window_days: 3
-  title_trigram:
+
+    # Fetch and persist optional cross-asset data for snapshots.
+    include_cross_assets: true
+
+    # Provider selection for each pipeline stage
+    # Options:
+    #   ingestion: "rss" (default) | "api_newsapi"
+    #   scoring: "heuristic_v2" (default) | "heuristic_v1"
+    #   enrichment: "fetch_extract" (default)
+    #   publisher: "telegram" (default) | "null"
+    providers:
+      ingestion: rss
+      scoring: heuristic_v2
+      # ingestion: api_newsapi  # Uncomment to use TheNewsAPI instead of RSS
+
+    telegram:
+      # Prefer env vars; allow optional override per stream
+      bot_token_env: TELEGRAM_BOT_TOKEN
+      chat_id_env: TELEGRAM_CHAT_ID
+      parse_mode_env: TELEGRAM_PARSE_MODE
+
+    schedule:
+      daily_us_close_sgt: "06:00"
+      weekend_wrap_sgt: "10:00"
+      monday_preview_ny: "SUN 18:10"
+
+    monday_preview:
+      conditional: true
+      risk_threshold: 60
+      force_publish: false
+      force_skip: false
+
+    retention:
+      news_items_days: 60
+      fingerprints_days: 3650
+      runs_days: 3650
+
+    dedupe:
+      url_hash: true
+      text_hash: true
+      simhash:
+        enabled: true
+        hamming_threshold: 3
+        window_days: 3
+      title_trigram:
+        enabled: true
+        similarity_threshold: 0.85
+
+    enrichment:
+      enabled: true
+      max_enrich_per_run: 25
+      allow_full_text_storage: false
+      snippet_chars: 1200
+
+    rss:
+      # Whitelisted RSS feeds are defined in files under ./rss so adding feeds is a file edit, not a code change.
+      # Each line: URL (optionally "#" comments). Blank lines ignored.
+      allowlist_files:
+        - "rss/us_markets.txt"
+      poll_interval_minutes: 20
+
+    # TheNewsAPI configuration (when providers.ingestion = "api_newsapi")
+    # API keys: Set NEWS_API_KEYS env var (comma-separated for rotation)
+    # Settings: See apis/newsapi_us_markets.txt for domains, lookback, etc.
+    # To list available sources: argus newsapi sources --categories business
+
+    constraints:
+      max_words_daily: 420
+      max_words_weekend: 520
+      max_words_preview: 320
+      max_takeaway_bullets: 5
+      max_watch_bullets: 3
+
+    spotlight:
+      enabled: false
+      title: ""
+      body: ""
+      disclaimer: ""
+
+    # Per-stream daemon job overrides (takes precedence over global daemon.jobs_enabled)
+    daemon:
+      jobs_enabled:
+        crypto_daily: false  # us_markets doesn't run crypto_daily
+
+  crypto:
+    name: crypto
     enabled: true
-    similarity_threshold: 0.85
 
-enrichment:
-  enabled: true
-  max_enrich_per_run: 25
-  allow_full_text_storage: false
-  snippet_chars: 1200
+    # Fetch and persist optional cross-asset data for snapshots.
+    include_cross_assets: false
 
-rss:
-  # Whitelisted RSS feeds are defined in files under ./rss so adding feeds is a file edit, not a code change.
-  # Each line: URL (optionally "#" comments). Blank lines ignored.
-  allowlist_files:
-    - "rss/us_markets.txt"
-  poll_interval_minutes: 20
+    # Provider selection for each pipeline stage
+    providers:
+      ingestion: rss
+      scoring: heuristic_v3
+      enrichment: fetch_extract
+      publisher: telegram
 
-# TheNewsAPI configuration (when providers.ingestion = "api_newsapi")
-# API keys: Set NEWS_API_KEYS env var (comma-separated for rotation)
-# Settings: See apis/newsapi_us_markets.txt for domains, lookback, etc.
-# To list available sources: argus newsapi sources --categories business
+    telegram:
+      # Prefer env vars; allow optional override per stream
+      bot_token_env: TELEGRAM_BOT_TOKEN
+      chat_id_env: TELEGRAM_CHAT_ID
+      parse_mode_env: TELEGRAM_PARSE_MODE
 
-constraints:
-  max_words_daily: 420
-  max_words_weekend: 520
-  max_words_preview: 320
-  max_takeaway_bullets: 5
-  max_watch_bullets: 3
+    schedule:
+      daily_crypto_utc: "00:00"
 
-spotlight:
-  enabled: false
-  title: ""
-  body: ""
-  disclaimer: ""
+    retention:
+      news_items_days: 60
+      fingerprints_days: 3650
+      runs_days: 3650
+
+    dedupe:
+      url_hash: true
+      text_hash: true
+      simhash:
+        enabled: true
+        hamming_threshold: 3
+        window_days: 3
+      title_trigram:
+        enabled: true
+        similarity_threshold: 0.85
+
+    enrichment:
+      enabled: true
+      max_enrich_per_run: 25
+      allow_full_text_storage: false
+      snippet_chars: 1200
+
+    rss:
+      # Whitelisted RSS feeds are defined in files under ./rss
+      allowlist_files:
+        - "rss/crypto.txt"
+      poll_interval_minutes: 20
+
+    constraints:
+      max_words_daily: 450
+      max_takeaway_bullets: 5
+      max_watch_bullets: 3
+
+    spotlight:
+      enabled: false
+      title: ""
+      body: ""
+      disclaimer: ""
+
+    # Per-stream daemon job overrides (takes precedence over global daemon.jobs_enabled)
+    daemon:
+      jobs_enabled:
+        us_close: false       # crypto doesn't run us_close
+        weekend_wrap: false   # crypto doesn't run weekend_wrap
+        monday_preview: false # crypto doesn't run monday_preview
+
+    # Crypto-specific configuration
+    crypto:
+      top_n_market_cap: 10
+      always_include_symbols:
+        - "BTC"
+        - "ETH"
+      exclude_symbols:
+        - "USDT"
+        - "USDC"
+        - "DAI"
+      chartinspect_api_key_env: CHARTINSPECT_API
 
 log_level: INFO
 
@@ -95,6 +182,7 @@ daemon:
     us_close: true
     weekend_wrap: true
     monday_preview: true
+    crypto_daily: true
     retention: true
 
   # Missed job policy: 'run_immediately' or 'skip'

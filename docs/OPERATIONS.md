@@ -42,11 +42,12 @@ This document provides detailed instructions for deploying and operating Argus i
 
 | Job | Schedule | Timezone | Command |
 |-----|----------|----------|---------|
-| Daily US Close | Mon-Fri 06:00 | Asia/Singapore | `argus run --mode us_close` |
-| Weekend Wrap | Sat 10:00 | Asia/Singapore | `argus run --mode weekend_wrap` |
-| Monday Preview | Sun 18:10 | America/New_York | `argus run --mode monday_preview --conditional` |
-| RSS Ingestion | Every 10 min | Any | `argus ingest` |
-| Retention Cleanup | Daily 03:00 | Asia/Singapore | `argus db cleanup` |
+| US Close (per stream) | Mon-Fri 06:00 | Asia/Singapore | `argus run --stream us_markets --mode us_close` |
+| Weekend Wrap (per stream) | Sat 10:00 | Asia/Singapore | `argus run --stream us_markets --mode weekend_wrap` |
+| Monday Preview (per stream) | Sun 18:10 | America/New_York | `argus run --stream us_markets --mode monday_preview --conditional` |
+| Crypto Daily (per stream) | Daily 00:00 | UTC | `argus run --stream crypto --mode crypto_daily` |
+| RSS Ingestion (per stream) | Every `poll_interval_minutes` | UTC | `argus ingest --stream <stream>` |
+| Retention Cleanup (per stream) | Daily 03:00 | UTC | `argus db cleanup` |
 | Partition Creation | Weekly Sun 04:00 | Asia/Singapore | `argus db create-partitions --days 14` |
 
 ---
@@ -54,6 +55,11 @@ This document provides detailed instructions for deploying and operating Argus i
 ## Daemon Mode Deployment (Recommended)
 
 Daemon mode is the recommended deployment method for VPS environments. It uses a long-running process with internal scheduling (APScheduler), eliminating the need for external cron configuration.
+
+### Scheduling model (multi-stream)
+
+- `ingest:<stream>` runs on a short interval and continuously writes new items into the DB for that stream.
+- Scheduled report jobs (`us_close:<stream>`, `crypto_daily:<stream>`, etc.) run `score → enrich → bundle → generate → publish` using the DB window (they do not ingest).
 
 ### Benefits
 
@@ -105,11 +111,12 @@ argus daemon start
 # Check daemon status (in another terminal)
 argus daemon status
 
-# Manually trigger a job
-argus daemon trigger ingest
+# Manually trigger a per-stream job
+argus daemon trigger ingest:crypto
+argus daemon trigger crypto_daily:crypto
 
 # View job history
-argus daemon history us_close
+argus daemon history crypto_daily:crypto
 ```
 
 ### Step 1: Configure Daemon
@@ -172,7 +179,7 @@ Quick check:
 
 1. DM the bot: `/start` then `/access`
 2. In your admin group (from the owner user): `/approve <id>`
-3. Back in DM: `/streams` then `/subscribe us_close_basic`
+3. Back in DM: `/streams` then `/subscribe us_markets`
 
 If the control plane is disabled, journald will include one of:
 - `Telegram control plane disabled: TELEGRAM_BOT_TOKEN not set`
@@ -204,8 +211,8 @@ argus daemon status
 |---------|-------------|
 | `argus daemon start` | Run daemon in foreground |
 | `argus daemon status` | Show daemon and job status |
-| `argus daemon trigger <job>` | Manually trigger a job |
-| `argus daemon history <job>` | Show recent run history for a job |
+| `argus daemon trigger <job_id_or_key>` | Manually trigger a job (supports `job:stream`) |
+| `argus daemon history <job_id_or_key>` | Show recent run history (supports `job:stream`) |
 
 ### Health Endpoint
 
@@ -415,10 +422,10 @@ ARGUS_HOME=/home/argus/argus
 CRON_TZ=Asia/Singapore
 
 # Daily US Close Update - Mon-Fri 06:00 SGT
-0 6 * * 1-5 argus cd $ARGUS_HOME && source venv/bin/activate && argus run --stream us_close_basic --mode us_close >> /var/log/argus/us_close.log 2>&1
+0 6 * * 1-5 argus cd $ARGUS_HOME && source venv/bin/activate && argus run --stream us_markets --mode us_close >> /var/log/argus/us_close.log 2>&1
 
 # Weekend Wrap - Sat 10:00 SGT
-0 10 * * 6 argus cd $ARGUS_HOME && source venv/bin/activate && argus run --stream us_close_basic --mode weekend_wrap >> /var/log/argus/weekend_wrap.log 2>&1
+0 10 * * 6 argus cd $ARGUS_HOME && source venv/bin/activate && argus run --stream us_markets --mode weekend_wrap >> /var/log/argus/weekend_wrap.log 2>&1
 
 # Retention Cleanup - Daily 03:00 SGT
 0 3 * * * argus cd $ARGUS_HOME && source venv/bin/activate && argus db cleanup >> /var/log/argus/cleanup.log 2>&1
@@ -432,15 +439,20 @@ CRON_TZ=Asia/Singapore
 CRON_TZ=America/New_York
 
 # Monday Preview - Sun 18:10 NY (10 min after futures open)
-10 18 * * 0 argus cd $ARGUS_HOME && source venv/bin/activate && argus run --stream us_close_basic --mode monday_preview --conditional >> /var/log/argus/monday_preview.log 2>&1
+10 18 * * 0 argus cd $ARGUS_HOME && source venv/bin/activate && argus run --stream us_markets --mode monday_preview --conditional >> /var/log/argus/monday_preview.log 2>&1
 
 # -----------------------------------------------------------------------------
 # Ingestion (runs frequently, any timezone)
 # -----------------------------------------------------------------------------
 CRON_TZ=UTC
 
-# RSS Ingestion - Every 10 minutes
-*/10 * * * * argus cd $ARGUS_HOME && source venv/bin/activate && argus ingest >> /var/log/argus/ingest.log 2>&1
+# Crypto Daily - 00:00 UTC
+0 0 * * * argus cd $ARGUS_HOME && source venv/bin/activate && argus run --stream crypto --mode crypto_daily >> /var/log/argus/crypto_daily.log 2>&1
+
+# RSS Ingestion (per stream) - match each stream.rss.poll_interval_minutes in config.yaml
+# Example for poll_interval_minutes=20:
+*/20 * * * * argus cd $ARGUS_HOME && source venv/bin/activate && argus ingest --stream us_markets >> /var/log/argus/ingest_us_markets.log 2>&1
+*/20 * * * * argus cd $ARGUS_HOME && source venv/bin/activate && argus ingest --stream crypto >> /var/log/argus/ingest_crypto.log 2>&1
 
 # Economic Calendar Refresh - Every 6 hours
 0 */6 * * * argus cd $ARGUS_HOME && source venv/bin/activate && argus calendar refresh >> /var/log/argus/calendar.log 2>&1
@@ -489,13 +501,13 @@ sudo crontab -u argus -l
 # Run a dry-run test
 cd /home/argus/argus
 source venv/bin/activate
-argus run --stream us_close_basic --mode us_close --dry-run
+argus run --stream us_markets --mode us_close --dry-run
 
 # Run smoke test
 argus smoke --verbose
 
 # Manually trigger ingestion
-argus ingest --dry-run
+argus ingest --stream us_markets --dry-run
 ```
 
 ---
@@ -612,7 +624,7 @@ For local testing, you can use Windows Task Scheduler to simulate cron jobs.
 
 3. **General Tab**
    - Name: `Argus - RSS Ingestion`
-   - Description: `Poll RSS feeds every 10 minutes`
+   - Description: `Poll RSS feeds for us_markets`
    - Select "Run whether user is logged on or not"
    - Check "Run with highest privileges"
 
@@ -620,7 +632,7 @@ For local testing, you can use Windows Task Scheduler to simulate cron jobs.
    - Click "New..."
    - Begin the task: "On a schedule"
    - Settings: Daily
-   - Repeat task every: 10 minutes
+   - Repeat task every: match `stream.rss.poll_interval_minutes` (e.g., 20 minutes)
    - For a duration of: Indefinitely
    - Check "Enabled"
    - Click OK
@@ -629,7 +641,7 @@ For local testing, you can use Windows Task Scheduler to simulate cron jobs.
    - Click "New..."
    - Action: "Start a program"
    - Program/script: `C:\Projects\argus\venv\Scripts\python.exe`
-   - Add arguments: `-m argus ingest`
+   - Add arguments: `-m argus ingest --stream us_markets`
    - Start in: `C:\Projects\argus`
    - Click OK
 
@@ -643,6 +655,8 @@ For local testing, you can use Windows Task Scheduler to simulate cron jobs.
 
 8. **Enter Password**
    - Enter your Windows password when prompted
+
+Repeat the ingestion task for the crypto stream (use `-m argus ingest --stream crypto`).
 
 #### Create Daily US Close Task
 
@@ -660,7 +674,23 @@ For local testing, you can use Windows Task Scheduler to simulate cron jobs.
 
 3. **Actions Tab**
    - Program/script: `C:\Projects\argus\venv\Scripts\python.exe`
-   - Add arguments: `-m argus run --stream us_close_basic --mode us_close`
+   - Add arguments: `-m argus run --stream us_markets --mode us_close`
+   - Start in: `C:\Projects\argus`
+
+#### Create Crypto Daily Task
+
+1. **Create New Task**
+   - Name: `Argus - Crypto Daily`
+   - Description: `Generate crypto daily recap (UTC close-to-close)`
+
+2. **Triggers Tab**
+   - Begin the task: "On a schedule"
+   - Settings: Daily
+   - Start: `00:00:00` (UTC)
+
+3. **Actions Tab**
+   - Program/script: `C:\Projects\argus\venv\Scripts\python.exe`
+   - Add arguments: `-m argus run --stream crypto --mode crypto_daily`
    - Start in: `C:\Projects\argus`
 
 #### Create Weekend Wrap Task
@@ -676,7 +706,7 @@ For local testing, you can use Windows Task Scheduler to simulate cron jobs.
 
 3. **Actions Tab**
    - Program/script: `C:\Projects\argus\venv\Scripts\python.exe`
-   - Add arguments: `-m argus run --stream us_close_basic --mode weekend_wrap`
+   - Add arguments: `-m argus run --stream us_markets --mode weekend_wrap`
    - Start in: `C:\Projects\argus`
 
 #### Create Monday Preview Task
@@ -692,7 +722,7 @@ For local testing, you can use Windows Task Scheduler to simulate cron jobs.
 
 3. **Actions Tab**
    - Program/script: `C:\Projects\argus\venv\Scripts\python.exe`
-   - Add arguments: `-m argus run --stream us_close_basic --mode monday_preview --conditional`
+   - Add arguments: `-m argus run --stream us_markets --mode monday_preview --conditional`
    - Start in: `C:\Projects\argus`
 
 #### Verify Tasks
@@ -900,10 +930,12 @@ curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
 
 ```bash
 # Check RSS feeds are configured
-cat rss/us_close_basic.txt
+cat rss/us_markets.txt
+cat rss/crypto.txt
 
 # Run ingestion manually
-argus ingest --dry-run
+argus ingest --stream us_markets --dry-run
+argus ingest --stream crypto --dry-run
 
 # Check if items exist in DB
 psql -d argus -c "SELECT COUNT(*) FROM news_items WHERE ingested_at > NOW() - INTERVAL '24 hours';"

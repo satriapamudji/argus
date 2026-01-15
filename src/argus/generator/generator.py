@@ -8,7 +8,10 @@ from datetime import datetime, timezone
 from typing import Optional
 import httpx
 from argus.config import ConstraintsConfig
-from argus.facts_bundle.types import FactsBundle
+from argus.facts_bundle.types import (
+    CryptoFactsBundle,
+    FactsBundle,
+)
 from argus.generator.prompts import (
     build_news_contexts,
     build_user_prompt,
@@ -80,6 +83,7 @@ class MessageGenerator:
             GenerationMode.US_CLOSE: self.constraints.max_words_daily,
             GenerationMode.WEEKEND_WRAP: self.constraints.max_words_weekend,
             GenerationMode.MONDAY_PREVIEW: self.constraints.max_words_preview,
+            GenerationMode.CRYPTO_DAILY: self.constraints.max_words_daily,
         }
         return limits[mode]
 
@@ -137,14 +141,45 @@ class MessageGenerator:
             raise GenerationError(str(e))
 
     def _build_fallback_message(
-        self, bundle: FactsBundle, news_contexts: list[NewsContext], mode: GenerationMode
+        self, bundle: FactsBundle | CryptoFactsBundle, news_contexts: list[NewsContext], mode: GenerationMode
     ) -> GeneratorResult:
         """Build a minimal safe fallback message from bundle data only (no LLM).
 
         This is used when LLM generation fails validation after retry.
         The fallback contains only verified data from the facts bundle.
-        Mode-aware: builds appropriate structure for us_close, weekend_wrap, or monday_preview.
+        Mode-aware: builds appropriate structure for us_close, weekend_wrap, monday_preview, or crypto_daily.
         """
+        # For crypto bundles, use the crypto renderer
+        if isinstance(bundle, CryptoFactsBundle):
+            # Build a simple LLM content for rendering
+            llm_content = LLMGeneratedContent(
+                narrative="Market data is summarized above. See sources for details.",
+                takeaways=[
+                    "Review crypto market performance above",
+                    "Monitor derivatives data for positioning signals",
+                    "Check sources for detailed analysis",
+                ],
+                watch_next=[
+                    "Upcoming economic events may impact crypto markets",
+                    "Monitor regulatory developments",
+                ],
+            )
+            # Use crypto renderer to build the message
+            from argus.generator.renderer_crypto import CryptoMessageRenderer
+            renderer = CryptoMessageRenderer(news_contexts)
+            message_text, message_type = renderer.render(bundle, llm_content)
+            return GeneratorResult(
+                message=escape_message_v2(message_text),
+                message_raw=message_text,
+                word_count=0,
+                sources_count=0,
+                has_spotlight=False,
+                model="fallback",
+                generation_mode=GenerationMode.CRYPTO_DAILY,
+                generated_at=datetime.now(timezone.utc),
+                error="LLM generation failed, using fallback",
+            )
+
         sections = []
         run_mode = bundle.run_mode
 

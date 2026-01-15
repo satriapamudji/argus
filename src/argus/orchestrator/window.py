@@ -28,6 +28,7 @@ WINDOW_HOURS = {
     RunMode.US_CLOSE: 24,  # Last 24h of news
     RunMode.WEEKEND_WRAP: 120,  # Mon-Fri (~5 days)
     RunMode.MONDAY_PREVIEW: 120,  # Full prior week's news for context
+    RunMode.CRYPTO_DAILY: 24,  # Last 24h of news
 }
 
 
@@ -195,6 +196,38 @@ def get_window_for_monday_preview(now: datetime) -> WindowConfig:
     )
 
 
+def get_window_for_crypto_daily(now: datetime) -> WindowConfig:
+    """Calculate window for crypto_daily run.
+
+    The crypto_daily covers the completed 24-hour UTC day (00:00-00:00).
+    Schedule: Daily at 00:00 UTC
+
+    Args:
+        now: Current datetime (timezone-aware).
+
+    Returns:
+        WindowConfig for crypto_daily run.
+    """
+    # Get today's date in UTC
+    now_utc = now.astimezone(TZ_UTC)
+    today_date = now_utc.date()
+
+    # Calculate the start of today (00:00 UTC)
+    window_start = datetime.combine(today_date, time(0, 0, 0), tzinfo=TZ_UTC)
+
+    # Window end is now (run time)
+    window_end = now_utc
+
+    logger.debug(f"crypto_daily window: {window_start.isoformat()} to {window_end.isoformat()}")
+
+    return WindowConfig(
+        start=window_start,
+        end=window_end,
+        window_hours=24,  # Fixed 24-hour window
+        mode=RunMode.CRYPTO_DAILY,
+    )
+
+
 def get_window_for_mode(
     mode: RunMode,
     now: Optional[datetime] = None,
@@ -224,6 +257,11 @@ def get_window_for_mode(
         return get_window_for_weekend_wrap(now)
     elif mode == RunMode.MONDAY_PREVIEW:
         return get_window_for_monday_preview(now)
+    elif mode == RunMode.CRYPTO_DAILY:
+        logger.debug(
+            f"get_window_for_mode: CRYPTO_DAILY match, calling get_window_for_crypto_daily"
+        )
+        return get_window_for_crypto_daily(now)
     else:
         raise ValueError(f"Unknown run mode: {mode}")
 
@@ -237,6 +275,7 @@ def get_trading_date_for_run(
     For us_close: The previous US trading session.
     For weekend_wrap: Friday's date.
     For monday_preview: The upcoming Monday.
+    For crypto_daily: The completed UTC date.
 
     Args:
         mode: The run mode.
@@ -250,6 +289,11 @@ def get_trading_date_for_run(
 
     if now.tzinfo is None:
         now = now.replace(tzinfo=TZ_UTC)
+
+    if mode == RunMode.CRYPTO_DAILY:
+        # For crypto, the trading date is the UTC date
+        now_utc = now.astimezone(TZ_UTC)
+        return now_utc.date()
 
     now_ny = now.astimezone(TZ_NEW_YORK)
     today_ny = now_ny.date()

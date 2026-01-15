@@ -186,6 +186,7 @@ class HealthServer:
         job_key = request.match_info.get("job_id", "")
 
         from argus.daemon.scheduler import ALL_JOBS, JOB_SEPARATOR
+        from argus.config import is_job_enabled_for_stream
 
         base_job_id = job_key.split(JOB_SEPARATOR, 1)[0]
         if base_job_id not in ALL_JOBS:
@@ -196,20 +197,14 @@ class HealthServer:
             )
 
         try:
-            # Check if job is enabled
-            if not self.daemon.daemon_config.is_job_enabled(base_job_id):
-                return web.Response(
-                    text=json.dumps({"status": "disabled", "job_id": job_key}),
-                    content_type="application/json",
-                )
-
-            # Trigger the job
+            # Trigger the job - the daemon.trigger_job() handles per-stream enablement
             result = await self.daemon.trigger_job(job_key)
 
             if result is None:
-                # Job was already running or disabled
+                # Job was disabled, already running, or stream was invalid
+                # The daemon logs the specific reason
                 return web.Response(
-                    text=json.dumps({"status": "already_running", "job_id": job_key}),
+                    text=json.dumps({"status": "disabled_or_running", "job_id": job_key}),
                     content_type="application/json",
                 )
 

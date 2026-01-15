@@ -13,7 +13,7 @@ import jsonschema
 logger = logging.getLogger(__name__)
 
 # Current schema version
-BUNDLE_SCHEMA_VERSION = "1.1.0"
+BUNDLE_SCHEMA_VERSION = "1.2.0"
 
 # JSON Schema for FactsBundle
 FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
@@ -46,7 +46,7 @@ FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
         "run_mode": {
             "type": "string",
             "description": "Run mode",
-            "enum": ["us_close", "weekend_wrap", "monday_preview"],
+            "enum": ["us_close", "weekend_wrap", "monday_preview", "crypto_daily"],
         },
         "generated_at": {
             "type": "string",
@@ -58,7 +58,12 @@ FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
             "description": "Trading date in YYYY-MM-DD format",
             "format": "date",
         },
-        "market_snapshot": {"$ref": "#/$defs/MarketSnapshotBundle"},
+        "market_snapshot": {
+            "oneOf": [
+                {"$ref": "#/$defs/MarketSnapshotBundle"},
+                {"$ref": "#/$defs/CryptoMarketSnapshotBundle"},
+            ],
+        },
         "news_items": {
             "type": "array",
             "description": "Selected news items for the bundle",
@@ -109,6 +114,62 @@ FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
             },
             "additionalProperties": False,
         },
+        "CryptoIndexData": {
+            "type": "object",
+            "required": ["symbol", "name", "price_usd", "change_1d_pct"],
+            "properties": {
+                "symbol": {"type": "string", "minLength": 1},
+                "name": {"type": "string", "minLength": 1},
+                "price_usd": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                "change_1d_pct": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                "market_cap_usd": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                "volume_24h_usd": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+            },
+            "additionalProperties": False,
+        },
+        "CryptoMarketData": {
+            "type": "object",
+            "properties": {
+                "btc_dominance": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                "total_market_cap": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                "fear_greed_index": {"type": "integer", "minimum": 0, "maximum": 100},
+                "funding_rates": {
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                    },
+                },
+                "open_interest": {
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                    },
+                },
+            },
+            "additionalProperties": False,
+        },
+        "DeFiTVLSnapshot": {
+            "type": "object",
+            "required": ["total_tvl_usd"],
+            "properties": {
+                "total_tvl_usd": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                "top_protocols": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 2,
+                    },
+                },
+                "chain_breakdown": {
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {"type": "string", "pattern": "^-?\\d+(\\.\\d+)?$"},
+                    },
+                },
+            },
+            "additionalProperties": False,
+        },
         "MarketSnapshotBundle": {
             "type": "object",
             "required": ["trading_date", "sp500", "dow", "nasdaq"],
@@ -118,6 +179,23 @@ FACTS_BUNDLE_SCHEMA: dict[str, Any] = {
                 "dow": {"$ref": "#/$defs/IndexData"},
                 "nasdaq": {"$ref": "#/$defs/IndexData"},
                 "cross_assets": {"oneOf": [{"$ref": "#/$defs/CrossAssetsData"}, {"type": "null"}]},
+            },
+            "additionalProperties": False,
+        },
+        "CryptoMarketSnapshotBundle": {
+            "type": "object",
+            "required": ["trading_date", "btc", "eth", "major_alts"],
+            "properties": {
+                "trading_date": {"type": "string", "format": "date"},
+                "btc": {"$ref": "#/$defs/CryptoIndexData"},
+                "eth": {"$ref": "#/$defs/CryptoIndexData"},
+                "major_alts": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/CryptoIndexData"},
+                    "minItems": 1,
+                },
+                "crypto_metrics": {"oneOf": [{"$ref": "#/$defs/CryptoMarketData"}, {"type": "null"}]},
+                "defi_tvl": {"oneOf": [{"$ref": "#/$defs/DeFiTVLSnapshot"}, {"type": "null"}]},
             },
             "additionalProperties": False,
         },

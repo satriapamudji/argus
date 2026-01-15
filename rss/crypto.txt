@@ -1,0 +1,11 @@
+# Whitelisted RSS feeds for the `crypto` stream.
+# One URL per line. Blank lines and lines starting with "#" are ignored.
+
+# Primary Sources
+https://cointelegraph.com/rss
+https://www.coindesk.com/arc/outboundfeeds/rss/
+https://www.theblock.co/rss.xml
+https://decrypt.co/feed
+
+# Specialized
+https://bitcoinmagazine.com/feed
