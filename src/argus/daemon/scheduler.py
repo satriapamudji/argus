@@ -269,7 +269,7 @@ class ArgusDaemon:
                 self._scheduler.add_job(
                     self._run_crypto_daily_for_stream,
                     CronTrigger(hour=hour, minute=minute, timezone="UTC"),
-                    args=[stream_name],
+                    kwargs={"stream_name": stream_name},
                     id=jid,
                     name=f"Crypto Daily ({stream_name})",
                     replace_existing=True,

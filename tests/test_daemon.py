@@ -242,6 +242,16 @@ daemon:
         assert "retention:alpha" in job_ids
         assert "retention:beta" in job_ids
 
+        # Ensure crypto_daily uses kwargs for stream_name (avoid passing stream_name as trigger_type)
+        crypto_calls = [
+            kwargs
+            for _, kwargs in scheduler.add_job.call_args_list
+            if kwargs.get("id") in {"crypto_daily:alpha", "crypto_daily:beta"}
+        ]
+        assert len(crypto_calls) == 2
+        for call_kwargs in crypto_calls:
+            assert call_kwargs.get("kwargs", {}).get("stream_name") in {"alpha", "beta"}
+
 
 class TestHealthServerSerialization:
     """Tests for health server response serialization."""
