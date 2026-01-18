@@ -1120,9 +1120,14 @@ def get_scored_items_for_bundle(
     Returns items with scores, content (if enriched), and all fields
     needed for BundleCandidate construction.
 
+    Filters by published_at (with fallback to ingested_at for items
+    without published_at) to ensure news is included based on when it
+    was published, not when it was scraped. Also excludes items older
+    than 30 days to prevent stale news from appearing.
+
     Args:
         conn: Database connection.
-        window_hours: Look back window in hours.
+        window_hours: Look back window in hours based on published_at.
         limit: Maximum number of items to return.
         stream_name: Stream name to filter items (e.g., 'us_markets', 'crypto').
 
@@ -1132,7 +1137,7 @@ def get_scored_items_for_bundle(
         impact_score, has_content.
     """
     query = """
-        SELECT 
+        SELECT
             ni.id,
             ni.title,
             ni.source_name,
@@ -1151,7 +1156,8 @@ def get_scored_items_for_bundle(
         LEFT JOIN news_content nc
           ON ni.id = nc.news_item_id
          AND nc.stream_name = ni.stream_name
-        WHERE ni.ingested_at >= NOW() - INTERVAL '%s hours'
+        WHERE COALESCE(ni.published_at, ni.ingested_at) >= NOW() - INTERVAL '%s hours'
+          AND ni.published_at >= NOW() - INTERVAL '30 days'
           AND ni.stream_name = %s
         ORDER BY ns.impact_score DESC, ni.id ASC
         LIMIT %s

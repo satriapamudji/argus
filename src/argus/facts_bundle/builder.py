@@ -97,10 +97,18 @@ class BundleBuilderConfig:
         if config.stream.economic_calendar.enabled:
             economic_calendar = config.stream.economic_calendar
 
+        # Use mode-specific window_hours for news lookup
+        # weekend_wrap and monday_preview need longer windows (120h)
+        # to cover the full trading week
+        if run_mode in ("weekend_wrap", "monday_preview"):
+            window_hours = 120
+        else:
+            window_hours = config.stream.scoring.window_hours
+
         return cls(
             stream_name=config.stream.name,
             run_mode=run_mode,
-            window_hours=config.stream.scoring.window_hours,
+            window_hours=window_hours,
             spotlight=spotlight,
             economic_calendar=economic_calendar,
             persist_daily_snapshots=False,
