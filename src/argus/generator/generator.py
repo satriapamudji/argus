@@ -324,7 +324,10 @@ class MessageGenerator:
         final_result = None
         final_validation = None
 
-        for val_attempt in range(2):
+        # Validation retry attempts (configurable, default 5)
+        max_val_attempts = 5
+
+        for val_attempt in range(max_val_attempts):
             for api_attempt in range(self.config.max_retries + 1):
                 try:
                     start = time.time()
@@ -342,18 +345,8 @@ class MessageGenerator:
                 except Exception as e:
                     retry_count += 1
                     if api_attempt == self.config.max_retries:
-                        # LLM call failed completely - use fallback
-                        logger.error(f"LLM generation failed after retries: {e}")
-                        fallback = self._build_fallback_message(bundle, news_contexts, mode)
-                        fallback_validation = ValidationResult(
-                            is_valid=False,
-                            errors=[f"LLM generation failed: {e}"],
-                            sections_valid=True,
-                            bullet_counts_valid=True,
-                            no_hallucinations=True,
-                            formatting_valid=True,
-                        )
-                        return fallback, fallback_validation
+                        # LLM call failed completely - raise error (no fallback)
+                        raise GenerationError(f"LLM generation failed after {self.config.max_retries + 1} attempts: {e}")
 
             if llm_content is None:
                 raise GenerationError("LLM content missing after generation")
@@ -378,30 +371,21 @@ class MessageGenerator:
                 final_validation = val
                 break
             else:
-                if val_attempt == 0:
-                    # First validation failed - retry with corrective prompt
-                    user_prompt += f"\n\nValidation errors to fix: {', '.join(val.errors)}"
-                    user_prompt += (
-                        "\nPlease regenerate the content fixing these issues. Do not add any facts not in the provided data."
-                        "\nRemember: cite news ONLY using the provided cite keys in the exact format [#A1B2C3D4]."
-                    )
-                    retry_count += 1
-                    logger.warning(f"Validation failed, retrying: {val.errors}")
-                else:
-                    # Second validation also failed - use fallback
-                    logger.error(f"Validation failed after retry: {val.errors}")
-                    final_result = self._build_fallback_message(bundle, news_contexts, mode)
-                    final_validation = val
-                    break
+                # Save last validation for error reporting
+                final_validation = val
+                # Retry with corrective prompt
+                user_prompt += f"\n\nValidation errors to fix: {', '.join(val.errors)}"
+                user_prompt += (
+                    "\nPlease regenerate the content fixing these issues. Do not add any facts not in the provided data."
+                    "\nRemember: cite news ONLY using the provided cite keys in the exact format [#A1B2C3D4]."
+                )
+                retry_count += 1
+                logger.warning(f"Validation failed (attempt {val_attempt + 1}/{max_val_attempts}): {val.errors}")
 
-        # Ensure we always have a result (should never reach here without assignment)
-        if final_result is None or final_validation is None:
-            # This is a defensive fallback - should not happen in normal flow
-            final_result = self._build_fallback_message(bundle, news_contexts, mode)
-            final_validation = ValidationResult(
-                is_valid=False,
-                errors=["Unexpected generation flow - using fallback"],
-            )
+        # If all validation attempts failed, raise error
+        if final_result is None:
+            last_errors = final_validation.errors if final_validation else "unknown"
+            raise GenerationError(f"LLM validation failed after {max_val_attempts} attempts. Last errors: {last_errors}")
 
         return final_result, final_validation
 

@@ -126,6 +126,12 @@ def format_crypto_snapshot(snapshot: CryptoMarketSnapshotBundle) -> str:
     eth_price = float(snapshot.eth.price_usd)
     lines.append(f"ETH: ${eth_price:,.2f} ({eth_change_str})")
 
+    # Top movers (if available)
+    if snapshot.major_alts:
+        movers_line = _format_top_movers_display(snapshot.major_alts)
+        if movers_line:
+            lines.append(movers_line)
+
     # Market metrics
     if snapshot.crypto_metrics:
         metrics = snapshot.crypto_metrics
@@ -137,6 +143,45 @@ def format_crypto_snapshot(snapshot: CryptoMarketSnapshotBundle) -> str:
             lines.append(f"BTC Dominance: {btc_dom:.1f}%")
 
     return "\n".join(lines)
+
+
+def _format_top_movers_display(major_alts: tuple) -> str | None:
+    """Format top movers for display in the message.
+
+    Shows top 2 gainers and top 2 losers in a compact format.
+
+    Args:
+        major_alts: Tuple of CryptoIndexData for major alts.
+
+    Returns:
+        Formatted top movers string, or None if no significant movers.
+    """
+    if not major_alts:
+        return None
+
+    # Filter for significant moves (>3% or <-3%)
+    significant = [a for a in major_alts if abs(float(a.change_1d_pct)) >= 3.0]
+    if not significant:
+        return None
+
+    # Sort by 24h change
+    sorted_alts = sorted(significant, key=lambda a: float(a.change_1d_pct), reverse=True)
+
+    # Top 2 gainers and losers
+    gainers = [a for a in sorted_alts if float(a.change_1d_pct) > 0][:2]
+    losers = [a for a in reversed(sorted_alts) if float(a.change_1d_pct) < 0][:2]
+
+    parts = []
+    if gainers:
+        gainer_strs = [f"{a.symbol} +{float(a.change_1d_pct):.1f}%" for a in gainers]
+        parts.append("Top: " + ", ".join(gainer_strs))
+    if losers:
+        loser_strs = [f"{a.symbol} {float(a.change_1d_pct):.1f}%" for a in losers]
+        parts.append("Lagging: " + ", ".join(loser_strs))
+
+    if parts:
+        return "Top Movers: " + " | ".join(parts)
+    return None
 
 
 class CryptoMessageRenderer:
@@ -334,16 +379,33 @@ class CryptoMessageRenderer:
             for symbol, rate in funding_rates.items():
                 rate_float = float(rate)
                 basis_points = rate_float * 10000
-                interpretation = (
-                    "bullish" if rate_float > 0 else "bearish" if rate_float < 0 else "neutral"
-                )
-                body_lines.append(f"  • {symbol}: {basis_points:.1f} bps ({interpretation})")
+
+                # Interpretation based on funding rate level
+                if basis_points > 2:
+                    interpretation = "strong long bias"
+                elif basis_points > 0:
+                    interpretation = "mild long bias"
+                elif basis_points < -2:
+                    interpretation = "strong short bias"
+                else:
+                    interpretation = "neutral"
+
+                body_lines.append(f"  • {symbol}: {basis_points:+.1f} bps ({interpretation})")
 
         if open_interest:
             body_lines.append("Open Interest:")
             for symbol, oi in open_interest.items():
                 oi_float = float(oi) / 1e9
-                body_lines.append(f"  • {symbol}: ${oi_float:.2f}B")
+
+                # Interpretation based on absolute OI level
+                if oi_float > 10:
+                    interpretation = "high liquidity"
+                elif oi_float > 5:
+                    interpretation = "active market"
+                else:
+                    interpretation = "moderate activity"
+
+                body_lines.append(f"  • {symbol}: ${oi_float:.2f}B ({interpretation})")
 
         if long_short_ratio:
             body_lines.append("Long/Short Ratio:")

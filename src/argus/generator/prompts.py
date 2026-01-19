@@ -270,6 +270,7 @@ def build_news_contexts(bundle: FactsBundle) -> list[NewsContext]:
             snippet=item.snippet,
             content_excerpt=item.content_excerpt,
             topic=item.topic,
+            impact_score=item.impact_score,
         )
         contexts.append(context)
 
@@ -435,7 +436,9 @@ def _classify_fear_greed(value: int) -> str:
 
 
 def _format_crypto_news_summary(news_contexts: list[NewsContext]) -> str:
-    """Format news items for crypto prompt.
+    """Format news items for crypto prompt with content, topics, and impact scores.
+
+    Groups news by topic and includes full content excerpts for investor context.
 
     Args:
         news_contexts: Pre-processed news items with citation keys.
@@ -446,19 +449,104 @@ def _format_crypto_news_summary(news_contexts: list[NewsContext]) -> str:
     if not news_contexts:
         return "No news items."
 
-    lines = []
+    # Group by topic (items without topic go to "General")
+    topic_groups: dict[str, list[NewsContext]] = {}
     for ctx in news_contexts:
-        # Format: [#A1B2C3D4] Title - Source
-        line = f"[#{ctx.cite_key}] {ctx.title}"
-        if ctx.source_name:
-            line += f" - {ctx.source_name}"
-        lines.append(line)
+        topic = ctx.topic or "General"
+        if topic not in topic_groups:
+            topic_groups[topic] = []
+        topic_groups[topic].append(ctx)
+
+    # Topic display order (high-signal topics first)
+    topic_order = [
+        "protocol_risk",
+        "regulation",
+        "derivatives",
+        "defi",
+        "onchain",
+        "technical",
+        "asset_news",
+        "General",
+    ]
+
+    lines = []
+
+    for topic in topic_order:
+        if topic not in topic_groups:
+            continue
+
+        items = topic_groups[topic]
+        # Sort by impact score descending
+        items.sort(key=lambda c: c.impact_score or 0, reverse=True)
+
+        # Topic header
+        topic_display = topic.replace("_", " ").upper()
+        lines.append(f"{topic_display}:")
+        lines.append("")
+
+        for ctx in items:
+            # Impact score badge
+            impact_badge = f"[{ctx.impact_score}] " if ctx.impact_score is not None else ""
+
+            # Title line with cite key and impact
+            lines.append(f"{impact_badge}[#{ctx.cite_key}] {ctx.title}")
+
+            # Source and date
+            source_parts = [ctx.source_name]
+            if ctx.published_date:
+                source_parts.append(f"({ctx.published_date})")
+            lines.append(f"Source: {' '.join(source_parts)}")
+
+            # Content excerpt (prefer full content, fall back to snippet)
+            content = ctx.content_excerpt or ctx.snippet or "(no content)"
+            # Truncate to 800 chars to keep prompt manageable
+            if len(content) > 800:
+                content = content[:797] + "..."
+            lines.append(f"Content: {content}")
+            lines.append("")
 
     return "\n".join(lines)
 
 
+def _format_top_movers(bundle: CryptoFactsBundle) -> str:
+    """Format top movers from major alts for crypto prompt.
+
+    Shows top 3 gainers and top 3 losers (excluding stablecoins).
+
+    Args:
+        bundle: The crypto facts bundle.
+
+    Returns:
+        Formatted top movers string (empty if no alts available).
+    """
+    alts = bundle.market_snapshot.major_alts
+    if not alts:
+        return ""
+
+    # Sort by 24h change
+    sorted_alts = sorted(alts, key=lambda a: float(a.change_1d_pct), reverse=True)
+
+    # Top 3 gainers and losers
+    gainers = [a for a in sorted_alts if float(a.change_1d_pct) > 0][:3]
+    losers = [a for a in reversed(sorted_alts) if float(a.change_1d_pct) < 0][:3]
+
+    parts = []
+    if gainers:
+        gainer_strs = [f"{a.symbol} +{float(a.change_1d_pct):.1f}%" for a in gainers]
+        parts.append("Top: " + ", ".join(gainer_strs))
+    if losers:
+        loser_strs = [f"{a.symbol} {float(a.change_1d_pct):.1f}%" for a in losers]
+        parts.append("Lagging: " + ", ".join(loser_strs))
+
+    if parts:
+        return "Top Movers: " + " | ".join(parts) + "\n"
+    return ""
+
+
 def _format_crypto_derivatives_summary(bundle: CryptoFactsBundle) -> str:
-    """Format derivatives data for crypto prompt.
+    """Format derivatives data for crypto prompt with interpretations.
+
+    Includes insights about what the derivatives data signals about market positioning.
 
     Args:
         bundle: The crypto facts bundle.
@@ -474,24 +562,43 @@ def _format_crypto_derivatives_summary(bundle: CryptoFactsBundle) -> str:
 
     lines = []
 
-    # Funding rates
+    # Funding rates with interpretation
     if metrics.funding_rates:
         lines.append("Funding Rates:")
         for symbol, rate in sorted(metrics.funding_rates.items()):
             rate_bps = float(rate) * 10000  # Convert to bps
-            sentiment = "bullish" if rate_bps > 0 else "bearish" if rate_bps < 0 else "neutral"
-            lines.append(f"  {symbol}: {rate_bps:+.1f} bps ({sentiment})")
 
-    # Open interest
+            # Interpretation based on funding rate level
+            if rate_bps > 2:
+                signal = "strong long bias — longs paying shorts, overcrowding risk"
+            elif rate_bps > 0:
+                signal = "mild long bias — fresh long positioning entering"
+            elif rate_bps < -2:
+                signal = "strong short bias — shorts paying longs, flushout risk"
+            else:
+                signal = "neutral positioning"
+
+            lines.append(f"  {symbol}: {rate_bps:+.1f} bps — {signal}")
+
+    # Open interest with interpretation
     if metrics.open_interest:
-        if lines:  # Add separator if we already have funding rates
+        if lines:
             lines.append("")
         lines.append("Open Interest:")
+
         for symbol, oi in sorted(metrics.open_interest.items()):
             oi_billion = float(oi) / 1e9
             # Only show if significant (> $100M)
             if oi_billion > 0.1:
-                lines.append(f"  {symbol}: ${oi_billion:.2f}B")
+                # Interpretation based on absolute OI level
+                if oi_billion > 10:
+                    signal = "high liquidity — deep derivatives market"
+                elif oi_billion > 5:
+                    signal = "active derivatives market — good liquidity"
+                else:
+                    signal = "moderate derivatives activity"
+
+                lines.append(f"  {symbol}: ${oi_billion:.2f}B — {signal}")
 
     return "\n".join(lines) if lines else "No derivatives data available."
 
@@ -521,6 +628,7 @@ def build_user_prompt(
         # Extract required parameters for crypto prompt
         news_summary = _format_crypto_news_summary(news_contexts)
         derivatives_summary = _format_crypto_derivatives_summary(bundle)
+        top_movers = _format_top_movers(bundle)
 
         # Get market data values
         btc_price = float(snapshot.btc.price_usd)
@@ -557,6 +665,7 @@ def build_user_prompt(
             news_summary=news_summary,
             derivatives_summary=derivatives_summary,
             defi_tvl=defi_tvl,
+            top_movers=top_movers,
         )
 
     # Standard mode: use generic prompt building

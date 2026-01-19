@@ -163,6 +163,7 @@ class NewsContext:
     snippet: Optional[str]
     content_excerpt: Optional[str]
     topic: Optional[str]
+    impact_score: Optional[int] = None  # 0-100 relevance score
 
     def format_for_prompt(self) -> str:
         """Format this news item for inclusion in LLM prompt.

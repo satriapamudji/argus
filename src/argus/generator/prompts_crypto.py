@@ -93,7 +93,7 @@ TRADING DATE: {trading_date}
 MARKET SNAPSHOT:
 BTC: ${btc_price:,.2f} ({btc_change:+.2f}%)
 ETH: ${eth_price:,.2f} ({eth_change:+.2f}%)
-Total Market Cap: ${total_mcap:,.0f}B
+{top_movers}Total Market Cap: ${total_mcap:,.0f}B
 BTC Dominance: {btc_dom:.1f}%
 
 SENTIMENT:
@@ -125,6 +125,7 @@ def format_crypto_user_prompt(
     news_summary: str,
     derivatives_summary: str,
     defi_tvl: float,
+    top_movers: str = "",
 ) -> str:
     """Format the user prompt for crypto daily message generation.
 
@@ -142,6 +143,7 @@ def format_crypto_user_prompt(
         news_summary: Formatted news summary.
         derivatives_summary: Formatted derivatives summary.
         defi_tvl: Total DeFi TVL in billions USD.
+        top_movers: Formatted top movers line (optional).
 
     Returns:
         The formatted user prompt string.
@@ -160,4 +162,5 @@ def format_crypto_user_prompt(
         news_summary=news_summary,
         derivatives_summary=derivatives_summary,
         defi_tvl=defi_tvl,
+        top_movers=top_movers,
     )
