@@ -75,6 +75,25 @@ streams:
       max_takeaway_bullets: 5
       max_watch_bullets: 3
 
+    generator:
+      enabled: true
+      # OpenRouter model identifier (see https://openrouter.ai/models for options)
+      # Common models:
+      #   openai/gpt-4.1        - GPT-4.1 (latest GPT-4, good balance of quality/speed)
+      #   openai/gpt-4o         - GPT-4 Omni (multimodal, fast)
+      #   openai/o1-preview     - O1 Preview (reasoning model)
+      #   anthropic/claude-3.5-sonnet  - Claude 3.5 Sonnet (high quality)
+      #   anthropic/claude-3-sonnet     - Claude 3 Sonnet
+      #   google/gemini-pro-1.5  - Gemini Pro 1.5
+      #   mistralai/mistral-7b-instruct - Mistral 7B (faster, cheaper)
+      model: openai/gpt-4.1
+      # LLM temperature (0-1). Lower = more deterministic, higher = more creative
+      temperature: 0.4
+      # Number of retries on LLM failure
+      max_retries: 1
+      # HTTP timeout for LLM API calls (in seconds)
+      timeout_seconds: 60
+
     spotlight:
       enabled: false
       title: ""
@@ -141,6 +160,25 @@ streams:
       max_words_daily: 450
       max_takeaway_bullets: 5
       max_watch_bullets: 3
+
+    generator:
+      enabled: true
+      # OpenRouter model identifier (see https://openrouter.ai/models for options)
+      # Common models:
+      #   openai/gpt-4.1        - GPT-4.1 (latest GPT-4, good balance of quality/speed)
+      #   openai/gpt-4o         - GPT-4 Omni (multimodal, fast)
+      #   openai/o1-preview     - O1 Preview (reasoning model)
+      #   anthropic/claude-3.5-sonnet  - Claude 3.5 Sonnet (high quality)
+      #   anthropic/claude-3-sonnet     - Claude 3 Sonnet
+      #   google/gemini-pro-1.5  - Gemini Pro 1.5
+      #   mistralai/mistral-7b-instruct - Mistral 7B (faster, cheaper)
+      model: openai/gpt-4.1
+      # LLM temperature (0-1). Lower = more deterministic, higher = more creative
+      temperature: 0.4
+      # Number of retries on LLM failure
+      max_retries: 5  # Increased from default 1 for crypto
+      # HTTP timeout for LLM API calls (in seconds)
+      timeout_seconds: 120  # Give LLM more time with larger prompts
 
     spotlight:
       enabled: false
