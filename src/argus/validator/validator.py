@@ -306,12 +306,36 @@ class MessageValidator:
         # 3. Build allowed numbers set from bundle
         allowed_numbers = self._extract_allowed_numbers(bundle)
 
-        # Extract numbers from narrative/takeaways/watch sections (not sources)
-        # Split text to exclude sources section (support both formats)
+        # Extract numbers from narrative/takeaways/watch sections only
+        # Exclude renderer-formatted sections:
+        # - Sources section (always excluded)
+        # - Scorecard/Weekly stats section (for weekend_wrap and monday_preview)
+        # - Cross-Asset Snapshot section (for weekend_wrap and monday_preview)
+        check_text = text
+
+        # Exclude Sources section
         sources_idx = text.find("__Sources__")
         if sources_idx == -1:
             sources_idx = text.find("*Sources*")
-        check_text = text[:sources_idx] if sources_idx != -1 else text
+        check_text = check_text[:sources_idx] if sources_idx != -1 else check_text
+
+        # For weekend_wrap and monday_preview, exclude renderer-formatted sections
+        if bundle.run_mode in ("weekend_wrap", "monday_preview"):
+            # Find the end of the header (first line after the date)
+            # The scorecard starts after the date header and ends before Cross-Asset or "Market data"
+            lines = text.split('\n')
+            content_start = -1
+            narrative_start = -1
+
+            for i, line in enumerate(lines):
+                # Find where narrative starts (after scorecard and cross-asset sections)
+                if "Market data as of close" in line:
+                    narrative_start = i
+                    break
+
+            if narrative_start > 0:
+                # Keep everything from narrative_start onwards
+                check_text = '\n'.join(lines[narrative_start:])
 
         # Check percentages
         for match in PERCENT_PATTERN.findall(check_text):
@@ -472,6 +496,12 @@ class MessageValidator:
                 extras.add(f"{rounded_1dp:.2f}")
                 if val > 0:
                     extras.add(f"+{rounded_1dp:.2f}")
+                # Add rounded versions (0 decimal places) for LLM rounding to integers
+                # e.g. 7.1 -> also allow 7.00, 0.13 -> allow 0.00
+                rounded_0dp = round(val)
+                extras.add(f"{rounded_0dp:.2f}")
+                if val > 0:
+                    extras.add(f"+{rounded_0dp:.2f}")
                 # Handle -0.2 -> allow "0" or "-0" for near-zero values
                 if abs(val) < 0.5:
                     extras.add("0.00")
