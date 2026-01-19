@@ -56,6 +56,28 @@ streams:
       allow_full_text_storage: false
       snippet_chars: 1200
 
+    scoring:
+      enabled: true
+      window_hours: 24
+      max_items_per_run: 100
+      # Source tiering (optional): tier_1 (20pts), tier_2 (15pts), tier_3 (10pts), unlisted (5pts)
+      source_tiers:
+        tier_1:
+          - "Reuters"
+          - "Bloomberg"
+          - "WSJ"
+        tier_2:
+          - "CNBC"
+          - "Financial Times"
+        tier_3:
+          - "Yahoo Finance"
+          - "MarketWatch"
+      # LLM triage for news filtering (optional)
+      # When enabled, uses an LLM to score and rank news items beyond heuristic scoring
+      llm_triage_enabled: false
+      llm_model: "mistralai/mistral-7b-instruct"  # Can use any OpenRouter model
+      llm_max_items: 25
+
     rss:
       # Whitelisted RSS feeds are defined in files under ./rss so adding feeds is a file edit, not a code change.
       # Each line: URL (optionally "#" comments). Blank lines ignored.
@@ -149,6 +171,29 @@ streams:
       max_enrich_per_run: 25
       allow_full_text_storage: false
       snippet_chars: 1200
+
+    scoring:
+      enabled: true
+      window_hours: 24
+      max_items_per_run: 100
+      # Source tiering (optional): tier_1 (20pts), tier_2 (15pts), tier_3 (10pts), unlisted (5pts)
+      source_tiers:
+        tier_1:
+          - "CoinDesk"
+          - "Cointelegraph"
+          - "The Block"
+        tier_2:
+          - "Decrypt"
+          - "Bitcoin.com"
+          - "BeInCrypto"
+        tier_3:
+          - "CryptoSlate"
+          - "AMBCrypto"
+      # LLM triage for news filtering (optional)
+      # When enabled, uses an LLM to score and rank news items beyond heuristic scoring
+      llm_triage_enabled: false
+      llm_model: "mistralai/mistral-7b-instruct"  # Can use any OpenRouter model
+      llm_max_items: 25
 
     rss:
       # Whitelisted RSS feeds are defined in files under ./rss
