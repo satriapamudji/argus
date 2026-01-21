@@ -43,9 +43,16 @@ OUTPUT FORMAT (JSON):
 You must respond with valid JSON containing exactly these fields:
 {{
   "narrative": "2-4 paragraphs of market analysis. Cite news with [#A1B2C3D4].",
-  "takeaways": ["bullet 1", "bullet 2", "bullet 3"],
-  "watch_next": ["watch item 1", "watch item 2", "watch item 3"]
+  "takeaways": ["bullet 1", "bullet 2", "bullet 3", "bullet 4", "bullet 5"],
+  "watch_next": ["watch item 1", "watch item 2"]
 }}
+
+CRITICAL BULLET COUNTS - STRICTLY ENFORCED:
+- takeaways: EXACTLY 3-5 bullets (not more, not less)
+- watch_next: EXACTLY 2 bullets ONLY (NEVER more than 2)
+  - ANY response with more than 2 watch_next items will be REJECTED
+  - Choose ONLY the top 2 most important catalysts to watch
+  - Ignore all other items even if they seem important
 
 STYLE GUIDELINES:
 - Narrative: 2-4 paragraphs of MECHANISTIC analysis
@@ -55,7 +62,9 @@ STYLE GUIDELINES:
   * Connect news events to price action with citations [#A1B2C3D4]
 - Takeaways: 3-5 bullets with actionable, non-generic insights
   * Each must have a specific level, threshold, or actionable angle
-- Watch Next: 2-3 bullets on specific catalysts
+- Watch Next: EXACTLY 2 bullets maximum
+  * Only the most important upcoming catalysts
+  * Not a laundry list of everything mentioned in news
 - Avoid: "monitor", "watch", "keep an eye on"
 - Prefer: "if BTC breaks $X, expect Y"
 

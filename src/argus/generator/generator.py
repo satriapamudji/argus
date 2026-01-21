@@ -128,10 +128,15 @@ class MessageGenerator:
             # Extract refs from all text sections (narrative + takeaways + watch_next)
             all_text = narrative + " " + " ".join(takeaways) + " " + " ".join(watch_next)
             referenced_ids = extract_referenced_ids(all_text, news_contexts)
+
+            # Truncate to constraints
+            truncated_takeaways = takeaways[: self.constraints.max_takeaway_bullets]
+            truncated_watch = watch_next[: self.constraints.max_watch_bullets]
+
             return LLMGeneratedContent(
                 narrative=narrative,
-                takeaways=takeaways[: self.constraints.max_takeaway_bullets],
-                watch_next=watch_next[: self.constraints.max_watch_bullets],
+                takeaways=truncated_takeaways,
+                watch_next=truncated_watch,
                 referenced_item_ids=referenced_ids,
                 raw_response=response,
                 opening_line=opening_line if isinstance(opening_line, str) else None,
@@ -378,6 +383,7 @@ class MessageGenerator:
                 user_prompt += (
                     "\nPlease regenerate the content fixing these issues. Do not add any facts not in the provided data."
                     "\nRemember: cite news ONLY using the provided cite keys in the exact format [#A1B2C3D4]."
+                    "\nCRITICAL: watch_next MUST have exactly 2 bullets maximum, never more."
                 )
                 retry_count += 1
                 logger.warning(f"Validation failed (attempt {val_attempt + 1}/{max_val_attempts}): {val.errors}")

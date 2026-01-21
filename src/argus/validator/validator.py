@@ -112,6 +112,9 @@ class MessageValidator:
                         "*What to Watch:*",
                         "__What to Watch__",
                         "__*What to Watch*__",
+                        "*What to Watch Next*",
+                        "__What to Watch Next__",
+                        "__*What to Watch Next*__",
                     ],
                 ),
             ]
@@ -224,7 +227,7 @@ class MessageValidator:
         # Define takeaway header pattern based on mode
         if run_mode == "crypto_daily":
             takeaway_header = r"(?:__\*|\*|__)Investor Key Takeaways(?:\*__|__|\*)"
-            next_section = r"(?:(?:__\*|\*|__)What to Watch|\Z)"
+            next_section = r"(?:(?:__\*|\*|__)What to Watch(?: Next)?|\Z)"
         elif run_mode == "weekend_wrap":
             takeaway_header = r"(?:__\*|\*|__)Key Takeaways for the Week(?:\*__|__|\*)"
             next_section = r"(?:(?:__\*|\*|__)Sources|\Z)"
@@ -248,12 +251,18 @@ class MessageValidator:
                 errors.append(f"Invalid takeaway bullet count: {len(bullets)} (expected 3-5)")
                 valid = False
 
-        # Watch Next: max 3 bullets (only for us_close mode)
-        if run_mode == "us_close":
+        # Watch Next: max 3 bullets (for us_close and crypto_daily modes)
+        if run_mode == "us_close" or run_mode == "crypto_daily":
+            # For crypto_daily, stop at Derivatives Data or Sources; for us_close, stop at Sources
+            if run_mode == "crypto_daily":
+                next_section = r"(?:(?:__\*|\*|__)Derivatives Data|(?:__\*|\*|__)Sources|\Z)"
+            else:  # us_close
+                next_section = r"(?:(?:__\*|\*|__)Sources|\Z)"
+
             watch_match = re.search(
-                r"(?:__\*|\*|__)What to Watch Next(?:\*__|__|\*)"
+                r"(?:__\*|\*|__)What to Watch(?: Next)?(?:\*__|__|\*)"
                 r"(.*?)"
-                r"(?:(?:__\*|\*|__)Sources|\Z)",
+                + next_section,
                 text,
                 re.DOTALL,
             )
