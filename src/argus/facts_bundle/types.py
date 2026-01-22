@@ -479,9 +479,10 @@ class CryptoMarketData:
         if self.fear_greed_index is not None:
             result["fear_greed_index"] = self.fear_greed_index
         if self.funding_rates is not None:
-            result["funding_rates"] = {k: str(v) for k, v in self.funding_rates.items()}
+            # Use format(v, 'f') to avoid scientific notation (e.g., '-6.6E-7' -> '-0.00000066')
+            result["funding_rates"] = {k: format(v, 'f') for k, v in self.funding_rates.items()}
         if self.open_interest is not None:
-            result["open_interest"] = {k: str(v) for k, v in self.open_interest.items()}
+            result["open_interest"] = {k: format(v, 'f') for k, v in self.open_interest.items()}
         return result
 
     @classmethod
