@@ -64,4 +64,4 @@ dmypy.json
 .ruff_cache/
 
 # Local assistant config
-.claude/
+.claude/settings.local.json
