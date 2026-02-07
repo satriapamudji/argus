@@ -6,3 +6,8 @@ ALTER TABLE runs DROP CONSTRAINT runs_run_mode_check;
 ALTER TABLE runs
 ADD CONSTRAINT runs_run_mode_check
 CHECK (run_mode IN ('us_close', 'weekend_wrap', 'monday_preview', 'crypto_daily'));
+
+-- Record migration
+INSERT INTO schema_migrations (version) VALUES ('007_add_crypto_daily_mode');
+
+COMMIT;

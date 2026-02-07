@@ -19,7 +19,7 @@ from .config import ArgusConfig, UnknownStreamError
 )
 @click.pass_context
 def cli(ctx: click.Context, config: Optional[Path]) -> None:
-    """Argus - US Close Market Update Bot.
+    """Argus - Market Update Bot.
 
     Ingest news, score and curate items, generate market updates.
     """
@@ -302,7 +302,9 @@ def run(
                     import sys
 
                     encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
-                    sys.stdout.buffer.write(result.message_content.encode(encoding, errors="replace"))
+                    sys.stdout.buffer.write(
+                        result.message_content.encode(encoding, errors="replace")
+                    )
                     sys.stdout.buffer.write(b"\n")
                 click.echo("--- END MESSAGE ---")
 
@@ -937,6 +939,205 @@ def insert_test(url: str, title: str, source: str, snippet: Optional[str]) -> No
 
     conn.close()
     click.echo("\nTest data inserted successfully.")
+
+
+@cli.group()
+def rss() -> None:
+    """RSS feed utilities."""
+    pass
+
+
+@rss.command()
+@click.option(
+    "--url",
+    multiple=True,
+    help="Feed URL (repeatable)",
+)
+@click.option(
+    "--allowlist",
+    type=click.Path(exists=True, path_type=Path),
+    multiple=True,
+    help="Path to allowlist file with one URL per line (repeatable)",
+)
+@click.option(
+    "--stream",
+    default=None,
+    help="Stream name to load feeds from config",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=5,
+    show_default=True,
+    help="Max entries per feed",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Output as JSON instead of text",
+)
+@click.pass_context
+def preview(
+    ctx: click.Context,
+    url: tuple[str, ...],
+    allowlist: tuple[Path, ...],
+    stream: Optional[str],
+    limit: int,
+    as_json: bool,
+) -> None:
+    """Preview RSS feed entries without writing to database.
+
+    Merge URLs from multiple sources (--url, --allowlist, --stream),
+    deduplicate, and display entries grouped by feed URL.
+
+    Examples:
+
+        # Preview a single feed
+        argus rss preview --url "https://feeds.bbci.co.uk/news/rss.xml" --limit 3
+
+        # Preview from allowlist file
+        argus rss preview --allowlist "rss/us_markets.txt" --limit 5
+
+        # Preview stream-configured feeds
+        argus rss preview --stream us_markets --limit 2
+
+        # JSON output
+        argus rss preview --url "https://example.com/feed.xml" --json --limit 2
+    """
+    import json as json_module
+
+    from argus.ingestion.rss_parser import parse_feed
+
+    config_path = ctx.obj.get("config_path")
+    config = ArgusConfig.load(config_path)
+
+    # Collect all URLs from all sources
+    all_urls: list[str] = []
+
+    # Add URLs from --url flags
+    all_urls.extend(url)
+
+    # Add URLs from --allowlist files
+    for allowlist_path in allowlist:
+        with open(allowlist_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    all_urls.append(line)
+
+    # Add URLs from --stream
+    if stream is not None:
+        try:
+            config.select_stream(stream)
+        except UnknownStreamError as e:
+            click.echo(f"Error: {e}", err=True)
+            raise SystemExit(2)
+
+        stream_urls = config.get_rss_feeds()
+        all_urls.extend(stream_urls)
+
+    # Deduplicate while preserving order
+    deduped_urls = list(dict.fromkeys(all_urls))
+
+    # Validate: must have at least one URL
+    if not deduped_urls:
+        click.echo(
+            "Error: No feed URLs provided. Use --url, --allowlist, or --stream.",
+            err=True,
+        )
+        raise SystemExit(2)
+
+    # Parse all feeds
+    feeds_data: list[dict] = []
+    feeds_ok = 0
+    feeds_failed = 0
+
+    for feed_url in deduped_urls:
+        entries, error = parse_feed(feed_url, max_snippet_chars=1_000_000)
+
+        if error:
+            feeds_failed += 1
+            feeds_data.append(
+                {
+                    "feed_url": feed_url,
+                    "ok": False,
+                    "error": error,
+                    "entries_total": 0,
+                    "entries": [],
+                }
+            )
+        else:
+            feeds_ok += 1
+            # Apply limit per feed
+            limited_entries = entries[:limit] if limit > 0 else []
+            feeds_data.append(
+                {
+                    "feed_url": feed_url,
+                    "ok": True,
+                    "error": None,
+                    "entries_total": len(entries),
+                    "entries": limited_entries,
+                }
+            )
+
+    # Output
+    if as_json:
+        # JSON mode: emit single JSON document
+        output = {
+            "feeds_total": len(deduped_urls),
+            "feeds_ok": feeds_ok,
+            "feeds_failed": feeds_failed,
+            "limit": limit,
+            "feeds": [
+                {
+                    "feed_url": feed["feed_url"],
+                    "ok": feed["ok"],
+                    "error": feed["error"],
+                    "entries_total": feed["entries_total"],
+                    "entries": [
+                        {
+                            "source_name": entry.source_name,
+                            "published_at": entry.published_at.isoformat()
+                            if entry.published_at
+                            else None,
+                            "title": entry.title,
+                            "source_url": entry.source_url,
+                            "snippet": entry.snippet,
+                        }
+                        for entry in feed["entries"]
+                    ],
+                }
+                for feed in feeds_data
+            ],
+        }
+        click.echo(json_module.dumps(output, indent=2))
+    else:
+        # Text mode: grouped by feed URL
+        for feed in feeds_data:
+            click.echo(f"FEED {feed['feed_url']}")
+            if feed["ok"]:
+                entries_shown = len(feed["entries"])
+                click.echo(f"  OK entries={feed['entries_total']} showing={entries_shown}")
+                for entry in feed["entries"]:
+                    pub_str = entry.published_at.isoformat() if entry.published_at else "unknown"
+                    click.echo(f"  - {pub_str} | {entry.source_name}")
+                    click.echo(f"    {entry.title}")
+                    click.echo(f"    {entry.source_url}")
+                    if entry.snippet:
+                        click.echo(f"    snippet: {entry.snippet}")
+            else:
+                click.echo(f"  ERROR: {feed['error']}")
+            click.echo()
+
+        # Summary
+        click.echo(
+            f"Summary: feeds_total={len(deduped_urls)} feeds_ok={feeds_ok} feeds_failed={feeds_failed}"
+        )
+
+    # Exit code: 0 if all OK, 1 if any failed
+    if feeds_failed > 0:
+        raise SystemExit(1)
 
 
 def main() -> None:
@@ -2081,6 +2282,98 @@ def bundle(
     if dry_run:
         click.echo()
         click.echo("Dry run complete. Bundle not saved to database.")
+
+
+@cli.command()
+@click.option("--stream", required=True, help="Stream name (e.g., us_markets, crypto)")
+@click.option(
+    "--mode",
+    default="us_close",
+    help="Run mode (us_close, weekend_wrap, monday_preview, crypto_daily)",
+)
+@click.option(
+    "--scoring",
+    type=click.Choice(["v2", "v3"]),
+    default=None,
+    help="Scoring version override",
+)
+@click.option(
+    "--output",
+    type=click.Path(),
+    required=True,
+    help="Output file path for trace JSON",
+)
+@click.option("--skip-generate", is_flag=True, help="Skip LLM message generation")
+@click.pass_context
+def trace(
+    ctx: click.Context,
+    stream: str,
+    mode: str,
+    scoring: Optional[str],
+    output: str,
+    skip_generate: bool,
+) -> None:
+    """Run DB-free pipeline trace for debugging.
+
+    Executes the full pipeline (ingest -> score -> enrich -> bundle -> generate)
+    without database access and outputs a detailed JSON trace.
+
+    The trace includes:
+    - All scored items with full scoring breakdown
+    - Stage-by-stage timing and artifacts
+    - The generated FactsBundle
+    - The generated message (unless --skip-generate)
+
+    JSON is written to both --output file and stdout.
+    Logs go to stderr.
+
+    Examples:
+
+        argus trace --stream us_markets --output trace.json
+
+        argus trace --stream crypto --mode crypto_daily --scoring v3 --output trace.json
+
+        argus trace --stream us_markets --skip-generate --output trace.json
+    """
+    import json
+    import sys
+
+    from argus.trace.runner import run_trace
+
+    config_path = ctx.obj.get("config_path")
+    config = ArgusConfig.load(config_path)
+
+    try:
+        config.select_stream(stream)
+    except UnknownStreamError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(2)
+
+    click.echo(f"Running trace for stream '{stream}' in mode '{mode}'...", err=True)
+    if scoring:
+        click.echo(f"  Scoring override: {scoring}", err=True)
+    if skip_generate:
+        click.echo("  Skipping LLM generation", err=True)
+    click.echo(err=True)
+
+    # Run the trace
+    trace_output = run_trace(
+        config=config,
+        run_mode=mode,
+        scoring_version=scoring,
+        skip_generate=skip_generate,
+    )
+
+    # Convert to JSON
+    trace_json = json.dumps(trace_output.to_dict(), indent=2, ensure_ascii=False)
+
+    # Write to file
+    Path(output).write_text(trace_json, encoding="utf-8")
+    click.echo(f"Trace written to: {output}", err=True)
+
+    # Also write to stdout
+    sys.stdout.write(trace_json)
+    sys.stdout.write("\n")
 
 
 @cli.group()

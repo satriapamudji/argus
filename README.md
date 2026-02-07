@@ -1,68 +1,200 @@
-# Argus - Market Update Bot
+<div align="center">
 
-Telegram bot that ingests news + prices, scores and curates items, generates WhatsApp/Telegram-style market updates across multiple run modes (e.g. `us_close`, `weekend_wrap`, `monday_preview`) within a stream (e.g. `us_markets`), and publishes on a schedule (SGT + NY DST-safe).
+# Argus
 
-## Quick Start
+Automated market briefings for Telegram, built for production reliability.
 
-```bash
-# Install in development mode
-pip install -e .
+Ingest curated news feeds and market data, score and select high-signal items, generate structured updates with an LLM, validate output, and publish on schedule across multiple streams.
 
-# Verify installation
-argus --version
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![Runtime](https://img.shields.io/badge/runtime-cli%20%2B%20daemon-0A7EA4)
+![Database](https://img.shields.io/badge/database-postgresql-336791)
+![Delivery](https://img.shields.io/badge/delivery-telegram-2CA5E0)
 
-# Run smoke test (no network required)
-argus smoke
+</div>
 
-# Run a dry-run to test configuration
-argus run --stream us_markets --mode us_close --dry-run
+> [!WARNING]
+> `TELEGRAM_BOT_TOKEN`, `OPENROUTER_API_KEY`, and `DATABASE_URL` are secrets.
+> Keep them in `.env` only. Never commit `.env`.
+
+## Contents
+
+- [What Argus does](#what-argus-does)
+- [Architecture](#architecture)
+- [Run modes](#run-modes)
+- [Quick start](#quick-start)
+- [Command reference](#command-reference)
+- [Configuration](#configuration)
+- [Telegram control plane](#telegram-control-plane)
+- [Debugging and QA](#debugging-and-qa)
+- [Production operations](#production-operations)
+- [Development](#development)
+- [Repository layout](#repository-layout)
+- [Documentation](#documentation)
+- [Security notes](#security-notes)
+- [License](#license)
+
+## What Argus does
+
+- Multi-stream execution (for example `us_markets`, `crypto`).
+- End-to-end pipeline: `ingest -> score -> enrich -> bundle -> generate -> validate -> publish`.
+- Pluggable providers per stage (`rss` or `api_newsapi`, multiple scoring versions, `telegram` or `null` publisher).
+- DB-backed broadcast fanout for per-stream Telegram subscriptions.
+- Long-running daemon scheduler with health endpoints and job history.
+
+## Architecture
+
+```text
+Feeds/APIs -> Ingestion -> Scoring -> Enrichment -> Facts Bundle -> LLM Generate -> Validator -> Publisher
+                      \___________________________________________________________/
+                                      PostgreSQL persistence
 ```
 
-## Environment Variables
+Core runtime path:
+- CLI entrypoint: `src/argus/cli.py`
+- Config loading: `src/argus/config.py`
+- Orchestration: `src/argus/orchestrator/orchestrator.py`
+- Stage provider registry: `src/argus/pipeline/registry.py`
+- Facts bundle builders:
+  - `src/argus/facts_bundle/builder.py` (US markets)
+  - `src/argus/facts_bundle/crypto_builder.py` (crypto)
 
-Create a `.env` file in the project root (see `.env.example`):
+## Run modes
 
-### Required Variables
+| Mode | Primary use | Window | Typical daemon schedule |
+|---|---|---:|---|
+| `us_close` | Daily US close recap | 24h | Tue-Fri, SGT |
+| `weekend_wrap` | Weekly wrap | 120h | Saturday, SGT |
+| `monday_preview` | Risk-gated week-ahead preview | 120h | Sunday, New York |
+| `crypto_daily` | Daily crypto recap | 24h | Daily, UTC |
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) | `123456789:ABCdef...` |
-| `TELEGRAM_CHAT_ID` | Target chat/channel ID (legacy single-destination publishing) | `-1001234567890` |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/argus` |
-| `OPENROUTER_API_KEY` | API key for LLM generation via [OpenRouter](https://openrouter.ai) | `sk-or-v1-...` |
+`monday_preview` supports conditional publish using `risk_score` from calendar + market + headline components.
 
-### Telegram Control Plane (Access + Subscriptions)
+## Quick start
 
-These settings enable chat onboarding and per-stream subscriptions. The control plane runs automatically inside `argus daemon start` when these variables are set.
+### 1) Local setup
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `TELEGRAM_OWNER_USER_ID` | Owner Telegram user ID (only this user can approve/deny access) | `123456789` |
-| `TELEGRAM_ADMIN_CHAT_ID` | Admin group chat ID where approvals happen | `-1001234567890` |
+Windows (PowerShell):
 
-### Optional Variables
+```powershell
+copy .env.example .env
+notepad .env
+pip install -e ".[dev]"
+argus --version
+argus smoke
+```
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TELEGRAM_PARSE_MODE` | `MarkdownV2` | Telegram message formatting mode |
-| `LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+Linux/macOS:
+
+```bash
+cp .env.example .env
+$EDITOR .env
+pip install -e ".[dev]"
+argus --version
+argus smoke
+```
+
+### 2) Validate config safely
+
+```bash
+argus run --stream us_markets --mode us_close --dry-run
+argus run --stream us_markets --mode us_close --skip-publish --print-message
+```
+
+### 3) Online prerequisites and first real run
+
+```bash
+argus db migrate
+argus run --stream us_markets --mode us_close
+```
+
+## Command reference
+
+### Full pipeline
+
+```bash
+argus run --stream us_markets --mode us_close
+argus run --stream us_markets --mode monday_preview --conditional
+argus run --stream crypto --mode crypto_daily
+```
+
+### Stage commands
+
+```bash
+argus ingest --stream us_markets
+argus score --stream us_markets --window-hours 24
+argus enrich --stream us_markets --window-hours 24
+argus bundle --mode us_close --output bundle.json --dry-run
+argus generate --bundle-file bundle.json --output message.txt
+argus publish --file message.txt --dry-run
+```
+
+### Daemon commands
+
+```bash
+argus daemon start
+argus daemon status
+argus daemon trigger ingest:crypto
+argus daemon history crypto_daily:crypto
+```
+
+### Utility commands
+
+```bash
+argus db status
+argus calendar status
+argus newsapi sources --categories business
+argus show --run-id 15
+```
 
 ## Configuration
 
-Configuration is loaded from two sources:
+Argus reads:
+1. `.env` for secrets and deployment-specific values.
+2. `config.yaml` for streams, schedules, providers, constraints, and daemon behavior.
 
-1. **`.env`** - Secrets and deployment-specific values (never commit to git)
-2. **`config.yaml`** - Non-secret stream settings, schedules, and constraints
+### Required environment variables
 
-### config.yaml Structure
+| Variable | Purpose |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | Bot token from `@BotFather` |
+| `TELEGRAM_CHAT_ID` | Legacy fallback destination when stream subscriptions are empty |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `OPENROUTER_API_KEY` | LLM generation key |
+
+### Common optional environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEWS_API_KEYS` | unset | Comma-separated keys for TheNewsAPI provider |
+| `TELEGRAM_OWNER_USER_ID` | unset | Control-plane owner for approvals |
+| `TELEGRAM_ADMIN_CHAT_ID` | unset | Admin chat for approval workflow |
+| `TELEGRAM_PARSE_MODE` | `MarkdownV2` | Telegram parse mode |
+| `CHARTINSPECT_API` | unset | Optional crypto OHLCV source |
+| `LOG_LEVEL` | `INFO` | Runtime logging level |
+
+### Provider keys (`config.yaml`)
+
+| Stage | Supported values |
+|---|---|
+| `providers.ingestion` | `rss`, `api_newsapi` |
+| `providers.scoring` | `heuristic_v1`, `heuristic_v2`, `heuristic_v3` |
+| `providers.enrichment` | `fetch_extract` |
+| `providers.publisher` | `telegram`, `null` |
+
+### Minimal multi-stream example
 
 ```yaml
 streams:
   us_markets:
     enabled: true
+    providers:
+      ingestion: rss
+      scoring: heuristic_v2
+      enrichment: fetch_extract
+      publisher: telegram
     rss:
       allowlist_files: ["rss/us_markets.txt"]
-      poll_interval_minutes: 20
     schedule:
       daily_us_close_sgt: "06:00"
       weekend_wrap_sgt: "10:00"
@@ -70,236 +202,114 @@ streams:
 
   crypto:
     enabled: true
+    providers:
+      ingestion: rss
+      scoring: heuristic_v3
+      enrichment: fetch_extract
+      publisher: telegram
     rss:
       allowlist_files: ["rss/crypto.txt"]
-      poll_interval_minutes: 20
     schedule:
       daily_crypto_utc: "00:00"
 ```
 
-### RSS Feed Configuration
+RSS allowlists are one URL per line in `rss/*.txt`.
 
-RSS feeds are configured in text files under the `rss/` directory:
+## Telegram control plane
 
-```
-rss/
-  us_markets.txt   # One URL per line, # for comments
-```
+If both `TELEGRAM_OWNER_USER_ID` and `TELEGRAM_ADMIN_CHAT_ID` are configured, daemon mode also runs Telegram onboarding/subscription control.
 
-## Telegram Control Plane (Onboarding + Subscriptions)
+User flow:
+1. `/start`
+2. `/access`
+3. After approval: `/streams`, `/subscribe <stream>`, `/unsubscribe <stream>`, `/status`
 
-Argus supports DB-backed per-stream subscriptions for Telegram publishing.
+Admin flow (owner only):
+1. `/requests`
+2. `/approve <id>` or `/deny <id> [reason]`
 
-### Onboarding flow
+Publish routing:
+- If enabled stream subscriptions exist, Argus broadcasts to authorized subscribers.
+- If none exist, Argus falls back to `TELEGRAM_CHAT_ID`.
 
-In any chat with the bot:
+## Debugging and QA
 
-1. `/start` — shows onboarding help
-2. `/access` — request access (creates a pending request)
-3. In the admin group (must be sent by `TELEGRAM_OWNER_USER_ID`):
-   - `/approve <id>` or `/deny <id> [reason]`
-4. After approval:
-   - `/streams` — list available stream names
-   - `/subscribe <stream>` — receive broadcasts for that stream
-   - `/unsubscribe <stream>` — stop receiving broadcasts
-   - `/status` — show authorization + current subscriptions
-
-Admin group commands (owner only):
-- `/requests` — list pending access requests
-
-### Broadcast publishing behavior
-
-When Argus publishes a message for a given stream, it sends it to **all authorized, enabled subscribers** for that stream.
-
-If there are **no subscriptions** in the database for that stream, Argus falls back to the legacy single destination `TELEGRAM_CHAT_ID`.
-
-This means being the owner/admin does **not** automatically subscribe you to broadcasts — subscribe the specific chat (DM/group/channel) you want to receive posts.
-
-## Commands Reference
-
-### Main Commands
-
-| Command | Description |
-|---------|-------------|
-| `argus run` | Execute a full pipeline run (ingest → score → generate → publish) |
-| `argus smoke` | Run offline smoke test using fixtures (no network required) |
-| `argus ingest --stream <stream>` | Poll RSS feeds and ingest new items for a stream |
-| `argus score --stream <stream>` | Score unscored news items for a stream |
-| `argus enrich --stream <stream>` | Fetch full content for top-scored items for a stream |
-| `argus bundle` | Build a facts bundle for generation |
-| `argus generate` | Generate a message from a facts bundle |
-| `argus publish` | Publish a message to Telegram |
-
-### Database Commands
-
-| Command | Description |
-|---------|-------------|
-| `argus db migrate` | Apply pending database migrations |
-| `argus db status` | Show migration status |
-| `argus db cleanup` | Run retention cleanup (drop old partitions) |
-| `argus db create-partitions` | Create partitions for upcoming days |
-
-### Calendar Commands
-
-| Command | Description |
-|---------|-------------|
-| `argus calendar refresh` | Fetch latest economic calendar data |
-| `argus calendar show` | Display upcoming economic events |
-| `argus calendar status` | Show calendar configuration and data status |
-
-### Daemon Commands
-
-| Command | Description |
-|---------|-------------|
-| `argus daemon start` | Run daemon scheduler in foreground |
-| `argus daemon status` | Show daemon and job status |
-| `argus daemon trigger <job_id_or_key>` | Manually trigger a job (supports `job:stream`) |
-| `argus daemon history <job_id_or_key>` | Show recent run history (supports `job:stream`) |
-
-### Common Options
+### Offline smoke test
 
 ```bash
-# Dry run (show what would happen without executing)
-argus run --mode us_close --dry-run
-
-# Skip publishing (generate but don't send)
-argus run --mode us_close --skip-publish
-
-# Verbose output
-argus smoke --verbose
-
-# Custom config path
-argus --config /path/to/config.yaml run --mode us_close
-```
-
-## Smoke Testing
-
-Run the offline smoke test to verify the generation and validation pipeline:
-
-```bash
-# Basic smoke test
 argus smoke
-
-# Verbose output showing validation details
 argus smoke --verbose
-
-# Also test that invalid messages are correctly rejected
 argus smoke --test-invalid
 ```
 
-The smoke test:
-1. Loads a sample facts bundle from `tests/fixtures/`
-2. Loads a pre-generated message (simulating LLM output)
-3. Runs the validator to ensure formatting and data integrity
-4. Reports success/failure with details
-
-**No network access, database, or API keys required.**
-
-## Daemon Mode
-
-For VPS deployment, Argus can run as a long-lived daemon with internal scheduling, eliminating the need for external cron configuration.
-
-### Scheduling model (multi-stream)
-
-- `ingest:<stream>` runs on a short interval and continuously writes new items into the DB for that stream.
-- Scheduled report jobs (`us_close:<stream>`, `crypto_daily:<stream>`, etc.) run `score → enrich → bundle → generate → publish` using the DB window (they do not ingest).
-
-**Note:** `argus daemon start` also starts the Telegram control plane (long polling) when `TELEGRAM_OWNER_USER_ID` and `TELEGRAM_ADMIN_CHAT_ID` are set.
+### RSS preview (no DB writes)
 
 ```bash
-# Start daemon (foreground)
-argus daemon start
-
-# Check status
-argus daemon status
-
-# Manually trigger a per-stream job
-argus daemon trigger ingest:crypto
-argus daemon trigger crypto_daily:crypto
-
-# View job history
-argus daemon history crypto_daily:crypto
+argus rss preview --url "https://feeds.bbci.co.uk/news/rss.xml" --limit 3
+argus rss preview --allowlist "rss/us_markets.txt" --json --limit 5
+argus rss preview --stream crypto --limit 5
 ```
 
-Configure daemon behavior in `config.yaml`:
+### DB-free trace
 
-```yaml
-daemon:
-  health_port: 8080
-  health_bind: "127.0.0.1"
-  
-  jobs_enabled:
-    ingest: true
-    us_close: true
-    weekend_wrap: true
-    monday_preview: true
-    retention: true
-  
-  # 'run_immediately' or 'skip' for missed jobs
-  missed_policy:
-    ingest: run_immediately
-    us_close: skip
+```bash
+argus trace --stream us_markets --output trace.json
+argus trace --stream crypto --mode crypto_daily --scoring v3 --output trace.json
+argus trace --stream us_markets --skip-generate --output trace.json
 ```
 
-For systemd deployment, see the [Operations Guide](docs/OPERATIONS.md#daemon-mode-deployment-recommended).
+Trace output includes stage timing, scored-item breakdowns, selected bundle items, and generated message (unless skipped).
 
-## Crypto Stream
+### Scoring evaluation utility
 
-- RSS allowlist: `rss/crypto.txt`
-- Run locally (no publish): `argus run --stream crypto --mode crypto_daily --skip-publish --print-message`
-- Optional: set `CHARTINSPECT_API` for ChartInspect OHLCV; otherwise Argus falls back to CoinGecko where possible.
+```bash
+argus evaluate --days 1
+argus evaluate --json --topk 20
+```
+
+## Production operations
+
+Daemon mode is the recommended production deployment:
+- Internal APScheduler for ingest/report/retention jobs.
+- Local health endpoints (`/ping`, `/health`, `/health/jobs/{job_id}/history`).
+- Per-stream job IDs and manual triggering (`job:stream`).
+- Catch-up policy support for missed jobs.
+
+See `docs/OPERATIONS.md` for systemd setup and operational runbooks.
 
 ## Development
 
 ```bash
-# Install dev dependencies
 pip install -e ".[dev]"
-
-# Run tests
 pytest
-
-# Run tests with coverage
 pytest --cov=argus
-
-# Run type checking
 mypy src/
-
-# Run linting
 ruff check src/
-
-# Run linting with auto-fix
 ruff check --fix src/
 ```
 
-## Deployment
+## Repository layout
 
-For detailed deployment instructions including:
-- Linux VPS setup with cron
-- Windows development with Task Scheduler
-- Database configuration
-- Retention operations
+- `src/argus/`: main package and CLI.
+- `tests/`: unit/integration test suite and fixtures.
+- `rss/`: feed allowlists (`*.txt`).
+- `docs/`: operations, design, and integration docs.
+- `scripts/`: helper scripts for local workflows.
 
-See the [Operations Guide](docs/OPERATIONS.md).
+## Documentation
 
-## Architecture
+- Operations: `docs/OPERATIONS.md`
+- Design: `docs/design/`
+- Integrations: `docs/integrations/`
+- Config baseline: `config.yaml`
+- Environment template: `.env.example`
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Argus Pipeline                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────┐   ┌─────────┐   ┌──────────┐   ┌───────────────┐ │
-│  │ Ingest   │ → │ Score   │ → │ Enrich   │ → │ Bundle Build  │ │
-│  │ (RSS)    │   │ (Rules) │   │ (Fetch)  │   │ (Selection)   │ │
-│  └──────────┘   └─────────┘   └──────────┘   └───────────────┘ │
-│                                                      ↓          │
-│  ┌──────────┐   ┌─────────┐   ┌──────────┐   ┌───────────────┐ │
-│  │ Publish  │ ← │Validate │ ← │ Generate │ ← │ Facts Bundle  │ │
-│  │(Telegram)│   │(Guards) │   │ (LLM)    │   │ (JSON)        │ │
-│  └──────────┘   └─────────┘   └──────────┘   └───────────────┘ │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Security notes
+
+- Never commit `.env` or API keys.
+- Rotate credentials immediately after any leak.
+- Keep `config.yaml` non-secret and reviewable.
+- Use `--dry-run`/`--skip-publish` after config changes before live publishing.
 
 ## License
 

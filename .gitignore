@@ -65,3 +65,4 @@ dmypy.json
 
 # Local assistant config
 .claude/settings.local.json
+.sisyphus/ 
